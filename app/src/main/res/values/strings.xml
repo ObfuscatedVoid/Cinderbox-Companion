@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SDV Sync</string>
+
+    <!-- Login -->
+    <string name="login_title">Steam Login</string>
+    <string name="login_username_hint">Steam Username</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_button">Log In</string>
+    <string name="login_remember_me">Remember me</string>
+    <string name="login_2fa_title">Steam Guard Code</string>
+    <string name="login_2fa_hint">Enter code</string>
+    <string name="login_2fa_email_hint">Enter code from email</string>
+    <string name="login_2fa_mobile_hint">Enter code from Steam app</string>
+    <string name="login_connecting">Connecting to Steam…</string>
+    <string name="login_authenticating">Authenticating…</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Stardew Saves</string>
+    <string name="dashboard_no_saves">No saves found on Steam Cloud</string>
+    <string name="dashboard_pull">Pull from Steam</string>
+    <string name="dashboard_push">Push to Steam</string>
+    <string name="dashboard_refreshing">Refreshing…</string>
+
+    <!-- Save info -->
+    <string name="save_year">Year %1$d</string>
+    <string name="save_season_spring">Spring</string>
+    <string name="save_season_summer">Summer</string>
+    <string name="save_season_fall">Fall</string>
+    <string name="save_season_winter">Winter</string>
+    <string name="save_day">Day %1$d</string>
+    <string name="save_version">v%1$s</string>
+    <string name="save_status_cloud">Cloud only</string>
+    <string name="save_status_local">Local only</string>
+    <string name="save_status_synced">Synced</string>
+    <string name="save_status_conflict">Conflict</string>
+    <string name="save_status_cloud_newer">Cloud is newer</string>
+    <string name="save_status_local_newer">Local is newer</string>
+
+    <!-- Sync -->
+    <string name="sync_pulling">Downloading save…</string>
+    <string name="sync_pushing">Uploading save…</string>
+    <string name="sync_complete">Sync complete</string>
+    <string name="sync_failed">Sync failed: %1$s</string>
+    <string name="sync_conflict_title">Save Conflict</string>
+    <string name="sync_conflict_message">Cloud and local saves differ. Which version do you want to keep?</string>
+    <string name="sync_keep_cloud">Keep Cloud</string>
+    <string name="sync_keep_local">Keep Local</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_file_access">File Access Mode</string>
+    <string name="settings_file_access_root">Root</string>
+    <string name="settings_file_access_shizuku">Shizuku</string>
+    <string name="settings_file_access_manual">Manual</string>
+    <string name="settings_auto_sync">Auto-sync on game close</string>
+    <string name="settings_auto_sync_root_only">(Requires root)</string>
+    <string name="settings_backup_count">Local backup count</string>
+    <string name="settings_logout">Log out of Steam</string>
+    <string name="settings_about">About SDV Sync</string>
+
+    <!-- Errors -->
+    <string name="error_no_internet">No internet connection</string>
+    <string name="error_steam_connection">Could not connect to Steam</string>
+    <string name="error_invalid_credentials">Invalid username or password</string>
+    <string name="error_2fa_required">Steam Guard code required</string>
+    <string name="error_file_access">Cannot access save files. Check file access settings.</string>
+    <string name="error_sdv_not_installed">Stardew Valley is not installed</string>
+    <string name="error_save_corrupt">Save file appears corrupt</string>
+    <string name="error_version_mismatch">Warning: Cloud save version (%1$s) may not be compatible with your game version</string>
+
+    <!-- Auto-sync notification -->
+    <string name="notification_channel_sync">Save Sync</string>
+    <string name="notification_auto_sync_title">SDV Sync</string>
+    <string name="notification_auto_sync_monitoring">Monitoring Stardew Valley…</string>
+    <string name="notification_auto_sync_uploading">Uploading save to Steam Cloud…</string>
+</resources>
