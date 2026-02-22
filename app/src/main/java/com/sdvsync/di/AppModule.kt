@@ -17,6 +17,7 @@ import com.sdvsync.ui.viewmodels.DashboardViewModel
 import com.sdvsync.ui.viewmodels.LoginViewModel
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
+import com.sdvsync.ui.viewmodels.SyncLogViewModel
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -59,4 +60,5 @@ val appModule = module {
     viewModel { DashboardViewModel(get(), get(), get()) }
     viewModel { SyncDetailViewModel(get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get()) }
+    viewModel { SyncLogViewModel(get()) }
 }

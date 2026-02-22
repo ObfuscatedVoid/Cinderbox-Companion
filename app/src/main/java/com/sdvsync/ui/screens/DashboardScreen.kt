@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import org.koin.androidx.compose.koinViewModel
 fun DashboardScreen(
     onSaveClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
+    onSyncLogClick: () -> Unit = {},
     viewModel: DashboardViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -40,6 +42,9 @@ fun DashboardScreen(
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(Icons.Default.Refresh, "Refresh")
+                    }
+                    IconButton(onClick = onSyncLogClick) {
+                        Icon(Icons.Default.History, "Sync Log")
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Default.Settings, "Settings")

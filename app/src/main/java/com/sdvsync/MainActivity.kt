@@ -15,6 +15,7 @@ import com.sdvsync.ui.screens.DashboardScreen
 import com.sdvsync.ui.screens.LoginScreen
 import com.sdvsync.ui.screens.SettingsScreen
 import com.sdvsync.ui.screens.SyncDetailScreen
+import com.sdvsync.ui.screens.SyncLogScreen
 import com.sdvsync.ui.theme.SdvSyncTheme
 
 class MainActivity : ComponentActivity() {
@@ -54,6 +55,9 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 onSettingsClick = {
                     navController.navigate("settings")
                 },
+                onSyncLogClick = {
+                    navController.navigate("sync_log")
+                },
             )
         }
 
@@ -66,6 +70,12 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             val saveFolderName = backStackEntry.arguments?.getString("saveFolderName") ?: return@composable
             SyncDetailScreen(
                 saveFolderName = saveFolderName,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable("sync_log") {
+            SyncLogScreen(
                 onBack = { navController.popBackStack() },
             )
         }
