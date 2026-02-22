@@ -2,7 +2,10 @@ package com.sdvsync.ui.viewmodels
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import com.sdvsync.autosync.AutoSyncService
 import com.sdvsync.fileaccess.FileAccessDetector
+import com.sdvsync.fileaccess.RootFileAccess
+import com.sdvsync.fileaccess.ShizukuFileAccess
 import com.sdvsync.steam.SteamAuthenticator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +15,10 @@ data class SettingsState(
     val fileAccessMode: String = "auto",
     val availableModes: List<String> = emptyList(),
     val autoSyncEnabled: Boolean = false,
+    val autoSyncAvailable: Boolean = false,
+    val shizukuInstalled: Boolean = false,
+    val shizukuRunning: Boolean = false,
+    val shizukuPermissionGranted: Boolean = false,
     val isLoggedIn: Boolean = false,
     val steamUsername: String? = null,
 )
@@ -26,11 +33,37 @@ class SettingsViewModel(
     val state: StateFlow<SettingsState> = _state.asStateFlow()
 
     fun load() {
+        val hasRoot = RootFileAccess.isAvailable()
+        val shizukuInstalled = ShizukuFileAccess.isInstalled(context.packageManager)
+        val shizukuRunning = ShizukuFileAccess.isRunning()
+        val shizukuPermission = ShizukuFileAccess.isPermissionGranted()
+
         _state.value = SettingsState(
             availableModes = fileAccessDetector.availableMethods(),
             fileAccessMode = fileAccessDetector.detectBestStrategy().name,
+            autoSyncAvailable = hasRoot,
+            shizukuInstalled = shizukuInstalled,
+            shizukuRunning = shizukuRunning,
+            shizukuPermissionGranted = shizukuPermission,
             isLoggedIn = authenticator.authState.value is com.sdvsync.steam.AuthState.LoggedIn,
         )
+    }
+
+    fun toggleAutoSync(enabled: Boolean) {
+        _state.value = _state.value.copy(autoSyncEnabled = enabled)
+        if (enabled) {
+            AutoSyncService.start(context)
+        } else {
+            AutoSyncService.stop(context)
+        }
+    }
+
+    fun requestShizukuPermission() {
+        ShizukuFileAccess.requestPermission()
+    }
+
+    fun bindShizukuService() {
+        ShizukuFileAccess.bindService()
     }
 
     fun logout() {

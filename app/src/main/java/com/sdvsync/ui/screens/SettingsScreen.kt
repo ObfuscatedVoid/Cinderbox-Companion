@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sdvsync.ui.viewmodels.SettingsViewModel
@@ -57,6 +58,58 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            // Shizuku status
+            if (!state.availableModes.contains("Root")) {
+                Spacer(Modifier.height(12.dp))
+                ShizukuStatusSection(
+                    installed = state.shizukuInstalled,
+                    running = state.shizukuRunning,
+                    permissionGranted = state.shizukuPermissionGranted,
+                    onRequestPermission = { viewModel.requestShizukuPermission() },
+                    onBindService = { viewModel.bindShizukuService() },
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Auto-sync (root only)
+            Text(
+                "Auto Sync",
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Spacer(Modifier.height(8.dp))
+            if (state.autoSyncAvailable) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Sync on game close",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            "Automatically push save when Stardew Valley exits",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = state.autoSyncEnabled,
+                        onCheckedChange = { viewModel.toggleAutoSync(it) },
+                    )
+                }
+            } else {
+                Text(
+                    "Requires root access. Not available on this device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
@@ -98,6 +151,67 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun ShizukuStatusSection(
+    installed: Boolean,
+    running: Boolean,
+    permissionGranted: Boolean,
+    onRequestPermission: () -> Unit,
+    onBindService: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                "Shizuku (non-root file access)",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            when {
+                !installed -> {
+                    Text(
+                        "Shizuku app not installed. Install from Play Store or GitHub.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                !running -> {
+                    Text(
+                        "Shizuku is installed but not running. Start it via ADB or wireless debugging.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                !permissionGranted -> {
+                    Text(
+                        "Shizuku is running. Grant permission to enable file access.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onRequestPermission) {
+                        Text("Grant Permission")
+                    }
+                }
+                else -> {
+                    Text(
+                        "Shizuku is ready.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onBindService) {
+                        Text("Connect File Service")
+                    }
+                }
+            }
         }
     }
 }
