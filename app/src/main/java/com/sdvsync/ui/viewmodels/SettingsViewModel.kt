@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.asStateFlow
 data class SettingsState(
     val fileAccessMode: String = "auto",
     val availableModes: List<String> = emptyList(),
+    val hasRoot: Boolean = false,
+    val preferredStrategy: String? = null,
     val autoSyncEnabled: Boolean = false,
     val autoSyncAvailable: Boolean = false,
     val shizukuInstalled: Boolean = false,
@@ -52,7 +54,9 @@ class SettingsViewModel(
 
         _state.value = SettingsState(
             availableModes = fileAccessDetector.availableMethods(),
-            fileAccessMode = fileAccessDetector.detectBestStrategy().name,
+            fileAccessMode = fileAccessDetector.resolveStrategy().name,
+            hasRoot = hasRoot,
+            preferredStrategy = fileAccessDetector.getPreferredStrategy(),
             autoSyncAvailable = hasRoot,
             shizukuInstalled = shizukuInstalled,
             shizukuRunning = shizukuRunning,
@@ -98,6 +102,11 @@ class SettingsViewModel(
     fun setMaxBackups(count: Int) {
         backupManager.setMaxBackupsAndPrune(count)
         _state.value = _state.value.copy(maxBackups = backupManager.maxBackups)
+    }
+
+    fun setFileAccessMode(name: String?) {
+        fileAccessDetector.setPreferredStrategy(name)
+        load()
     }
 
     fun logout() {

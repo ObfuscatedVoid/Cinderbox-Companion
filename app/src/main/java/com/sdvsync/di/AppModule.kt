@@ -43,7 +43,7 @@ val appModule = module {
 
     // File access
     single { FileAccessDetector(androidContext()) }
-    factory<FileAccessStrategy> { get<FileAccessDetector>().detectBestStrategy() }
+    factory<FileAccessStrategy> { get<FileAccessDetector>().resolveStrategy() }
 
     // Saves
     single { SaveMetadataParser() }

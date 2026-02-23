@@ -22,6 +22,17 @@ import kotlin.math.roundToInt
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import org.koin.androidx.compose.koinViewModel
 
+@Composable
+private fun strategyDisplayName(name: String): String = when (name.lowercase()) {
+    "root" -> stringResource(R.string.settings_file_access_root)
+    "shizuku" -> stringResource(R.string.settings_file_access_shizuku)
+    "all files" -> stringResource(R.string.settings_file_access_all_files)
+    "saf" -> stringResource(R.string.settings_file_access_saf)
+    "saf (staging)" -> stringResource(R.string.settings_file_access_saf_staging)
+    "manual" -> stringResource(R.string.settings_file_access_manual)
+    else -> name
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -75,18 +86,49 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(8.dp))
+            val currentModeDisplay = strategyDisplayName(state.fileAccessMode)
+            val availableModesDisplay = state.availableModes.map { strategyDisplayName(it) }
             Text(
-                stringResource(R.string.settings_file_access_current, state.fileAccessMode),
+                stringResource(R.string.settings_file_access_current, currentModeDisplay),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                stringResource(R.string.settings_file_access_available, state.availableModes.joinToString(", ")),
+                stringResource(
+                    R.string.settings_file_access_available,
+                    availableModesDisplay.joinToString(", "),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            // Strategy picker
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.settings_file_access_choose),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.height(8.dp))
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                FilterChip(
+                    selected = state.preferredStrategy == null,
+                    onClick = { viewModel.setFileAccessMode(null) },
+                    label = { Text(stringResource(R.string.settings_file_access_auto)) },
+                )
+                state.availableModes.forEach { mode ->
+                    FilterChip(
+                        selected = state.preferredStrategy.equals(mode, ignoreCase = true),
+                        onClick = { viewModel.setFileAccessMode(mode) },
+                        label = { Text(strategyDisplayName(mode)) },
+                    )
+                }
+            }
+
             // Shizuku status
-            if (!state.availableModes.contains("Root")) {
+            if (!state.hasRoot) {
                 Spacer(Modifier.height(12.dp))
                 ShizukuStatusSection(
                     installed = state.shizukuInstalled,
@@ -98,7 +140,7 @@ fun SettingsScreen(
             }
 
             // All Files Access
-            if (state.allFilesEligible && !state.availableModes.contains("Root")) {
+            if (state.allFilesEligible && !state.hasRoot) {
                 Spacer(Modifier.height(12.dp))
                 AllFilesAccessSection(
                     permissionGranted = state.allFilesPermissionGranted,
@@ -114,7 +156,7 @@ fun SettingsScreen(
             }
 
             // SAF
-            if (state.safEligible && !state.availableModes.contains("Root")) {
+            if (state.safEligible && !state.hasRoot) {
                 Spacer(Modifier.height(12.dp))
                 SAFAccessSection(
                     configured = state.safConfigured,
