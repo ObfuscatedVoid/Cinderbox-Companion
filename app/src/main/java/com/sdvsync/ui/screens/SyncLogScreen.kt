@@ -10,7 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.sdvsync.R
 import com.sdvsync.sync.SyncHistoryEntry
 import com.sdvsync.ui.viewmodels.SyncLogViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -30,16 +32,16 @@ fun SyncLogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sync Log") },
+                title = { Text(stringResource(R.string.sync_log_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     if (state.entries.isNotEmpty()) {
                         IconButton(onClick = { viewModel.clearHistory() }) {
-                            Icon(Icons.Default.DeleteSweep, "Clear log")
+                            Icon(Icons.Default.DeleteSweep, stringResource(R.string.sync_log_clear))
                         }
                     }
                 },
@@ -59,7 +61,7 @@ fun SyncLogScreen(
                 }
                 state.entries.isEmpty() -> {
                     Text(
-                        "No sync history yet",
+                        stringResource(R.string.sync_log_empty),
                         modifier = Modifier.align(Alignment.Center),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

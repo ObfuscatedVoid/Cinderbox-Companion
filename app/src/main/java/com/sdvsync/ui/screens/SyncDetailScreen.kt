@@ -9,7 +9,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.sdvsync.R
 import com.sdvsync.sync.SyncResult
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -29,7 +31,7 @@ fun SyncDetailScreen(
                 title = { Text(saveFolderName.substringBefore("_")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
                     }
                 },
             )
@@ -61,7 +63,7 @@ fun SyncDetailScreen(
                 ) {
                     Icon(Icons.Default.CloudDownload, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Pull")
+                    Text(stringResource(R.string.action_pull))
                 }
 
                 Button(
@@ -71,7 +73,7 @@ fun SyncDetailScreen(
                 ) {
                     Icon(Icons.Default.CloudUpload, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Push")
+                    Text(stringResource(R.string.action_push))
                 }
             }
 
@@ -108,7 +110,7 @@ fun SyncDetailScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    "Save Conflict",
+                                    stringResource(R.string.sync_conflict_title),
                                     style = MaterialTheme.typography.titleLarge,
                                 )
                                 Spacer(Modifier.height(8.dp))
@@ -126,7 +128,7 @@ fun SyncDetailScreen(
                                             viewModel.pullSave(saveFolderName, force = true)
                                         },
                                     ) {
-                                        Text("Keep Cloud")
+                                        Text(stringResource(R.string.sync_keep_cloud))
                                     }
                                     Button(
                                         onClick = {
@@ -134,7 +136,7 @@ fun SyncDetailScreen(
                                             viewModel.pushSave(saveFolderName, force = true)
                                         },
                                     ) {
-                                        Text("Keep Local")
+                                        Text(stringResource(R.string.sync_keep_local))
                                     }
                                 }
                             }

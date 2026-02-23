@@ -9,7 +9,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.sdvsync.R
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -37,10 +39,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
                     }
                 },
             )
@@ -54,16 +56,16 @@ fun SettingsScreen(
         ) {
             // File access mode
             Text(
-                "File Access",
+                stringResource(R.string.settings_file_access),
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Current: ${state.fileAccessMode}",
+                stringResource(R.string.settings_file_access_current, state.fileAccessMode),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                "Available: ${state.availableModes.joinToString(", ")}",
+                stringResource(R.string.settings_file_access_available, state.availableModes.joinToString(", ")),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -96,7 +98,7 @@ fun SettingsScreen(
 
             // Auto-sync (root only)
             Text(
-                "Auto Sync",
+                stringResource(R.string.settings_auto_sync_title),
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(8.dp))
@@ -108,11 +110,11 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Sync on game close",
+                            stringResource(R.string.settings_auto_sync),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            "Automatically push save when Stardew Valley exits",
+                            stringResource(R.string.settings_auto_sync_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -124,7 +126,7 @@ fun SettingsScreen(
                 }
             } else {
                 Text(
-                    "Requires root access. Not available on this device.",
+                    stringResource(R.string.settings_auto_sync_root_only),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -136,7 +138,7 @@ fun SettingsScreen(
 
             // Account
             Text(
-                "Steam Account",
+                stringResource(R.string.settings_steam_account),
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(16.dp))
@@ -149,7 +151,7 @@ fun SettingsScreen(
                     containerColor = MaterialTheme.colorScheme.error,
                 ),
             ) {
-                Text("Log Out")
+                Text(stringResource(R.string.settings_logout))
             }
 
             Spacer(Modifier.height(24.dp))
@@ -158,16 +160,16 @@ fun SettingsScreen(
 
             // About
             Text(
-                "About",
+                stringResource(R.string.settings_about_title),
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "SDV Sync v0.1.0",
+                stringResource(R.string.settings_about),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                "Sync Stardew Valley saves between Steam Cloud and Android.",
+                stringResource(R.string.settings_about_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -188,31 +190,30 @@ private fun SAFAccessSection(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                "Storage Access Framework",
+                stringResource(R.string.settings_saf_title),
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(Modifier.height(8.dp))
 
             if (configured) {
                 Text(
-                    "Save directory access configured.",
+                    stringResource(R.string.settings_saf_configured),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = onRevoke) {
-                    Text("Revoke Access")
+                    Text(stringResource(R.string.settings_saf_revoke))
                 }
             } else {
                 Text(
-                    "Grant access to Stardew Valley saves without root or Shizuku. " +
-                        "Navigate to: Android > data > com.chucklefish.stardewvalley > files > Saves",
+                    stringResource(R.string.settings_saf_instructions),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = onSelectDirectory) {
-                    Text("Select Save Directory")
+                    Text(stringResource(R.string.settings_saf_select))
                 }
             }
         }
@@ -234,7 +235,7 @@ private fun ShizukuStatusSection(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                "Shizuku (non-root file access)",
+                stringResource(R.string.settings_shizuku_title),
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(Modifier.height(8.dp))
@@ -242,37 +243,37 @@ private fun ShizukuStatusSection(
             when {
                 !installed -> {
                     Text(
-                        "Shizuku app not installed. Install from Play Store or GitHub.",
+                        stringResource(R.string.settings_shizuku_not_installed),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 !running -> {
                     Text(
-                        "Shizuku is installed but not running. Start it via ADB or wireless debugging.",
+                        stringResource(R.string.settings_shizuku_not_running),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 !permissionGranted -> {
                     Text(
-                        "Shizuku is running. Grant permission to enable file access.",
+                        stringResource(R.string.settings_shizuku_grant_prompt),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = onRequestPermission) {
-                        Text("Grant Permission")
+                        Text(stringResource(R.string.settings_shizuku_grant_permission))
                     }
                 }
                 else -> {
                     Text(
-                        "Shizuku is ready.",
+                        stringResource(R.string.settings_shizuku_ready),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = onBindService) {
-                        Text("Connect File Service")
+                        Text(stringResource(R.string.settings_shizuku_connect))
                     }
                 }
             }

@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
+import com.sdvsync.R
 import com.sdvsync.steam.AuthState
 import com.sdvsync.ui.viewmodels.LoginViewModel
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +61,7 @@ fun LoginScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("SDV Sync - Steam Login") })
+            TopAppBar(title = { Text(stringResource(R.string.login_title)) })
         },
     ) { padding ->
         Column(
@@ -92,9 +94,9 @@ fun LoginScreen(
                     Spacer(Modifier.height(16.dp))
                     Text(
                         when (state) {
-                            is AuthState.Connecting -> "Connecting to Steam..."
-                            is AuthState.Authenticating -> "Authenticating..."
-                            is AuthState.LoggingIn -> "Logging in..."
+                            is AuthState.Connecting -> stringResource(R.string.login_connecting)
+                            is AuthState.Authenticating -> stringResource(R.string.login_authenticating)
+                            is AuthState.LoggingIn -> stringResource(R.string.login_logging_in)
                             else -> ""
                         },
                         style = MaterialTheme.typography.bodyLarge,
@@ -110,15 +112,15 @@ fun LoginScreen(
 
                 is AuthState.WaitingFor2FA -> {
                     Text(
-                        if (state.is2FACode) "Enter your Steam Guard code"
-                        else "Enter the code sent to your email",
+                        if (state.is2FACode) stringResource(R.string.login_2fa_steam_guard)
+                        else stringResource(R.string.login_2fa_email_prompt),
                         style = MaterialTheme.typography.titleLarge,
                     )
                     Spacer(Modifier.height(16.dp))
                     OutlinedTextField(
                         value = twoFactorCode,
                         onValueChange = viewModel::updateTwoFactorCode,
-                        label = { Text("Code") },
+                        label = { Text(stringResource(R.string.login_2fa_label)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
@@ -135,7 +137,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = twoFactorCode.isNotBlank(),
                     ) {
-                        Text("Submit Code")
+                        Text(stringResource(R.string.login_2fa_submit))
                     }
                 }
 
@@ -190,7 +192,7 @@ private fun LoginOptions(
             modifier = Modifier.size(20.dp),
         )
         Spacer(Modifier.width(8.dp))
-        Text("Sign in with QR Code")
+        Text(stringResource(R.string.login_qr_button))
     }
 
     Spacer(Modifier.height(24.dp))
@@ -201,7 +203,7 @@ private fun LoginOptions(
     ) {
         HorizontalDivider(Modifier.weight(1f))
         Text(
-            "or",
+            stringResource(R.string.login_or_divider),
             modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -215,7 +217,7 @@ private fun LoginOptions(
     OutlinedTextField(
         value = username,
         onValueChange = onUsernameChange,
-        label = { Text("Steam Username") },
+        label = { Text(stringResource(R.string.login_username_hint)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth(),
@@ -224,7 +226,7 @@ private fun LoginOptions(
     OutlinedTextField(
         value = password,
         onValueChange = onPasswordChange,
-        label = { Text("Password") },
+        label = { Text(stringResource(R.string.login_password_hint)) },
         singleLine = true,
         visualTransformation = if (passwordVisible) VisualTransformation.None
         else PasswordVisualTransformation(),
@@ -233,7 +235,7 @@ private fun LoginOptions(
                 Icon(
                     if (passwordVisible) Icons.Filled.Visibility
                     else Icons.Filled.VisibilityOff,
-                    contentDescription = "Toggle password visibility",
+                    contentDescription = stringResource(R.string.login_toggle_password),
                 )
             }
         },
@@ -250,7 +252,7 @@ private fun LoginOptions(
         modifier = Modifier.fillMaxWidth(),
         enabled = username.isNotBlank() && password.isNotBlank(),
     ) {
-        Text("Log In")
+        Text(stringResource(R.string.login_button))
     }
 }
 
@@ -260,12 +262,12 @@ private fun QRLoginView(
     onCancel: () -> Unit,
 ) {
     Text(
-        "Scan with Steam Mobile App",
+        stringResource(R.string.login_qr_title),
         style = MaterialTheme.typography.titleLarge,
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        "Open the Steam app on your phone,\ntap the shield icon, then \"Approve a sign-in\"",
+        stringResource(R.string.login_qr_instructions),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
@@ -294,7 +296,7 @@ private fun QRLoginView(
 
     Spacer(Modifier.height(24.dp))
     OutlinedButton(onClick = onCancel) {
-        Text("Cancel")
+        Text(stringResource(R.string.action_cancel))
     }
 }
 
@@ -305,6 +307,7 @@ private fun QrCodeImage(
 ) {
     val density = LocalDensity.current
     val sizePx = with(density) { 200.dp.roundToPx() }
+    val qrContentDescription = stringResource(R.string.login_qr_content_description)
 
     var bitmap by remember(data) { mutableStateOf<Bitmap?>(null) }
 
@@ -334,7 +337,7 @@ private fun QrCodeImage(
     bitmap?.let {
         Image(
             painter = BitmapPainter(it.asImageBitmap()),
-            contentDescription = "Steam login QR code",
+            contentDescription = qrContentDescription,
             modifier = modifier,
         )
     } ?: Box(modifier, contentAlignment = Alignment.Center) {
