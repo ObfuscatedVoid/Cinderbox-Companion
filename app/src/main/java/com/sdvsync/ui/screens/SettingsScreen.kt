@@ -1,5 +1,9 @@
 package com.sdvsync.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -9,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
@@ -25,6 +30,14 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+
+    val context = LocalContext.current
+
+    val allFilesLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) {
+        viewModel.load()
+    }
 
     val safLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
@@ -81,6 +94,22 @@ fun SettingsScreen(
                     permissionGranted = state.shizukuPermissionGranted,
                     onRequestPermission = { viewModel.requestShizukuPermission() },
                     onBindService = { viewModel.bindShizukuService() },
+                )
+            }
+
+            // All Files Access
+            if (state.allFilesEligible && !state.availableModes.contains("Root")) {
+                Spacer(Modifier.height(12.dp))
+                AllFilesAccessSection(
+                    permissionGranted = state.allFilesPermissionGranted,
+                    accessWorking = state.allFilesAccessWorking,
+                    onGrantPermission = {
+                        val intent = Intent(
+                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                            Uri.parse("package:${context.packageName}"),
+                        )
+                        allFilesLauncher.launch(intent)
+                    },
                 )
             }
 
@@ -322,6 +351,55 @@ private fun ShizukuStatusSection(
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = onBindService) {
                         Text(stringResource(R.string.settings_shizuku_connect))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AllFilesAccessSection(
+    permissionGranted: Boolean,
+    accessWorking: Boolean,
+    onGrantPermission: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                stringResource(R.string.settings_all_files_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            when {
+                accessWorking -> {
+                    Text(
+                        stringResource(R.string.settings_all_files_granted),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                permissionGranted -> {
+                    Text(
+                        stringResource(R.string.settings_all_files_no_access),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                else -> {
+                    Text(
+                        stringResource(R.string.settings_all_files_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onGrantPermission) {
+                        Text(stringResource(R.string.settings_all_files_grant))
                     }
                 }
             }

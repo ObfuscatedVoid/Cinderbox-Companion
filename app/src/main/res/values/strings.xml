@@ -152,6 +152,13 @@
     <string name="staging_pull_reminder">Save downloaded to staging folder. Copy it to:\nAndroid/data/com.chucklefish.stardewvalley/files/Saves/</string>
     <string name="staging_push_reminder">Copy your save from the game directory into the staging folder before pushing.</string>
 
+    <!-- Settings - All Files Access -->
+    <string name="settings_all_files_title">All Files Access</string>
+    <string name="settings_all_files_description">Grant full file access to read Stardew Valley saves directly. Works on many devices without root or Shizuku.</string>
+    <string name="settings_all_files_grant">Grant Permission</string>
+    <string name="settings_all_files_granted">All Files access is active.</string>
+    <string name="settings_all_files_no_access">Permission granted, but your device still restricts access to the save directory. Try Shizuku or SAF instead.</string>
+
     <!-- Settings - Shizuku -->
     <string name="settings_shizuku_title">Shizuku (non-root file access)</string>
     <string name="settings_shizuku_not_installed">Shizuku app not installed. Install from Play Store or GitHub.</string>

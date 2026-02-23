@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import com.sdvsync.autosync.AutoSyncService
+import com.sdvsync.fileaccess.AllFilesAccess
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.RootFileAccess
 import com.sdvsync.fileaccess.SAFFileAccess
@@ -22,6 +23,9 @@ data class SettingsState(
     val shizukuInstalled: Boolean = false,
     val shizukuRunning: Boolean = false,
     val shizukuPermissionGranted: Boolean = false,
+    val allFilesEligible: Boolean = false,
+    val allFilesPermissionGranted: Boolean = false,
+    val allFilesAccessWorking: Boolean = false,
     val safEligible: Boolean = false,
     val safConfigured: Boolean = false,
     val safIsStaging: Boolean = false,
@@ -53,6 +57,9 @@ class SettingsViewModel(
             shizukuInstalled = shizukuInstalled,
             shizukuRunning = shizukuRunning,
             shizukuPermissionGranted = shizukuPermission,
+            allFilesEligible = android.os.Build.VERSION.SDK_INT >= 30,
+            allFilesPermissionGranted = AllFilesAccess.isPermissionGranted(),
+            allFilesAccessWorking = AllFilesAccess.isAvailable(),
             safEligible = SAFFileAccess.isDeviceEligible(),
             safConfigured = SAFFileAccess.isAvailable(context),
             safIsStaging = SAFFileAccess.isStaging(context),
