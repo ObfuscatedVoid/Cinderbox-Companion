@@ -314,7 +314,7 @@ private fun QrCodeImage(
     LaunchedEffect(data) {
         bitmap = withContext(Dispatchers.IO) {
             val writer = QRCodeWriter()
-            val hints = mapOf(EncodeHintType.MARGIN to 1)
+            val hints = mapOf<EncodeHintType, Any>(EncodeHintType.MARGIN to 1)
             val matrix = writer.encode(data, BarcodeFormat.QR_CODE, sizePx, sizePx, hints)
             val w = matrix.width
             val h = matrix.height
