@@ -30,7 +30,7 @@ class SyncEngine(
     }
 
     /**
-     * Pull a save from Steam Cloud to local device.
+     * Pull a save from Steam Cloud to a local device.
      */
     suspend fun pullSave(
         saveFolderName: String,
@@ -40,7 +40,7 @@ class SyncEngine(
         try {
             onProgress?.invoke(context.getString(R.string.sync_progress_downloading))
 
-            // Download save files from cloud
+            // Download save files from the cloud
             val cloudFiles = cloudService.downloadSave(saveFolderName) { downloaded, total ->
                 onProgress?.invoke(context.getString(R.string.sync_progress_downloading_file, downloaded, total))
             }
@@ -99,7 +99,7 @@ class SyncEngine(
                 }
             }
 
-            // Write to device
+            // Write to the device
             onProgress?.invoke(context.getString(R.string.sync_progress_writing))
             val writeSuccess = saveFileManager.writeLocalSave(saveFolderName, cloudFiles)
             if (!writeSuccess) {
@@ -121,6 +121,7 @@ class SyncEngine(
 
     /**
      * Push a save from local device to Steam Cloud.
+     * Always backs up the existing cloud save before overwriting.
      */
     suspend fun pushSave(
         saveFolderName: String,
@@ -130,17 +131,15 @@ class SyncEngine(
         try {
             onProgress?.invoke(context.getString(R.string.sync_progress_reading))
 
-            // Read local save files
+            // Step 1: Read and validate local save files
             val localFiles = saveFileManager.readLocalSave(saveFolderName)
             if (localFiles.isEmpty()) {
                 return SyncResult.Error(context.getString(R.string.sync_error_no_local_files, saveFolderName))
             }
 
-            // Parse local metadata
             val localInfoData = localFiles["SaveGameInfo"]
             val localMeta = localInfoData?.let { metadataParser.parseFromBytes(it) }
 
-            // Validate local save
             val mainSaveData = localFiles[saveFolderName]
             val validation = saveValidator.validateSaveData(mainSaveData, localInfoData)
             if (!validation.valid) {
@@ -149,36 +148,62 @@ class SyncEngine(
                 )
             }
 
-            if (!force) {
-                // Compare with cloud
-                onProgress?.invoke(context.getString(R.string.sync_progress_checking_cloud))
-                val cloudSaves = cloudService.listCloudSaves()
-                val cloudFiles = cloudSaves[saveFolderName]
+            // Step 2: Check cloud state (always — we need to know if there's something to back up)
+            onProgress?.invoke(context.getString(R.string.sync_progress_checking_cloud))
+            val cloudSaves = cloudService.listCloudSaves()
+            val cloudFileList = cloudSaves[saveFolderName]
 
-                if (cloudFiles != null) {
-                    // Download just the SaveGameInfo to compare
-                    val cloudInfoFile = cloudFiles.find { it.baseName == "SaveGameInfo" }
-                    if (cloudInfoFile != null) {
-                        val cloudInfoData = cloudService.downloadFile(cloudInfoFile.fullPath)
-                        val cloudMeta = metadataParser.parseFromBytes(cloudInfoData)
+            // Step 3: Conflict check (only when !force)
+            if (!force && cloudFileList != null) {
+                val cloudInfoFile = cloudFileList.find { it.baseName == "SaveGameInfo" }
+                if (cloudInfoFile != null) {
+                    val cloudInfoData = cloudService.downloadFile(cloudInfoFile.fullPath)
+                    val cloudMeta = metadataParser.parseFromBytes(cloudInfoData)
 
-                        if (cloudMeta != null && localMeta != null) {
-                            val comparison = conflictResolver.compare(cloudMeta, localMeta)
-                            if (comparison.direction == SyncDirection.CONFLICT) {
-                                return SyncResult.NeedsConflictResolution(comparison)
-                            }
-                            if (comparison.direction == SyncDirection.PULL) {
-                                return SyncResult.Error(context.getString(R.string.sync_error_cloud_newer))
-                            }
-                            if (comparison.direction == SyncDirection.SKIP) {
-                                return SyncResult.Success(context.getString(R.string.sync_already_in_sync))
-                            }
+                    if (cloudMeta != null && localMeta != null) {
+                        val comparison = conflictResolver.compare(cloudMeta, localMeta)
+                        if (comparison.direction == SyncDirection.CONFLICT) {
+                            return SyncResult.NeedsConflictResolution(comparison)
+                        }
+                        if (comparison.direction == SyncDirection.PULL) {
+                            return SyncResult.Error(context.getString(R.string.sync_error_cloud_newer))
+                        }
+                        if (comparison.direction == SyncDirection.SKIP) {
+                            return SyncResult.Success(context.getString(R.string.sync_already_in_sync))
                         }
                     }
                 }
             }
 
-            // Upload to Steam Cloud
+            // Step 4: Back up existing cloud save before overwriting
+            if (cloudFileList != null && cloudFileList.isNotEmpty()) {
+                try {
+                    onProgress?.invoke(context.getString(R.string.sync_progress_backing_up_cloud))
+
+                    val cloudFiles = mutableMapOf<String, ByteArray>()
+                    cloudFileList.forEachIndexed { index, file ->
+                        onProgress?.invoke(
+                            context.getString(
+                                R.string.sync_progress_backing_up_cloud_file,
+                                index + 1,
+                                cloudFileList.size,
+                            )
+                        )
+                        val data = cloudService.downloadFile(file.fullPath)
+                        cloudFiles[file.baseName] = data
+                    }
+
+                    backupManager.backupSaveData(saveFolderName, cloudFiles)
+                    Log.d(TAG, "pushSave: backed up ${cloudFiles.size} cloud files for $saveFolderName")
+                } catch (e: Exception) {
+                    Log.e(TAG, "pushSave: cloud backup failed for $saveFolderName, aborting push", e)
+                    return SyncResult.Error(
+                        context.getString(R.string.sync_error_backup_failed, e.message ?: "Unknown error")
+                    )
+                }
+            }
+
+            // Step 5: Upload local files to cloud
             onProgress?.invoke(context.getString(R.string.sync_progress_uploading))
             cloudService.uploadSave(saveFolderName, localFiles) { uploaded, total ->
                 onProgress?.invoke(context.getString(R.string.sync_progress_uploading_file, uploaded, total))

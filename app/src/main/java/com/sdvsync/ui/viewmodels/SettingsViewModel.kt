@@ -8,6 +8,7 @@ import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.RootFileAccess
 import com.sdvsync.fileaccess.SAFFileAccess
 import com.sdvsync.fileaccess.ShizukuFileAccess
+import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.steam.SteamAuthenticator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,12 +27,14 @@ data class SettingsState(
     val safIsStaging: Boolean = false,
     val isLoggedIn: Boolean = false,
     val steamUsername: String? = null,
+    val maxBackups: Int = SaveBackupManager.DEFAULT_MAX_BACKUPS,
 )
 
 class SettingsViewModel(
     private val context: Context,
     private val fileAccessDetector: FileAccessDetector,
     private val authenticator: SteamAuthenticator,
+    private val backupManager: SaveBackupManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -54,6 +57,7 @@ class SettingsViewModel(
             safConfigured = SAFFileAccess.isAvailable(context),
             safIsStaging = SAFFileAccess.isStaging(context),
             isLoggedIn = authenticator.authState.value is com.sdvsync.steam.AuthState.LoggedIn,
+            maxBackups = backupManager.maxBackups,
         )
     }
 
@@ -82,6 +86,11 @@ class SettingsViewModel(
 
     fun bindShizukuService() {
         ShizukuFileAccess.bindService()
+    }
+
+    fun setMaxBackups(count: Int) {
+        backupManager.setMaxBackupsAndPrune(count)
+        _state.value = _state.value.copy(maxBackups = backupManager.maxBackups)
     }
 
     fun logout() {

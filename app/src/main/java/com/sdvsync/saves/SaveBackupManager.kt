@@ -9,12 +9,43 @@ import java.util.Locale
 class SaveBackupManager(private val context: Context) {
 
     companion object {
-        private const val MAX_BACKUPS = 5
+        const val DEFAULT_MAX_BACKUPS = 7
+        const val MIN_MAX_BACKUPS = 1
+        const val MAX_MAX_BACKUPS = 20
+        private const val PREF_NAME = "backup_prefs"
+        private const val KEY_MAX_BACKUPS = "max_backups"
         private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US)
+    }
+
+    var maxBackups: Int = DEFAULT_MAX_BACKUPS
+        private set
+
+    init {
+        maxBackups = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .getInt(KEY_MAX_BACKUPS, DEFAULT_MAX_BACKUPS)
     }
 
     private val backupRoot: File
         get() = File(context.filesDir, "backups").also { it.mkdirs() }
+
+    /**
+     * Update the max backup count and immediately prune all save folders.
+     */
+    fun setMaxBackupsAndPrune(count: Int) {
+        maxBackups = count.coerceIn(MIN_MAX_BACKUPS, MAX_MAX_BACKUPS)
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_MAX_BACKUPS, maxBackups).apply()
+        pruneAllSaves()
+    }
+
+    /**
+     * Prune backups across all save folders to the current maxBackups limit.
+     */
+    fun pruneAllSaves() {
+        backupRoot.listFiles()?.filter { it.isDirectory }?.forEach { saveDir ->
+            pruneBackups(saveDir.name)
+        }
+    }
 
     /**
      * Create a backup of a local save folder.
@@ -27,28 +58,37 @@ class SaveBackupManager(private val context: Context) {
         val backupDir = File(backupRoot, "${saveDir.name}/$timestamp")
         backupDir.mkdirs()
 
-        saveDir.listFiles()?.forEach { file ->
-            if (file.isFile) {
-                file.copyTo(File(backupDir, file.name), overwrite = true)
+        try {
+            saveDir.listFiles()?.forEach { file ->
+                if (file.isFile) {
+                    file.copyTo(File(backupDir, file.name), overwrite = true)
+                }
             }
+        } catch (e: Exception) {
+            backupDir.deleteRecursively()
+            throw e
         }
 
-        // Prune old backups
         pruneBackups(saveDir.name)
-
         return backupDir
     }
 
     /**
      * Create a backup from in-memory save data.
+     * Cleans up partial writes on failure.
      */
     fun backupSaveData(saveFolderName: String, files: Map<String, ByteArray>): File {
         val timestamp = DATE_FORMAT.format(Date())
         val backupDir = File(backupRoot, "$saveFolderName/$timestamp")
         backupDir.mkdirs()
 
-        for ((filename, data) in files) {
-            File(backupDir, filename).writeBytes(data)
+        try {
+            for ((filename, data) in files) {
+                File(backupDir, filename).writeBytes(data)
+            }
+        } catch (e: Exception) {
+            backupDir.deleteRecursively()
+            throw e
         }
 
         pruneBackups(saveFolderName)
@@ -91,8 +131,8 @@ class SaveBackupManager(private val context: Context) {
 
     private fun pruneBackups(saveFolderName: String) {
         val backups = listBackups(saveFolderName)
-        if (backups.size > MAX_BACKUPS) {
-            backups.drop(MAX_BACKUPS).forEach { dir ->
+        if (backups.size > maxBackups) {
+            backups.drop(maxBackups).forEach { dir ->
                 dir.deleteRecursively()
             }
         }

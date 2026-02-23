@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
+import com.sdvsync.saves.SaveBackupManager
+import kotlin.math.roundToInt
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -92,6 +94,40 @@ fun SettingsScreen(
                     onRevoke = { viewModel.clearSafAccess() },
                 )
             }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Backups
+            Text(
+                stringResource(R.string.settings_backups_title),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.settings_backups_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            var sliderValue by remember(state.maxBackups) {
+                mutableFloatStateOf(state.maxBackups.toFloat())
+            }
+            Text(
+                stringResource(R.string.settings_backups_count, sliderValue.roundToInt()),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                onValueChangeFinished = {
+                    viewModel.setMaxBackups(sliderValue.roundToInt())
+                },
+                valueRange = SaveBackupManager.MIN_MAX_BACKUPS.toFloat()..SaveBackupManager.MAX_MAX_BACKUPS.toFloat(),
+                steps = SaveBackupManager.MAX_MAX_BACKUPS - SaveBackupManager.MIN_MAX_BACKUPS - 1,
+            )
 
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()

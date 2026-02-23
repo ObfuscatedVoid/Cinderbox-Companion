@@ -80,6 +80,8 @@
     <string name="sync_progress_checking_cloud">Checking Steam Cloud\u2026</string>
     <string name="sync_progress_uploading">Uploading to Steam Cloud\u2026</string>
     <string name="sync_progress_uploading_file">Uploading file %1$d of %2$d\u2026</string>
+    <string name="sync_progress_backing_up_cloud">Backing up cloud save\u2026</string>
+    <string name="sync_progress_backing_up_cloud_file">Backing up cloud file %1$d of %2$d\u2026</string>
 
     <!-- Sync results -->
     <string name="sync_pull_success">Save pulled successfully</string>
@@ -96,6 +98,7 @@
     <string name="sync_error_invalid_local">Local save is invalid: %1$s</string>
     <string name="sync_error_cloud_newer">Cloud save is newer. Pull first or use force push.</string>
     <string name="sync_error_push_failed">Push failed: %1$s</string>
+    <string name="sync_error_backup_failed">Failed to create backup before push: %1$s</string>
 
     <!-- Conflict resolver -->
     <string name="conflict_cloud_only">Save exists only on Steam Cloud</string>
@@ -126,7 +129,9 @@
     <string name="settings_auto_sync_root_only">Requires root access. Not available on this device.</string>
     <string name="settings_steam_account">Steam Account</string>
     <string name="settings_logout">Log Out</string>
-    <string name="settings_backup_count">Local backup count</string>
+    <string name="settings_backups_title">Cloud Backups</string>
+    <string name="settings_backups_description">A backup is created before every sync to protect your save data.</string>
+    <string name="settings_backups_count">Keep up to %1$d backups per save</string>
     <string name="settings_about_title">About</string>
     <string name="settings_about">SDV Sync v0.1.0</string>
     <string name="settings_about_desc">Sync Stardew Valley saves between Steam Cloud and Android.</string>
