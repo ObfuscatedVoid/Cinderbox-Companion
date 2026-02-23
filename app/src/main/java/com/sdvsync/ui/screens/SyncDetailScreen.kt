@@ -20,10 +20,14 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun SyncDetailScreen(
     saveFolderName: String,
+    hasCloud: Boolean,
+    hasLocal: Boolean,
     onBack: () -> Unit,
     viewModel: SyncDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    var showPullConfirm by remember { mutableStateOf(false) }
+    var showPushConfirm by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -75,7 +79,10 @@ fun SyncDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Button(
-                    onClick = { viewModel.pullSave(saveFolderName) },
+                    onClick = {
+                        if (hasLocal) showPullConfirm = true
+                        else viewModel.pullSave(saveFolderName)
+                    },
                     modifier = Modifier.weight(1f),
                     enabled = !state.isSyncing,
                 ) {
@@ -85,7 +92,10 @@ fun SyncDetailScreen(
                 }
 
                 Button(
-                    onClick = { viewModel.pushSave(saveFolderName) },
+                    onClick = {
+                        if (hasCloud) showPushConfirm = true
+                        else viewModel.pushSave(saveFolderName)
+                    },
                     modifier = Modifier.weight(1f),
                     enabled = !state.isSyncing,
                 ) {
@@ -195,5 +205,47 @@ fun SyncDetailScreen(
                 }
             }
         }
+    }
+
+    if (showPullConfirm) {
+        AlertDialog(
+            onDismissRequest = { showPullConfirm = false },
+            title = { Text(stringResource(R.string.sync_confirm_pull_title)) },
+            text = { Text(stringResource(R.string.sync_confirm_pull_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPullConfirm = false
+                    viewModel.pullSave(saveFolderName)
+                }) {
+                    Text(stringResource(R.string.sync_confirm_continue))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPullConfirm = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+
+    if (showPushConfirm) {
+        AlertDialog(
+            onDismissRequest = { showPushConfirm = false },
+            title = { Text(stringResource(R.string.sync_confirm_push_title)) },
+            text = { Text(stringResource(R.string.sync_confirm_push_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPushConfirm = false
+                    viewModel.pushSave(saveFolderName)
+                }) {
+                    Text(stringResource(R.string.sync_confirm_continue))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPushConfirm = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 }

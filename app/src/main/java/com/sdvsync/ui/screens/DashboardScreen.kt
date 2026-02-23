@@ -22,7 +22,7 @@ import org.koin.androidx.compose.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    onSaveClick: (String) -> Unit,
+    onSaveClick: (String, Boolean, Boolean) -> Unit,
     onSettingsClick: () -> Unit,
     onSyncLogClick: () -> Unit = {},
     viewModel: DashboardViewModel = koinViewModel(),
@@ -127,7 +127,7 @@ fun DashboardScreen(
                         items(state.saves) { save ->
                             SaveCard(
                                 save = save,
-                                onClick = { onSaveClick(save.folderName) },
+                                onClick = { onSaveClick(save.folderName, save.hasCloud, save.hasLocal) },
                             )
                         }
                     }

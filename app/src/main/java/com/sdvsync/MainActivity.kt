@@ -49,8 +49,8 @@ fun SdvSyncNavGraph(navController: NavHostController) {
 
         composable("dashboard") {
             DashboardScreen(
-                onSaveClick = { folderName ->
-                    navController.navigate("sync_detail/$folderName")
+                onSaveClick = { folderName, hasCloud, hasLocal ->
+                    navController.navigate("sync_detail/$folderName/$hasCloud/$hasLocal")
                 },
                 onSettingsClick = {
                     navController.navigate("settings")
@@ -62,14 +62,20 @@ fun SdvSyncNavGraph(navController: NavHostController) {
         }
 
         composable(
-            route = "sync_detail/{saveFolderName}",
+            route = "sync_detail/{saveFolderName}/{hasCloud}/{hasLocal}",
             arguments = listOf(
                 navArgument("saveFolderName") { type = NavType.StringType },
+                navArgument("hasCloud") { type = NavType.BoolType },
+                navArgument("hasLocal") { type = NavType.BoolType },
             ),
         ) { backStackEntry ->
             val saveFolderName = backStackEntry.arguments?.getString("saveFolderName") ?: return@composable
+            val hasCloud = backStackEntry.arguments?.getBoolean("hasCloud") ?: false
+            val hasLocal = backStackEntry.arguments?.getBoolean("hasLocal") ?: false
             SyncDetailScreen(
                 saveFolderName = saveFolderName,
+                hasCloud = hasCloud,
+                hasLocal = hasLocal,
                 onBack = { navController.popBackStack() },
             )
         }

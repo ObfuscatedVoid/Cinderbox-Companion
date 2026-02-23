@@ -101,6 +101,13 @@
     <string name="sync_error_backup_failed">Failed to create backup before push: %1$s</string>
     <string name="sync_error_save_in_progress">Save appears to be in progress (temp files found). Wait for the game to finish saving, then try again.</string>
 
+    <!-- Sync confirmation -->
+    <string name="sync_confirm_pull_title">Replace local save?</string>
+    <string name="sync_confirm_pull_message">This save also exists on your device. Pulling will replace the local version with the Steam Cloud version.\n\nA backup of your local save will be created automatically.</string>
+    <string name="sync_confirm_push_title">Replace cloud save?</string>
+    <string name="sync_confirm_push_message">This save also exists on Steam Cloud. Pushing will replace the cloud version with your local version.\n\nA backup of the cloud save will be created automatically.</string>
+    <string name="sync_confirm_continue">Continue</string>
+
     <!-- Conflict resolver -->
     <string name="conflict_cloud_only">Save exists only on Steam Cloud</string>
     <string name="conflict_local_only">Save exists only on device</string>
