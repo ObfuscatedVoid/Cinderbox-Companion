@@ -1,5 +1,7 @@
 package com.sdvsync.sync
 
+import android.content.Context
+import com.sdvsync.R
 import com.sdvsync.saves.SaveMetadata
 
 enum class SyncDirection {
@@ -16,7 +18,7 @@ data class SyncComparison(
     val message: String,
 )
 
-class ConflictResolver {
+class ConflictResolver(private val context: Context) {
 
     /**
      * Compare cloud and local save metadata to determine sync direction.
@@ -28,7 +30,7 @@ class ConflictResolver {
                 direction = SyncDirection.PULL,
                 cloudMeta = cloudMeta,
                 localMeta = null,
-                message = "Save exists only on Steam Cloud",
+                message = context.getString(R.string.conflict_cloud_only),
             )
         }
 
@@ -38,7 +40,7 @@ class ConflictResolver {
                 direction = SyncDirection.PUSH,
                 cloudMeta = null,
                 localMeta = localMeta,
-                message = "Save exists only on device",
+                message = context.getString(R.string.conflict_local_only),
             )
         }
 
@@ -48,7 +50,7 @@ class ConflictResolver {
                 direction = SyncDirection.SKIP,
                 cloudMeta = null,
                 localMeta = null,
-                message = "No save data",
+                message = context.getString(R.string.conflict_no_data),
             )
         }
 
@@ -64,13 +66,13 @@ class ConflictResolver {
                 direction = SyncDirection.PULL,
                 cloudMeta = cloud,
                 localMeta = local,
-                message = "Cloud is ahead (Day $cloudDays vs $localDays)",
+                message = context.getString(R.string.conflict_cloud_ahead, cloudDays, localDays),
             )
             localDays > cloudDays -> SyncComparison(
                 direction = SyncDirection.PUSH,
                 cloudMeta = cloud,
                 localMeta = local,
-                message = "Device is ahead (Day $localDays vs $cloudDays)",
+                message = context.getString(R.string.conflict_device_ahead, localDays, cloudDays),
             )
             else -> {
                 // Same day - check if identical
@@ -81,14 +83,14 @@ class ConflictResolver {
                         direction = SyncDirection.SKIP,
                         cloudMeta = cloud,
                         localMeta = local,
-                        message = "Saves appear to be in sync (Day $cloudDays)",
+                        message = context.getString(R.string.conflict_in_sync, cloudDays),
                     )
                 } else {
                     SyncComparison(
                         direction = SyncDirection.CONFLICT,
                         cloudMeta = cloud,
                         localMeta = local,
-                        message = "Same progress but saves differ",
+                        message = context.getString(R.string.conflict_same_progress_differ),
                     )
                 }
             }
@@ -115,8 +117,7 @@ class ConflictResolver {
             if (cloudParts[0] > localParts[0] ||
                 (cloudParts[0] == localParts[0] && cloudParts[1] > localParts[1])
             ) {
-                return "Cloud save is version $cloudVersion but your game is $localVersion. " +
-                    "The save may not load. Update your game first."
+                return context.getString(R.string.conflict_version_warning, cloudVersion, localVersion)
             }
         }
 

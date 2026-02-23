@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
+import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.sync.SyncDirection
 import com.sdvsync.ui.theme.*
 import com.sdvsync.ui.viewmodels.SaveEntry
@@ -56,7 +57,7 @@ fun SaveCard(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Text(
-                        meta.displayDate,
+                        formatDisplayDate(meta),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     if (meta.millisecondsPlayed > 0) {
@@ -109,4 +110,16 @@ fun SyncStatusBadge(direction: SyncDirection) {
             )
         },
     )
+}
+
+@Composable
+private fun formatDisplayDate(meta: SaveMetadata): String {
+    val seasonName = when (meta.season) {
+        0 -> stringResource(R.string.save_season_spring)
+        1 -> stringResource(R.string.save_season_summer)
+        2 -> stringResource(R.string.save_season_fall)
+        3 -> stringResource(R.string.save_season_winter)
+        else -> stringResource(R.string.save_season_unknown)
+    }
+    return stringResource(R.string.save_display_date, seasonName, meta.dayOfMonth, meta.year)
 }

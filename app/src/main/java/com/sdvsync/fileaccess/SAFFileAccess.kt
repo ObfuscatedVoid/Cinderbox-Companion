@@ -13,8 +13,9 @@ import java.io.File
 
 /**
  * File access using SAF (Storage Access Framework).
- * Works on Android 11-13 (API 30-33) for accessing Android/data/ via user-granted tree URI.
- * On Android 14+ SAF access to Android/data/ is blocked.
+ * Works on Android 11+ (API 30+) for accessing Android/data/ via user-granted tree URI.
+ * On Android 14+ the system picker may block navigation into Android/data/ on some devices,
+ * but it still works on emulators and some custom ROMs.
  */
 class SAFFileAccess(
     private val context: Context,
@@ -28,9 +29,9 @@ class SAFFileAccess(
         private const val PREF_NAME = "saf_prefs"
         private const val KEY_TREE_URI = "tree_uri"
 
-        /** SAF for Android/data/ works on API 30-33 only. */
+        /** SAF for Android/data/ works on API 30+. May be restricted on API 34+ on some devices. */
         fun isDeviceEligible(): Boolean {
-            return Build.VERSION.SDK_INT in 30..33
+            return Build.VERSION.SDK_INT >= 30
         }
 
         /** Check if a persisted URI grant exists and the device is eligible. */

@@ -51,14 +51,14 @@ val appModule = module {
     single { SaveFileManager(get(), get()) }
 
     // Sync
-    single { ConflictResolver() }
+    single { ConflictResolver(androidContext()) }
     single { SyncHistoryStore(androidContext()) }
-    single { SyncEngine(get(), get(), get(), get(), get()) }
+    single { SyncEngine(androidContext(), get(), get(), get(), get(), get(), get()) }
 
     // ViewModels
     viewModel { LoginViewModel(get()) }
-    viewModel { DashboardViewModel(get(), get(), get(), get()) }
-    viewModel { SyncDetailViewModel(get(), get()) }
+    viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { SyncDetailViewModel(androidContext(), get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
 }

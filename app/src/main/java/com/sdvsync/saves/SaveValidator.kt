@@ -1,5 +1,6 @@
 package com.sdvsync.saves
 
+import android.util.Log
 import com.sdvsync.util.GzipUtil
 import java.io.File
 
@@ -10,6 +11,10 @@ data class ValidationResult(
 )
 
 class SaveValidator {
+
+    companion object {
+        private const val TAG = "SaveValidator"
+    }
 
     /**
      * Validate a save folder on the local filesystem.
@@ -84,11 +89,14 @@ class SaveValidator {
             errors.add("Main save data is empty")
         } else {
             // Stardew 1.6+ saves may be gzip-compressed — decompress before checking XML
+            Log.d(TAG, "Validating main save: size=${mainSaveData.size}, isGzip=${GzipUtil.isGzip(mainSaveData)}")
             val xmlData = GzipUtil.decompressIfGzip(mainSaveData)
+            Log.d(TAG, "Main save after decompression: size=${xmlData.size}")
             if (xmlData.size < 1024) {
                 errors.add("Main save data too small (${xmlData.size} bytes)")
             }
             val tail = String(xmlData.takeLast(100).toByteArray())
+            Log.d(TAG, "Main save tail (last 100 chars): '$tail'")
             if (!tail.contains("</SaveGame>")) {
                 errors.add("Main save data missing closing </SaveGame> tag")
             }
@@ -97,8 +105,11 @@ class SaveValidator {
         if (saveGameInfoData == null || saveGameInfoData.isEmpty()) {
             errors.add("SaveGameInfo data is empty")
         } else {
+            Log.d(TAG, "Validating SaveGameInfo: size=${saveGameInfoData.size}, isGzip=${GzipUtil.isGzip(saveGameInfoData)}")
             val xmlData = GzipUtil.decompressIfGzip(saveGameInfoData)
+            Log.d(TAG, "SaveGameInfo after decompression: size=${xmlData.size}")
             val tail = String(xmlData.takeLast(100).toByteArray())
+            Log.d(TAG, "SaveGameInfo tail (last 100 chars): '$tail'")
             if (!tail.contains("</Farmer>")) {
                 errors.add("SaveGameInfo missing closing </Farmer> tag")
             }
@@ -113,8 +124,13 @@ class SaveValidator {
             val xmlBytes = GzipUtil.decompressIfGzip(rawBytes)
             val tailSize = minOf(xmlBytes.size, 200)
             val tail = String(xmlBytes, xmlBytes.size - tailSize, tailSize)
-            tail.contains(expectedTag)
+            val found = tail.contains(expectedTag)
+            if (!found) {
+                Log.w(TAG, "validateXmlEnding: '$expectedTag' not found in ${file.name} tail: '$tail'")
+            }
+            found
         } catch (e: Exception) {
+            Log.e(TAG, "validateXmlEnding failed for ${file.name}", e)
             false
         }
     }

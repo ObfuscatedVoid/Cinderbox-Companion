@@ -1,8 +1,10 @@
 package com.sdvsync.ui.viewmodels
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sdvsync.R
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
@@ -35,16 +37,16 @@ data class DashboardState(
 )
 
 class DashboardViewModel(
+    private val context: Context,
     private val clientManager: SteamClientManager,
     private val cloudService: SteamCloudService,
     private val saveFileManager: SaveFileManager,
     private val metadataParser: SaveMetadataParser,
+    private val conflictResolver: ConflictResolver,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
-
-    private val conflictResolver = ConflictResolver()
 
     fun refresh() {
         viewModelScope.launch {
@@ -58,7 +60,7 @@ class DashboardViewModel(
                     if (!loggedIn) {
                         _state.value = _state.value.copy(
                             isLoading = false,
-                            error = "Not connected to Steam. Please go back and log in.",
+                            error = context.getString(R.string.error_not_connected),
                         )
                         return@launch
                     }
@@ -130,7 +132,7 @@ class DashboardViewModel(
                 Log.e(TAG, "Failed to load saves", e)
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = "Failed to load saves: ${e.message}",
+                    error = context.getString(R.string.error_load_saves_failed, e.message ?: "Unknown error"),
                 )
             }
         }

@@ -127,9 +127,16 @@ class SteamCloudService(
 
         val rawBytes = response.body?.bytes() ?: throw RuntimeException("Empty response body")
 
+        Log.d(TAG, "Downloaded '$filename': ${rawBytes.size} bytes, " +
+            "isGzip=${GzipUtil.isGzip(rawBytes)}, " +
+            "first4=${rawBytes.take(4).joinToString(" ") { "%02x".format(it) }}")
+
         // Stardew Valley 1.6+ saves are gzip-compressed XML.
         // Steam Cloud stores them as-is, so decompress for all callers.
-        GzipUtil.decompressIfGzip(rawBytes)
+        val result = GzipUtil.decompressIfGzip(rawBytes)
+        Log.d(TAG, "After decompression: ${result.size} bytes, " +
+            "first50=${String(result, 0, minOf(50, result.size))}")
+        result
     }
 
     /**

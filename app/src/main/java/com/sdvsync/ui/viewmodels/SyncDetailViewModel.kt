@@ -1,7 +1,9 @@
 package com.sdvsync.ui.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sdvsync.R
 import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
 import com.sdvsync.sync.SyncResult
@@ -17,6 +19,7 @@ data class SyncDetailState(
 )
 
 class SyncDetailViewModel(
+    private val context: Context,
     private val syncEngine: SyncEngine,
     private val historyStore: SyncHistoryStore,
 ) : ViewModel() {
@@ -43,7 +46,7 @@ class SyncDetailViewModel(
             val message = when (result) {
                 is SyncResult.Success -> result.message
                 is SyncResult.Error -> result.message
-                is SyncResult.NeedsConflictResolution -> "Conflict detected"
+                is SyncResult.NeedsConflictResolution -> context.getString(R.string.sync_conflict_detected)
             }
             historyStore.addEntry(saveFolderName, "pull", success, message)
         }
@@ -67,7 +70,7 @@ class SyncDetailViewModel(
             val message = when (result) {
                 is SyncResult.Success -> result.message
                 is SyncResult.Error -> result.message
-                is SyncResult.NeedsConflictResolution -> "Conflict detected"
+                is SyncResult.NeedsConflictResolution -> context.getString(R.string.sync_conflict_detected)
             }
             historyStore.addEntry(saveFolderName, "push", success, message)
         }

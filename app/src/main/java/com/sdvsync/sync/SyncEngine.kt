@@ -1,7 +1,11 @@
 package com.sdvsync.sync
 
+import android.content.Context
+import android.util.Log
+import com.sdvsync.R
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveFileManager
+import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
 import com.sdvsync.saves.SaveValidator
 import com.sdvsync.steam.SteamCloudService
@@ -13,12 +17,18 @@ sealed class SyncResult {
 }
 
 class SyncEngine(
+    private val context: Context,
     private val cloudService: SteamCloudService,
     private val saveFileManager: SaveFileManager,
     private val saveValidator: SaveValidator,
     private val backupManager: SaveBackupManager,
     private val metadataParser: SaveMetadataParser,
+    private val conflictResolver: ConflictResolver,
 ) {
+    companion object {
+        private const val TAG = "SyncEngine"
+    }
+
     /**
      * Pull a save from Steam Cloud to local device.
      */
@@ -28,27 +38,33 @@ class SyncEngine(
         onProgress: ((String) -> Unit)? = null,
     ): SyncResult {
         try {
-            onProgress?.invoke("Downloading from Steam Cloud...")
+            onProgress?.invoke(context.getString(R.string.sync_progress_downloading))
 
             // Download save files from cloud
             val cloudFiles = cloudService.downloadSave(saveFolderName) { downloaded, total ->
-                onProgress?.invoke("Downloading file $downloaded of $total...")
+                onProgress?.invoke(context.getString(R.string.sync_progress_downloading_file, downloaded, total))
             }
 
             if (cloudFiles.isEmpty()) {
-                return SyncResult.Error("No files found on Steam Cloud for $saveFolderName")
+                return SyncResult.Error(context.getString(R.string.sync_error_no_cloud_files, saveFolderName))
             }
+
+            Log.d(TAG, "pullSave: downloaded ${cloudFiles.size} files: ${cloudFiles.keys}")
 
             // Parse cloud metadata
             val cloudInfoData = cloudFiles["SaveGameInfo"]
+            Log.d(TAG, "pullSave: SaveGameInfo data size=${cloudInfoData?.size ?: 0}")
             val cloudMeta = cloudInfoData?.let { metadataParser.parseFromBytes(it) }
+            Log.d(TAG, "pullSave: cloudMeta=$cloudMeta")
 
             // Validate downloaded data
             val mainSaveData = cloudFiles[saveFolderName]
+            Log.d(TAG, "pullSave: main save data key='$saveFolderName', size=${mainSaveData?.size ?: 0}")
             val validation = saveValidator.validateSaveData(mainSaveData, cloudInfoData)
+            Log.d(TAG, "pullSave: validation=${validation.valid}, errors=${validation.errors}")
             if (!validation.valid) {
                 return SyncResult.Error(
-                    "Downloaded save is invalid: ${validation.errors.joinToString(", ")}"
+                    context.getString(R.string.sync_error_invalid_download, validation.errors.joinToString(", "))
                 )
             }
 
@@ -59,23 +75,21 @@ class SyncEngine(
                 val localMeta = localSave?.metadata
 
                 if (localMeta != null && cloudMeta != null) {
-                    val comparison = ConflictResolver().compare(cloudMeta, localMeta)
+                    val comparison = conflictResolver.compare(cloudMeta, localMeta)
                     if (comparison.direction == SyncDirection.CONFLICT) {
                         return SyncResult.NeedsConflictResolution(comparison)
                     }
                     if (comparison.direction == SyncDirection.PUSH) {
-                        return SyncResult.Error(
-                            "Local save is newer than cloud. Push first or use force pull."
-                        )
+                        return SyncResult.Error(context.getString(R.string.sync_error_local_newer))
                     }
                     if (comparison.direction == SyncDirection.SKIP) {
-                        return SyncResult.Success("Already in sync")
+                        return SyncResult.Success(context.getString(R.string.sync_already_in_sync))
                     }
                 }
             }
 
             // Backup existing local save
-            onProgress?.invoke("Backing up local save...")
+            onProgress?.invoke(context.getString(R.string.sync_progress_backing_up))
             val localSaves = saveFileManager.listLocalSaves()
             val existingLocal = localSaves.find { it.folderName == saveFolderName }
             if (existingLocal != null) {
@@ -86,17 +100,22 @@ class SyncEngine(
             }
 
             // Write to device
-            onProgress?.invoke("Writing save to device...")
+            onProgress?.invoke(context.getString(R.string.sync_progress_writing))
             val writeSuccess = saveFileManager.writeLocalSave(saveFolderName, cloudFiles)
             if (!writeSuccess) {
-                return SyncResult.Error("Failed to write save files to device")
+                return SyncResult.Error(context.getString(R.string.sync_error_write_failed))
             }
 
-            val dayInfo = cloudMeta?.let { " (${it.displayDate})" } ?: ""
-            return SyncResult.Success("Save pulled successfully$dayInfo")
+            val dayInfo = cloudMeta?.let { formatDisplayDate(it) }
+            return if (dayInfo != null) {
+                SyncResult.Success(context.getString(R.string.sync_pull_success_with_day, dayInfo))
+            } else {
+                SyncResult.Success(context.getString(R.string.sync_pull_success))
+            }
 
         } catch (e: Exception) {
-            return SyncResult.Error("Pull failed: ${e.message}")
+            Log.e(TAG, "Pull failed for $saveFolderName", e)
+            return SyncResult.Error(context.getString(R.string.sync_error_pull_failed, e.message ?: "Unknown error"))
         }
     }
 
@@ -109,12 +128,12 @@ class SyncEngine(
         onProgress: ((String) -> Unit)? = null,
     ): SyncResult {
         try {
-            onProgress?.invoke("Reading local save...")
+            onProgress?.invoke(context.getString(R.string.sync_progress_reading))
 
             // Read local save files
             val localFiles = saveFileManager.readLocalSave(saveFolderName)
             if (localFiles.isEmpty()) {
-                return SyncResult.Error("No local save files found for $saveFolderName")
+                return SyncResult.Error(context.getString(R.string.sync_error_no_local_files, saveFolderName))
             }
 
             // Parse local metadata
@@ -126,13 +145,13 @@ class SyncEngine(
             val validation = saveValidator.validateSaveData(mainSaveData, localInfoData)
             if (!validation.valid) {
                 return SyncResult.Error(
-                    "Local save is invalid: ${validation.errors.joinToString(", ")}"
+                    context.getString(R.string.sync_error_invalid_local, validation.errors.joinToString(", "))
                 )
             }
 
             if (!force) {
                 // Compare with cloud
-                onProgress?.invoke("Checking Steam Cloud...")
+                onProgress?.invoke(context.getString(R.string.sync_progress_checking_cloud))
                 val cloudSaves = cloudService.listCloudSaves()
                 val cloudFiles = cloudSaves[saveFolderName]
 
@@ -144,17 +163,15 @@ class SyncEngine(
                         val cloudMeta = metadataParser.parseFromBytes(cloudInfoData)
 
                         if (cloudMeta != null && localMeta != null) {
-                            val comparison = ConflictResolver().compare(cloudMeta, localMeta)
+                            val comparison = conflictResolver.compare(cloudMeta, localMeta)
                             if (comparison.direction == SyncDirection.CONFLICT) {
                                 return SyncResult.NeedsConflictResolution(comparison)
                             }
                             if (comparison.direction == SyncDirection.PULL) {
-                                return SyncResult.Error(
-                                    "Cloud save is newer. Pull first or use force push."
-                                )
+                                return SyncResult.Error(context.getString(R.string.sync_error_cloud_newer))
                             }
                             if (comparison.direction == SyncDirection.SKIP) {
-                                return SyncResult.Success("Already in sync")
+                                return SyncResult.Success(context.getString(R.string.sync_already_in_sync))
                             }
                         }
                     }
@@ -162,16 +179,32 @@ class SyncEngine(
             }
 
             // Upload to Steam Cloud
-            onProgress?.invoke("Uploading to Steam Cloud...")
+            onProgress?.invoke(context.getString(R.string.sync_progress_uploading))
             cloudService.uploadSave(saveFolderName, localFiles) { uploaded, total ->
-                onProgress?.invoke("Uploading file $uploaded of $total...")
+                onProgress?.invoke(context.getString(R.string.sync_progress_uploading_file, uploaded, total))
             }
 
-            val dayInfo = localMeta?.let { " (${it.displayDate})" } ?: ""
-            return SyncResult.Success("Save pushed successfully$dayInfo")
+            val dayInfo = localMeta?.let { formatDisplayDate(it) }
+            return if (dayInfo != null) {
+                SyncResult.Success(context.getString(R.string.sync_push_success_with_day, dayInfo))
+            } else {
+                SyncResult.Success(context.getString(R.string.sync_push_success))
+            }
 
         } catch (e: Exception) {
-            return SyncResult.Error("Push failed: ${e.message}")
+            Log.e(TAG, "Push failed for $saveFolderName", e)
+            return SyncResult.Error(context.getString(R.string.sync_error_push_failed, e.message ?: "Unknown error"))
         }
+    }
+
+    private fun formatDisplayDate(meta: SaveMetadata): String {
+        val seasonName = when (meta.season) {
+            0 -> context.getString(R.string.save_season_spring)
+            1 -> context.getString(R.string.save_season_summer)
+            2 -> context.getString(R.string.save_season_fall)
+            3 -> context.getString(R.string.save_season_winter)
+            else -> context.getString(R.string.save_season_unknown)
+        }
+        return context.getString(R.string.save_display_date, seasonName, meta.dayOfMonth, meta.year)
     }
 }

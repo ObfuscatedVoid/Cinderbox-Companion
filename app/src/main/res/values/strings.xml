@@ -47,7 +47,9 @@
     <string name="save_season_summer">Summer</string>
     <string name="save_season_fall">Fall</string>
     <string name="save_season_winter">Winter</string>
+    <string name="save_season_unknown">Unknown</string>
     <string name="save_day">Day %1$d</string>
+    <string name="save_display_date">%1$s %2$d, Year %3$d</string>
     <string name="save_version">v%1$s</string>
     <string name="save_farm_name">%1$s Farm</string>
     <string name="save_play_time">%1$dh %2$dm</string>
@@ -67,6 +69,43 @@
     <string name="sync_conflict_message">Cloud and local saves differ. Which version do you want to keep?</string>
     <string name="sync_keep_cloud">Keep Cloud</string>
     <string name="sync_keep_local">Keep Local</string>
+    <string name="sync_conflict_detected">Conflict detected</string>
+
+    <!-- Sync progress -->
+    <string name="sync_progress_downloading">Downloading from Steam Cloud\u2026</string>
+    <string name="sync_progress_downloading_file">Downloading file %1$d of %2$d\u2026</string>
+    <string name="sync_progress_backing_up">Backing up local save\u2026</string>
+    <string name="sync_progress_writing">Writing save to device\u2026</string>
+    <string name="sync_progress_reading">Reading local save\u2026</string>
+    <string name="sync_progress_checking_cloud">Checking Steam Cloud\u2026</string>
+    <string name="sync_progress_uploading">Uploading to Steam Cloud\u2026</string>
+    <string name="sync_progress_uploading_file">Uploading file %1$d of %2$d\u2026</string>
+
+    <!-- Sync results -->
+    <string name="sync_pull_success">Save pulled successfully</string>
+    <string name="sync_pull_success_with_day">Save pulled successfully (%1$s)</string>
+    <string name="sync_push_success">Save pushed successfully</string>
+    <string name="sync_push_success_with_day">Save pushed successfully (%1$s)</string>
+    <string name="sync_already_in_sync">Already in sync</string>
+    <string name="sync_error_no_cloud_files">No files found on Steam Cloud for %1$s</string>
+    <string name="sync_error_invalid_download">Downloaded save is invalid: %1$s</string>
+    <string name="sync_error_local_newer">Local save is newer than cloud. Push first or use force pull.</string>
+    <string name="sync_error_write_failed">Failed to write save files to device</string>
+    <string name="sync_error_pull_failed">Pull failed: %1$s</string>
+    <string name="sync_error_no_local_files">No local save files found for %1$s</string>
+    <string name="sync_error_invalid_local">Local save is invalid: %1$s</string>
+    <string name="sync_error_cloud_newer">Cloud save is newer. Pull first or use force push.</string>
+    <string name="sync_error_push_failed">Push failed: %1$s</string>
+
+    <!-- Conflict resolver -->
+    <string name="conflict_cloud_only">Save exists only on Steam Cloud</string>
+    <string name="conflict_local_only">Save exists only on device</string>
+    <string name="conflict_no_data">No save data</string>
+    <string name="conflict_cloud_ahead">Cloud is ahead (Day %1$d vs %2$d)</string>
+    <string name="conflict_device_ahead">Device is ahead (Day %1$d vs %2$d)</string>
+    <string name="conflict_in_sync">Saves appear to be in sync (Day %1$d)</string>
+    <string name="conflict_same_progress_differ">Same progress but saves differ</string>
+    <string name="conflict_version_warning">Cloud save is version %1$s but your game is %2$s. The save may not load. Update your game first.</string>
 
     <!-- Sync Log -->
     <string name="sync_log_title">Sync Log</string>
@@ -109,6 +148,8 @@
     <string name="settings_shizuku_connect">Connect File Service</string>
 
     <!-- Errors -->
+    <string name="error_not_connected">Not connected to Steam. Please go back and log in.</string>
+    <string name="error_load_saves_failed">Failed to load saves: %1$s</string>
     <string name="error_no_internet">No internet connection</string>
     <string name="error_steam_connection">Could not connect to Steam</string>
     <string name="error_invalid_credentials">Invalid username or password</string>
