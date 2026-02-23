@@ -1,8 +1,8 @@
 package com.sdvsync.ui.viewmodels
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.sdvsync.logging.AppLogger
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.saves.SaveFileManager
@@ -62,7 +62,7 @@ class DashboardViewModel(
             try {
                 // Wait for Steam connection to be ready
                 if (!clientManager.isLoggedIn) {
-                    Log.d(TAG, "Waiting for Steam login...")
+                    AppLogger.d(TAG, "Waiting for Steam login...")
                     val loggedIn = clientManager.awaitLoggedIn(timeoutMs = 30_000)
                     if (!loggedIn) {
                         _state.value = _state.value.copy(
@@ -74,13 +74,13 @@ class DashboardViewModel(
                     }
                 }
 
-                Log.d(TAG, "Fetching cloud saves...")
+                AppLogger.d(TAG, "Fetching cloud saves...")
 
                 // Fetch cloud saves with retry (Steam may disconnect/reconnect after login)
                 val cloudSaves = retryOnDisconnect {
                     cloudService.listCloudSaves()
                 }
-                Log.d(TAG, "Got ${cloudSaves.size} cloud save folders")
+                AppLogger.d(TAG, "Got ${cloudSaves.size} cloud save folders")
 
                 val cloudMetadata = mutableMapOf<String, SaveMetadata>()
 
@@ -95,7 +95,7 @@ class DashboardViewModel(
                                 cloudMetadata[folderName] = it
                             }
                         } catch (e: Exception) {
-                            Log.w(TAG, "Failed to parse SaveGameInfo for $folderName", e)
+                            AppLogger.w(TAG, "Failed to parse SaveGameInfo for $folderName", e)
                         }
                     }
                 }
@@ -142,7 +142,7 @@ class DashboardViewModel(
 
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Log.e(TAG, "Failed to load saves", e)
+                AppLogger.e(TAG, "Failed to load saves", e)
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isRefreshing = false,
@@ -177,16 +177,16 @@ class DashboardViewModel(
                 if (!currentCoroutineContext().isActive) throw e
 
                 lastException = e
-                Log.w(TAG, "Cloud request failed (attempt ${attempt + 1}/$maxRetries): ${e::class.simpleName}")
+                AppLogger.w(TAG, "Cloud request failed (attempt ${attempt + 1}/$maxRetries): ${e::class.simpleName}")
 
                 // Wait for the disconnect callback to be processed by the callback loop
                 // and for auto-reconnect to kick in (callback loop ~1s + reconnect delay 2s)
-                Log.d(TAG, "Waiting 5s for disconnect processing + auto-reconnect...")
+                AppLogger.d(TAG, "Waiting 5s for disconnect processing + auto-reconnect...")
                 delay(5000)
 
                 // If still not logged in, wait for the auto-reconnect to fully complete
                 if (!clientManager.isLoggedIn) {
-                    Log.d(TAG, "Not logged in yet (state=${clientManager.connectionState.value}), waiting for reconnection...")
+                    AppLogger.d(TAG, "Not logged in yet (state=${clientManager.connectionState.value}), waiting for reconnection...")
                     val reconnected = clientManager.awaitLoggedIn(timeoutMs = 30_000)
                     if (!reconnected) {
                         throw RuntimeException("Lost connection to Steam", e)
@@ -195,7 +195,7 @@ class DashboardViewModel(
                     delay(2000)
                 }
 
-                Log.d(TAG, "Ready to retry (state=${clientManager.connectionState.value})")
+                AppLogger.d(TAG, "Ready to retry (state=${clientManager.connectionState.value})")
             }
         }
         throw lastException ?: RuntimeException("Failed after $maxRetries retries")

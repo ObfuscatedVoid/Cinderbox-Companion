@@ -1,6 +1,6 @@
 package com.sdvsync.saves
 
-import android.util.Log
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.util.GzipUtil
 import java.io.File
 
@@ -89,14 +89,14 @@ class SaveValidator {
             errors.add("Main save data is empty")
         } else {
             // Stardew 1.6+ saves may be gzip-compressed — decompress before checking XML
-            Log.d(TAG, "Validating main save: size=${mainSaveData.size}, isGzip=${GzipUtil.isGzip(mainSaveData)}")
+            AppLogger.d(TAG, "Validating main save: size=${mainSaveData.size}, isGzip=${GzipUtil.isGzip(mainSaveData)}")
             val xmlData = GzipUtil.decompressIfGzip(mainSaveData)
-            Log.d(TAG, "Main save after decompression: size=${xmlData.size}")
+            AppLogger.d(TAG, "Main save after decompression: size=${xmlData.size}")
             if (xmlData.size < 1024) {
                 errors.add("Main save data too small (${xmlData.size} bytes)")
             }
             val tail = String(xmlData.takeLast(100).toByteArray())
-            Log.d(TAG, "Main save tail (last 100 chars): '$tail'")
+            AppLogger.d(TAG, "Main save tail (last 100 chars): '$tail'")
             if (!tail.contains("</SaveGame>")) {
                 errors.add("Main save data missing closing </SaveGame> tag")
             }
@@ -105,11 +105,11 @@ class SaveValidator {
         if (saveGameInfoData == null || saveGameInfoData.isEmpty()) {
             errors.add("SaveGameInfo data is empty")
         } else {
-            Log.d(TAG, "Validating SaveGameInfo: size=${saveGameInfoData.size}, isGzip=${GzipUtil.isGzip(saveGameInfoData)}")
+            AppLogger.d(TAG, "Validating SaveGameInfo: size=${saveGameInfoData.size}, isGzip=${GzipUtil.isGzip(saveGameInfoData)}")
             val xmlData = GzipUtil.decompressIfGzip(saveGameInfoData)
-            Log.d(TAG, "SaveGameInfo after decompression: size=${xmlData.size}")
+            AppLogger.d(TAG, "SaveGameInfo after decompression: size=${xmlData.size}")
             val tail = String(xmlData.takeLast(100).toByteArray())
-            Log.d(TAG, "SaveGameInfo tail (last 100 chars): '$tail'")
+            AppLogger.d(TAG, "SaveGameInfo tail (last 100 chars): '$tail'")
             if (!tail.contains("</Farmer>")) {
                 errors.add("SaveGameInfo missing closing </Farmer> tag")
             }
@@ -126,11 +126,11 @@ class SaveValidator {
             val tail = String(xmlBytes, xmlBytes.size - tailSize, tailSize)
             val found = tail.contains(expectedTag)
             if (!found) {
-                Log.w(TAG, "validateXmlEnding: '$expectedTag' not found in ${file.name} tail: '$tail'")
+                AppLogger.w(TAG, "validateXmlEnding: '$expectedTag' not found in ${file.name} tail: '$tail'")
             }
             found
         } catch (e: Exception) {
-            Log.e(TAG, "validateXmlEnding failed for ${file.name}", e)
+            AppLogger.e(TAG, "validateXmlEnding failed for ${file.name}", e)
             false
         }
     }

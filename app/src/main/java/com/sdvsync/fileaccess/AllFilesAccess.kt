@@ -2,6 +2,7 @@ package com.sdvsync.fileaccess
 
 import android.os.Build
 import android.os.Environment
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileManager
 import java.io.File
 
@@ -17,6 +18,8 @@ class AllFilesAccess : FileAccessStrategy {
     override val name = "All Files"
 
     companion object {
+        private const val TAG = "AllFilesAccess"
+
         /**
          * True when the permission is granted AND the save directory is actually accessible.
          * Some devices grant the permission but still block /Android/data/.
@@ -58,6 +61,7 @@ class AllFilesAccess : FileAccessStrategy {
         return try {
             if (file.exists()) file.readBytes() else null
         } catch (e: Exception) {
+            AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
             null
         }
     }
@@ -68,6 +72,7 @@ class AllFilesAccess : FileAccessStrategy {
             file.writeBytes(data)
             true
         } catch (e: Exception) {
+            AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
             false
         }
     }
@@ -76,6 +81,7 @@ class AllFilesAccess : FileAccessStrategy {
         return try {
             file.delete()
         } catch (e: Exception) {
+            AppLogger.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
             false
         }
     }
@@ -84,6 +90,7 @@ class AllFilesAccess : FileAccessStrategy {
         return try {
             from.renameTo(to)
         } catch (e: Exception) {
+            AppLogger.e(TAG, "renameFile failed: ${from.absolutePath}", e)
             false
         }
     }
@@ -92,6 +99,7 @@ class AllFilesAccess : FileAccessStrategy {
         return try {
             dir.mkdirs()
         } catch (e: Exception) {
+            AppLogger.e(TAG, "mkdirs failed: ${dir.absolutePath}", e)
             false
         }
     }

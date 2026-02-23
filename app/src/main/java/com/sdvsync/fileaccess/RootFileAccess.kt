@@ -1,5 +1,6 @@
 package com.sdvsync.fileaccess
 
+import com.sdvsync.logging.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -49,6 +50,7 @@ class RootFileAccess : FileAccessStrategy {
             val exitCode = process.waitFor()
             if (exitCode == 0 && data.isNotEmpty()) data else null
         } catch (e: Exception) {
+            AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
             null
         }
     }
@@ -69,6 +71,7 @@ class RootFileAccess : FileAccessStrategy {
                 // Verify write
                 exists(file)
             } catch (e: Exception) {
+                AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
                 false
             }
         }
@@ -95,11 +98,14 @@ class RootFileAccess : FileAccessStrategy {
             process.waitFor()
             output
         } catch (e: Exception) {
+            AppLogger.e(TAG, "execRoot failed: $command", e)
             ""
         }
     }
 
     companion object {
+        private const val TAG = "RootFileAccess"
+
         /**
          * Check if root access is available.
          */

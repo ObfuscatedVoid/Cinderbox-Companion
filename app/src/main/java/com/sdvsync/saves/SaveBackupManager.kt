@@ -1,6 +1,7 @@
 package com.sdvsync.saves
 
 import android.content.Context
+import com.sdvsync.logging.AppLogger
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -9,6 +10,7 @@ import java.util.Locale
 class SaveBackupManager(private val context: Context) {
 
     companion object {
+        private const val TAG = "BackupManager"
         const val DEFAULT_MAX_BACKUPS = 7
         const val MIN_MAX_BACKUPS = 1
         const val MAX_MAX_BACKUPS = 20
@@ -54,6 +56,7 @@ class SaveBackupManager(private val context: Context) {
     fun backupSave(saveDir: File): File? {
         if (!saveDir.exists() || !saveDir.isDirectory) return null
 
+        AppLogger.d(TAG, "backupSave: starting backup of ${saveDir.name}")
         val timestamp = DATE_FORMAT.format(Date())
         val backupDir = File(backupRoot, "${saveDir.name}/$timestamp")
         backupDir.mkdirs()
@@ -65,11 +68,13 @@ class SaveBackupManager(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
+            AppLogger.e(TAG, "backupSave: failed for ${saveDir.name}", e)
             backupDir.deleteRecursively()
             throw e
         }
 
         pruneBackups(saveDir.name)
+        AppLogger.d(TAG, "backupSave: completed at ${backupDir.absolutePath}")
         return backupDir
     }
 
@@ -78,6 +83,7 @@ class SaveBackupManager(private val context: Context) {
      * Cleans up partial writes on failure.
      */
     fun backupSaveData(saveFolderName: String, files: Map<String, ByteArray>): File {
+        AppLogger.d(TAG, "backupSaveData: starting backup of $saveFolderName (${files.size} files)")
         val timestamp = DATE_FORMAT.format(Date())
         val backupDir = File(backupRoot, "$saveFolderName/$timestamp")
         backupDir.mkdirs()
@@ -87,11 +93,13 @@ class SaveBackupManager(private val context: Context) {
                 File(backupDir, filename).writeBytes(data)
             }
         } catch (e: Exception) {
+            AppLogger.e(TAG, "backupSaveData: failed for $saveFolderName", e)
             backupDir.deleteRecursively()
             throw e
         }
 
         pruneBackups(saveFolderName)
+        AppLogger.d(TAG, "backupSaveData: completed at ${backupDir.absolutePath}")
         return backupDir
     }
 
@@ -132,9 +140,9 @@ class SaveBackupManager(private val context: Context) {
     private fun pruneBackups(saveFolderName: String) {
         val backups = listBackups(saveFolderName)
         if (backups.size > maxBackups) {
-            backups.drop(maxBackups).forEach { dir ->
-                dir.deleteRecursively()
-            }
+            val toPrune = backups.drop(maxBackups)
+            AppLogger.d(TAG, "pruneBackups($saveFolderName): removing ${toPrune.size} old backups")
+            toPrune.forEach { dir -> dir.deleteRecursively() }
         }
     }
 }

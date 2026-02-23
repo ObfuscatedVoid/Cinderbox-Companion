@@ -2,6 +2,7 @@ package com.sdvsync.sync
 
 import android.content.Context
 import com.sdvsync.R
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveMetadata
 
 enum class SyncDirection {
@@ -19,6 +20,10 @@ data class SyncComparison(
 )
 
 class ConflictResolver(private val context: Context) {
+
+    companion object {
+        private const val TAG = "ConflictResolver"
+    }
 
     /**
      * Compare cloud and local save metadata to determine sync direction.
@@ -61,7 +66,7 @@ class ConflictResolver(private val context: Context) {
         val cloudDays = cloud.daysPlayed
         val localDays = local.daysPlayed
 
-        return when {
+        val result = when {
             cloudDays > localDays -> SyncComparison(
                 direction = SyncDirection.PULL,
                 cloudMeta = cloud,
@@ -95,6 +100,8 @@ class ConflictResolver(private val context: Context) {
                 }
             }
         }
+        AppLogger.d(TAG, "compare: ${result.direction} — ${result.message}")
+        return result
     }
 
     /**

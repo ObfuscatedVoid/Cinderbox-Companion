@@ -1,6 +1,6 @@
 package com.sdvsync.util
 
-import android.util.Log
+import com.sdvsync.logging.AppLogger
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
@@ -35,24 +35,24 @@ object GzipUtil {
         if (isZip(data)) {
             return try {
                 val extracted = extractFirstZipEntry(data)
-                Log.d(TAG, "Extracted ZIP: ${data.size} -> ${extracted.size} bytes")
+                AppLogger.d(TAG, "Extracted ZIP: ${data.size} -> ${extracted.size} bytes")
                 extracted
             } catch (e: Exception) {
-                Log.e(TAG, "ZIP extraction failed (size=${data.size})", e)
+                AppLogger.e(TAG, "ZIP extraction failed (size=${data.size})", e)
                 data
             }
         }
         if (isGzip(data)) {
             return try {
                 val decompressed = GZIPInputStream(ByteArrayInputStream(data)).use { it.readBytes() }
-                Log.d(TAG, "Decompressed gzip: ${data.size} -> ${decompressed.size} bytes")
+                AppLogger.d(TAG, "Decompressed gzip: ${data.size} -> ${decompressed.size} bytes")
                 decompressed
             } catch (e: Exception) {
-                Log.e(TAG, "Gzip decompression failed (size=${data.size})", e)
+                AppLogger.e(TAG, "Gzip decompression failed (size=${data.size})", e)
                 data
             }
         }
-        Log.d(TAG, "Data is not compressed (size=${data.size}, first4=${data.take(4).joinToString(" ") { "%02x".format(it) }})")
+        AppLogger.d(TAG, "Data is not compressed (size=${data.size}, first4=${data.take(4).joinToString(" ") { "%02x".format(it) }})")
         return data
     }
 
@@ -64,7 +64,7 @@ object GzipUtil {
         ZipInputStream(ByteArrayInputStream(data)).use { zis ->
             val entry = zis.nextEntry
                 ?: throw RuntimeException("ZIP archive is empty")
-            Log.d(TAG, "ZIP entry: name='${entry.name}', compressedSize=${entry.compressedSize}, size=${entry.size}")
+            AppLogger.d(TAG, "ZIP entry: name='${entry.name}', compressedSize=${entry.compressedSize}, size=${entry.size}")
             val content = zis.readBytes()
             zis.closeEntry()
             return content

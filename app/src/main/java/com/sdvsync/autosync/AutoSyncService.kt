@@ -9,8 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.MainActivity
 import com.sdvsync.R
 import com.sdvsync.sync.SyncEngine
@@ -61,11 +61,11 @@ class AutoSyncService : Service() {
         processMonitor.start(
             onGameStarted = {
                 updateNotification("Stardew Valley is running")
-                Log.d(TAG, "Game started")
+                AppLogger.d(TAG, "Game started")
             },
             onGameStopped = {
                 updateNotification("Game closed, syncing...")
-                Log.d(TAG, "Game stopped, triggering auto-push")
+                AppLogger.d(TAG, "Game stopped, triggering auto-push")
                 serviceScope.launch { autoSync() }
             },
         )
@@ -117,7 +117,7 @@ class AutoSyncService : Service() {
             updateNotification("Monitoring... Last: $message")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Auto-sync failed", e)
+            AppLogger.e(TAG, "Auto-sync failed", e)
             updateNotification("Auto-sync failed: ${e.message}")
         }
     }

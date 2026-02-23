@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import androidx.documentfile.provider.DocumentFile
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -77,7 +77,7 @@ class SAFFileAccess(
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                     )
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to release URI permission", e)
+                    AppLogger.w(TAG, "Failed to release URI permission", e)
                 }
             }
             context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -157,7 +157,7 @@ class SAFFileAccess(
                 .filter { it.isNotEmpty() }
                 .ifEmpty { null }
         } catch (e: Exception) {
-            Log.e(TAG, "listDirectories failed: ${dir.absolutePath}", e)
+            AppLogger.e(TAG, "listDirectories failed: ${dir.absolutePath}", e)
             null
         }
     }
@@ -171,7 +171,7 @@ class SAFFileAccess(
                 .filter { it.isNotEmpty() }
                 .ifEmpty { null }
         } catch (e: Exception) {
-            Log.e(TAG, "listFiles failed: ${dir.absolutePath}", e)
+            AppLogger.e(TAG, "listFiles failed: ${dir.absolutePath}", e)
             null
         }
     }
@@ -181,7 +181,7 @@ class SAFFileAccess(
             val doc = resolveDocument(file) ?: return@withContext null
             context.contentResolver.openInputStream(doc.uri)?.use { it.readBytes() }
         } catch (e: Exception) {
-            Log.e(TAG, "readFile failed: ${file.absolutePath}", e)
+            AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
             null
         }
     }
@@ -200,7 +200,7 @@ class SAFFileAccess(
                 context.contentResolver.openOutputStream(newDoc.uri)?.use { it.write(data) }
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "writeFile failed: ${file.absolutePath}", e)
+                AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
                 false
             }
         }
@@ -209,7 +209,7 @@ class SAFFileAccess(
         try {
             resolveDocument(file)?.delete() ?: false
         } catch (e: Exception) {
-            Log.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
+            AppLogger.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
             false
         }
     }
@@ -219,7 +219,7 @@ class SAFFileAccess(
             val doc = resolveDocument(from) ?: return@withContext false
             doc.renameTo(to.name)
         } catch (e: Exception) {
-            Log.e(TAG, "renameFile failed: ${from.absolutePath}", e)
+            AppLogger.e(TAG, "renameFile failed: ${from.absolutePath}", e)
             false
         }
     }
@@ -238,7 +238,7 @@ class SAFFileAccess(
             }
             true
         } catch (e: Exception) {
-            Log.e(TAG, "mkdirs failed: ${dir.absolutePath}", e)
+            AppLogger.e(TAG, "mkdirs failed: ${dir.absolutePath}", e)
             false
         }
     }

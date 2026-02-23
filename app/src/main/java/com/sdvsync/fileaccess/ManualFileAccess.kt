@@ -1,5 +1,6 @@
 package com.sdvsync.fileaccess
 
+import com.sdvsync.logging.AppLogger
 import java.io.File
 
 /**
@@ -11,6 +12,10 @@ import java.io.File
  * and the user copies them manually.
  */
 class ManualFileAccess : FileAccessStrategy {
+
+    companion object {
+        private const val TAG = "ManualFileAccess"
+    }
 
     override val name = "Manual"
 
@@ -34,6 +39,7 @@ class ManualFileAccess : FileAccessStrategy {
         return try {
             if (file.exists()) file.readBytes() else null
         } catch (e: Exception) {
+            AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
             null
         }
     }
@@ -44,6 +50,7 @@ class ManualFileAccess : FileAccessStrategy {
             file.writeBytes(data)
             true
         } catch (e: Exception) {
+            AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
             false
         }
     }
@@ -52,6 +59,7 @@ class ManualFileAccess : FileAccessStrategy {
         return try {
             file.delete()
         } catch (e: Exception) {
+            AppLogger.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
             false
         }
     }
@@ -60,6 +68,7 @@ class ManualFileAccess : FileAccessStrategy {
         return try {
             from.renameTo(to)
         } catch (e: Exception) {
+            AppLogger.e(TAG, "renameFile failed: ${from.absolutePath}", e)
             false
         }
     }
@@ -68,6 +77,7 @@ class ManualFileAccess : FileAccessStrategy {
         return try {
             dir.mkdirs()
         } catch (e: Exception) {
+            AppLogger.e(TAG, "mkdirs failed: ${dir.absolutePath}", e)
             false
         }
     }

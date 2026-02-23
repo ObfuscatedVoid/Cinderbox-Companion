@@ -148,6 +148,9 @@
     <string name="settings_about_title">About</string>
     <string name="settings_about">SDV Sync v0.1.0</string>
     <string name="settings_about_desc">Sync Stardew Valley saves between Steam Cloud and Android.</string>
+    <string name="settings_diagnostics_title">Diagnostics</string>
+    <string name="settings_share_logs">Share Logs</string>
+    <string name="settings_share_logs_desc">Export app logs for troubleshooting. Logs are sanitized to remove credentials.</string>
 
     <!-- Settings - SAF -->
     <string name="settings_saf_title">Storage Access Framework</string>

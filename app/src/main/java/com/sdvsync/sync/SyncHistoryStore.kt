@@ -1,8 +1,8 @@
 package com.sdvsync.sync
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.core.DataStore
+import com.sdvsync.logging.AppLogger
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -92,7 +92,7 @@ class SyncHistoryStore(private val context: Context) {
                 )
             }
         } catch (e: Exception) {
-            Log.e("SyncHistoryStore", "Failed to parse history: $json", e)
+            AppLogger.e("SyncHistoryStore", "Failed to parse history: $json", e)
             emptyList()
         }
     }

@@ -4,7 +4,7 @@ import android.content.ComponentName
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
-import android.util.Log
+import com.sdvsync.logging.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
@@ -30,13 +30,13 @@ class ShizukuFileAccess : FileAccessStrategy {
             override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
                 if (binder != null && binder.pingBinder()) {
                     fileService = IFileService.Stub.asInterface(binder)
-                    Log.d(TAG, "FileService connected")
+                    AppLogger.d(TAG, "FileService connected")
                 }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
                 fileService = null
-                Log.d(TAG, "FileService disconnected")
+                AppLogger.d(TAG, "FileService disconnected")
             }
         }
 
@@ -90,7 +90,7 @@ class ShizukuFileAccess : FileAccessStrategy {
             try {
                 Shizuku.requestPermission(requestCode)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to request permission", e)
+                AppLogger.e(TAG, "Failed to request permission", e)
             }
         }
 
@@ -98,7 +98,7 @@ class ShizukuFileAccess : FileAccessStrategy {
             try {
                 Shizuku.bindUserService(userServiceArgs, serviceConnection)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to bind service", e)
+                AppLogger.e(TAG, "Failed to bind service", e)
             }
         }
 
@@ -106,7 +106,7 @@ class ShizukuFileAccess : FileAccessStrategy {
             try {
                 Shizuku.unbindUserService(userServiceArgs, serviceConnection, true)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to unbind service", e)
+                AppLogger.e(TAG, "Failed to unbind service", e)
             }
             fileService = null
         }
@@ -133,7 +133,7 @@ class ShizukuFileAccess : FileAccessStrategy {
                 .map { it.removePrefix("D|") }
                 .ifEmpty { null }
         } catch (e: Exception) {
-            Log.e(TAG, "listDirectories failed: ${dir.absolutePath}", e)
+            AppLogger.e(TAG, "listDirectories failed: ${dir.absolutePath}", e)
             null
         }
     }
@@ -145,7 +145,7 @@ class ShizukuFileAccess : FileAccessStrategy {
                 .map { it.removePrefix("F|") }
                 .ifEmpty { null }
         } catch (e: Exception) {
-            Log.e(TAG, "listFiles failed: ${dir.absolutePath}", e)
+            AppLogger.e(TAG, "listFiles failed: ${dir.absolutePath}", e)
             null
         }
     }
@@ -166,7 +166,7 @@ class ShizukuFileAccess : FileAccessStrategy {
             }
             result
         } catch (e: Exception) {
-            Log.e(TAG, "readFile failed: ${file.absolutePath}", e)
+            AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
             null
         }
     }
@@ -190,7 +190,7 @@ class ShizukuFileAccess : FileAccessStrategy {
                 }
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "writeFile failed: ${file.absolutePath}", e)
+                AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
                 false
             }
         }
@@ -200,7 +200,7 @@ class ShizukuFileAccess : FileAccessStrategy {
             requireService().deleteFile(file.absolutePath)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
+            AppLogger.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
             false
         }
     }
@@ -209,7 +209,7 @@ class ShizukuFileAccess : FileAccessStrategy {
         try {
             requireService().renameFile(from.absolutePath, to.absolutePath)
         } catch (e: Exception) {
-            Log.e(TAG, "renameFile failed: ${from.absolutePath}", e)
+            AppLogger.e(TAG, "renameFile failed: ${from.absolutePath}", e)
             false
         }
     }
@@ -219,7 +219,7 @@ class ShizukuFileAccess : FileAccessStrategy {
             requireService().createDirectory(dir.absolutePath)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "mkdirs failed: ${dir.absolutePath}", e)
+            AppLogger.e(TAG, "mkdirs failed: ${dir.absolutePath}", e)
             false
         }
     }

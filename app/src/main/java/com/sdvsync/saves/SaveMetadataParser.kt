@@ -1,7 +1,7 @@
 package com.sdvsync.saves
 
-import android.util.Log
 import android.util.Xml
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.util.GzipUtil
 import org.xmlpull.v1.XmlPullParser
 import java.io.ByteArrayInputStream
@@ -43,17 +43,17 @@ class SaveMetadataParser {
      */
     fun parseFromBytes(data: ByteArray): SaveMetadata? {
         return try {
-            Log.d(TAG, "parseFromBytes: input size=${data.size}, isGzip=${GzipUtil.isGzip(data)}")
+            AppLogger.d(TAG, "parseFromBytes: input size=${data.size}, isGzip=${GzipUtil.isGzip(data)}")
             // Stardew 1.6+ saves may be gzip-compressed — decompress before parsing XML
             val xmlData = GzipUtil.decompressIfGzip(data)
-            Log.d(TAG, "parseFromBytes: after decompression size=${xmlData.size}, " +
+            AppLogger.d(TAG, "parseFromBytes: after decompression size=${xmlData.size}, " +
                 "first50=${String(xmlData, 0, minOf(50, xmlData.size))}")
             val result = parse(ByteArrayInputStream(xmlData))
-            Log.d(TAG, "parseFromBytes: parsed farmer='${result.farmerName}', farm='${result.farmName}', " +
+            AppLogger.d(TAG, "parseFromBytes: parsed farmer='${result.farmerName}', farm='${result.farmName}', " +
                 "day=${result.dayOfMonth}, season=${result.season}, year=${result.year}")
             result
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse SaveGameInfo from bytes (size=${data.size})", e)
+            AppLogger.e(TAG, "Failed to parse SaveGameInfo from bytes (size=${data.size})", e)
             null
         }
     }
@@ -63,18 +63,18 @@ class SaveMetadataParser {
      */
     fun parseFromFile(file: File): SaveMetadata? {
         if (!file.exists() || file.length() == 0L) {
-            Log.w(TAG, "parseFromFile: file does not exist or is empty: ${file.path}")
+            AppLogger.w(TAG, "parseFromFile: file does not exist or is empty: ${file.path}")
             return null
         }
         return try {
             val rawBytes = file.readBytes()
-            Log.d(TAG, "parseFromFile: ${file.name} size=${rawBytes.size}, isGzip=${GzipUtil.isGzip(rawBytes)}")
+            AppLogger.d(TAG, "parseFromFile: ${file.name} size=${rawBytes.size}, isGzip=${GzipUtil.isGzip(rawBytes)}")
             val xmlData = GzipUtil.decompressIfGzip(rawBytes)
             val result = parse(ByteArrayInputStream(xmlData))
-            Log.d(TAG, "parseFromFile: parsed farmer='${result.farmerName}', farm='${result.farmName}'")
+            AppLogger.d(TAG, "parseFromFile: parsed farmer='${result.farmerName}', farm='${result.farmName}'")
             result
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse SaveGameInfo from file: ${file.path}", e)
+            AppLogger.e(TAG, "Failed to parse SaveGameInfo from file: ${file.path}", e)
             null
         }
     }
