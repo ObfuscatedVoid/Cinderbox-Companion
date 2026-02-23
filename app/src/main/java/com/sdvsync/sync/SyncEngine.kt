@@ -1,8 +1,8 @@
 package com.sdvsync.sync
 
 import android.content.Context
-import android.util.Log
 import com.sdvsync.R
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
@@ -49,19 +49,19 @@ class SyncEngine(
                 return SyncResult.Error(context.getString(R.string.sync_error_no_cloud_files, saveFolderName))
             }
 
-            Log.d(TAG, "pullSave: downloaded ${cloudFiles.size} files: ${cloudFiles.keys}")
+            AppLogger.d(TAG, "pullSave: downloaded ${cloudFiles.size} files: ${cloudFiles.keys}")
 
             // Parse cloud metadata
             val cloudInfoData = cloudFiles["SaveGameInfo"]
-            Log.d(TAG, "pullSave: SaveGameInfo data size=${cloudInfoData?.size ?: 0}")
+            AppLogger.d(TAG, "pullSave: SaveGameInfo data size=${cloudInfoData?.size ?: 0}")
             val cloudMeta = cloudInfoData?.let { metadataParser.parseFromBytes(it) }
-            Log.d(TAG, "pullSave: cloudMeta=$cloudMeta")
+            AppLogger.d(TAG, "pullSave: cloudMeta=$cloudMeta")
 
             // Validate downloaded data
             val mainSaveData = cloudFiles[saveFolderName]
-            Log.d(TAG, "pullSave: main save data key='$saveFolderName', size=${mainSaveData?.size ?: 0}")
+            AppLogger.d(TAG, "pullSave: main save data key='$saveFolderName', size=${mainSaveData?.size ?: 0}")
             val validation = saveValidator.validateSaveData(mainSaveData, cloudInfoData)
-            Log.d(TAG, "pullSave: validation=${validation.valid}, errors=${validation.errors}")
+            AppLogger.d(TAG, "pullSave: validation=${validation.valid}, errors=${validation.errors}")
             if (!validation.valid) {
                 return SyncResult.Error(
                     context.getString(R.string.sync_error_invalid_download, validation.errors.joinToString(", "))
@@ -123,7 +123,7 @@ class SyncEngine(
             return SyncResult.Success(successMsg, warning = versionWarning)
 
         } catch (e: Exception) {
-            Log.e(TAG, "Pull failed for $saveFolderName", e)
+            AppLogger.e(TAG, "Pull failed for $saveFolderName", e)
             return SyncResult.Error(context.getString(R.string.sync_error_pull_failed, e.message ?: "Unknown error"))
         }
     }
@@ -209,9 +209,9 @@ class SyncEngine(
                     }
 
                     backupManager.backupSaveData(saveFolderName, cloudFiles)
-                    Log.d(TAG, "pushSave: backed up ${cloudFiles.size} cloud files for $saveFolderName")
+                    AppLogger.d(TAG, "pushSave: backed up ${cloudFiles.size} cloud files for $saveFolderName")
                 } catch (e: Exception) {
-                    Log.e(TAG, "pushSave: cloud backup failed for $saveFolderName, aborting push", e)
+                    AppLogger.e(TAG, "pushSave: cloud backup failed for $saveFolderName, aborting push", e)
                     return SyncResult.Error(
                         context.getString(R.string.sync_error_backup_failed, e.message ?: "Unknown error")
                     )
@@ -219,8 +219,14 @@ class SyncEngine(
             }
 
             // Step 5: Upload local files to cloud
+            // Use the same path prefix as existing cloud files so we overwrite them
+            // (not create duplicates at a different path)
+            val cloudPathPrefix = cloudFileList?.firstOrNull {
+                it.pathPrefix.contains("%WinAppDataRoaming%")
+            }?.pathPrefix ?: cloudFileList?.firstOrNull()?.pathPrefix
+
             onProgress?.invoke(context.getString(R.string.sync_progress_uploading))
-            cloudService.uploadSave(saveFolderName, localFiles) { uploaded, total ->
+            cloudService.uploadSave(saveFolderName, localFiles, cloudPathPrefix) { uploaded, total ->
                 onProgress?.invoke(context.getString(R.string.sync_progress_uploading_file, uploaded, total))
             }
 
@@ -232,7 +238,7 @@ class SyncEngine(
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Push failed for $saveFolderName", e)
+            AppLogger.e(TAG, "Push failed for $saveFolderName", e)
             return SyncResult.Error(context.getString(R.string.sync_error_push_failed, e.message ?: "Unknown error"))
         }
     }
