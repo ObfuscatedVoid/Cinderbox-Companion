@@ -6,7 +6,7 @@ class FileAccessDetector(private val context: Context) {
 
     /**
      * Detect the best available file access strategy.
-     * Priority: Root > Shizuku > Manual
+     * Priority: Root > Shizuku > SAF > Manual
      */
     fun detectBestStrategy(): FileAccessStrategy {
         if (RootFileAccess.isAvailable()) {
@@ -15,6 +15,7 @@ class FileAccessDetector(private val context: Context) {
         if (ShizukuFileAccess.isAvailable()) {
             return ShizukuFileAccess()
         }
+        SAFFileAccess.createInstance(context)?.let { return it }
         return ManualFileAccess()
     }
 
@@ -25,6 +26,7 @@ class FileAccessDetector(private val context: Context) {
         return when (name.lowercase()) {
             "root" -> RootFileAccess()
             "shizuku" -> ShizukuFileAccess()
+            "saf" -> SAFFileAccess.createInstance(context) ?: ManualFileAccess()
             "manual" -> ManualFileAccess()
             else -> detectBestStrategy()
         }
@@ -37,6 +39,7 @@ class FileAccessDetector(private val context: Context) {
         val methods = mutableListOf<String>()
         if (RootFileAccess.isAvailable()) methods.add("Root")
         if (ShizukuFileAccess.isAvailable()) methods.add("Shizuku")
+        if (SAFFileAccess.isAvailable(context)) methods.add("SAF")
         methods.add("Manual") // Always available as fallback
         return methods
     }

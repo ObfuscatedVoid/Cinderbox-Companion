@@ -138,7 +138,7 @@ class SyncEngine(
 
                 if (cloudFiles != null) {
                     // Download just the SaveGameInfo to compare
-                    val cloudInfoFile = cloudFiles.find { it.filename == "SaveGameInfo" }
+                    val cloudInfoFile = cloudFiles.find { it.baseName == "SaveGameInfo" }
                     if (cloudInfoFile != null) {
                         val cloudInfoData = cloudService.downloadFile(cloudInfoFile.fullPath)
                         val cloudMeta = metadataParser.parseFromBytes(cloudInfoData)

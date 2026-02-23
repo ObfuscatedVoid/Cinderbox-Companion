@@ -75,7 +75,7 @@ class DashboardViewModel(
                 val cloudMetadata = mutableMapOf<String, SaveMetadata>()
 
                 for ((folderName, files) in cloudSaves) {
-                    val infoFile = files.find { it.filename == "SaveGameInfo" }
+                    val infoFile = files.find { it.baseName == "SaveGameInfo" }
                     if (infoFile != null) {
                         try {
                             val data = retryOnDisconnect {

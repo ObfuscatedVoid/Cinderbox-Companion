@@ -1,5 +1,7 @@
 package com.sdvsync.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,6 +21,14 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+
+    val safLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onSafDirectorySelected(uri)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -67,6 +77,16 @@ fun SettingsScreen(
                     permissionGranted = state.shizukuPermissionGranted,
                     onRequestPermission = { viewModel.requestShizukuPermission() },
                     onBindService = { viewModel.bindShizukuService() },
+                )
+            }
+
+            // SAF (Android 11-13)
+            if (state.safEligible && !state.availableModes.contains("Root")) {
+                Spacer(Modifier.height(12.dp))
+                SAFAccessSection(
+                    configured = state.safConfigured,
+                    onSelectDirectory = { safLauncher.launch(null) },
+                    onRevoke = { viewModel.clearSafAccess() },
                 )
             }
 
@@ -151,6 +171,50 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun SAFAccessSection(
+    configured: Boolean,
+    onSelectDirectory: () -> Unit,
+    onRevoke: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                "Storage Access Framework",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            if (configured) {
+                Text(
+                    "Save directory access configured.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = onRevoke) {
+                    Text("Revoke Access")
+                }
+            } else {
+                Text(
+                    "Grant access to Stardew Valley saves without root or Shizuku. " +
+                        "Navigate to: Android > data > com.chucklefish.stardewvalley > files > Saves",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = onSelectDirectory) {
+                    Text("Select Save Directory")
+                }
+            }
         }
     }
 }

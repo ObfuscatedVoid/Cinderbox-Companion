@@ -57,6 +57,15 @@ fun SaveCard(
                         meta.displayDate,
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    if (meta.millisecondsPlayed > 0) {
+                        val hours = meta.millisecondsPlayed / 3_600_000
+                        val mins = (meta.millisecondsPlayed % 3_600_000) / 60_000
+                        Text(
+                            "${hours}h ${mins}m",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     if (meta.gameVersion.isNotEmpty()) {
                         Text(
                             "v${meta.gameVersion}",

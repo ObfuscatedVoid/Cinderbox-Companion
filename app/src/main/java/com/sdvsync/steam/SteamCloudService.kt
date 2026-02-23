@@ -1,6 +1,7 @@
 package com.sdvsync.steam
 
 import android.util.Log
+import com.sdvsync.util.GzipUtil
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.*
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,9 @@ data class CloudFile(
         // Prefix already ends with "/" — don't add another
         return if (pathPrefix.endsWith("/")) "$pathPrefix$filename" else "$pathPrefix/$filename"
     }
+
+    /** Just the file name without any directory components, e.g. "SaveGameInfo" */
+    val baseName: String get() = filename.substringAfterLast("/")
 
     /** The save folder name (parent directory), e.g. "CHAD_419795178" */
     val saveFolderName: String? get() {
@@ -121,12 +125,16 @@ class SteamCloudService(
             throw RuntimeException("Download failed: HTTP ${response.code}")
         }
 
-        response.body?.bytes() ?: throw RuntimeException("Empty response body")
+        val rawBytes = response.body?.bytes() ?: throw RuntimeException("Empty response body")
+
+        // Stardew Valley 1.6+ saves are gzip-compressed XML.
+        // Steam Cloud stores them as-is, so decompress for all callers.
+        GzipUtil.decompressIfGzip(rawBytes)
     }
 
     /**
      * Download all files for a specific save folder.
-     * Returns map of filename -> bytes.
+     * Returns map of baseName -> bytes (e.g. "SaveGameInfo" -> bytes).
      */
     suspend fun downloadSave(
         saveFolderName: String,
@@ -143,7 +151,7 @@ class SteamCloudService(
         saveFiles.forEachIndexed { index, file ->
             onProgress?.invoke(index, saveFiles.size)
             val data = downloadFile(file.fullPath)
-            result[file.filename] = data
+            result[file.baseName] = data
         }
         onProgress?.invoke(saveFiles.size, saveFiles.size)
         result

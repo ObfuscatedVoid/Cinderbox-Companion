@@ -1,10 +1,10 @@
 package com.sdvsync.saves
 
 import android.util.Xml
+import com.sdvsync.util.GzipUtil
 import org.xmlpull.v1.XmlPullParser
 import java.io.ByteArrayInputStream
 import java.io.File
-import java.io.FileInputStream
 
 data class SaveMetadata(
     val farmerName: String,
@@ -38,7 +38,9 @@ class SaveMetadataParser {
      */
     fun parseFromBytes(data: ByteArray): SaveMetadata? {
         return try {
-            parse(ByteArrayInputStream(data))
+            // Stardew 1.6+ saves may be gzip-compressed — decompress before parsing XML
+            val xmlData = GzipUtil.decompressIfGzip(data)
+            parse(ByteArrayInputStream(xmlData))
         } catch (e: Exception) {
             null
         }
@@ -50,7 +52,9 @@ class SaveMetadataParser {
     fun parseFromFile(file: File): SaveMetadata? {
         if (!file.exists() || file.length() == 0L) return null
         return try {
-            parse(FileInputStream(file))
+            val rawBytes = file.readBytes()
+            val xmlData = GzipUtil.decompressIfGzip(rawBytes)
+            parse(ByteArrayInputStream(xmlData))
         } catch (e: Exception) {
             null
         }
