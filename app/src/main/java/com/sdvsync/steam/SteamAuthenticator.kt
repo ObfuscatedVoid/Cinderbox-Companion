@@ -1,6 +1,9 @@
 package com.sdvsync.steam
 
-import android.util.Log
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import com.sdvsync.logging.AppLogger
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.authentication.*
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.LogOnDetails
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 
 sealed class AuthState {
     data object Idle : AuthState()
@@ -37,6 +41,7 @@ sealed class AuthEvent {
 }
 
 class SteamAuthenticator(
+    private val context: Context,
     private val clientManager: SteamClientManager,
     private val sessionStore: SteamSessionStore,
 ) {
@@ -76,13 +81,64 @@ class SteamAuthenticator(
         cbMgr.subscribe(LoggedOffCallback::class.java) { onLoggedOff(it) }
     }
 
+    private fun isNetworkAvailable(): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    /**
+     * Connect to a CM server with timeout and one retry.
+     * Throws TimeoutCancellationException if both attempts fail.
+     */
+    private suspend fun connectWithTimeout() {
+        clientManager.reconnect() // Always force fresh — avoids stuck CONNECTING state
+        try {
+            withTimeout(15_000) {
+                clientManager.connectionState.first { state ->
+                    state == ConnectionState.CONNECTED ||
+                    state == ConnectionState.LOGGED_IN
+                }
+            }
+            AppLogger.d(TAG, "Connected to CM server")
+        } catch (_: TimeoutCancellationException) {
+            AppLogger.w(TAG, "Connection timed out after 15s, retrying with new CM server...")
+            clientManager.reconnect()
+            // Let this throw TimeoutCancellationException to caller
+            withTimeout(15_000) {
+                clientManager.connectionState.first { state ->
+                    state == ConnectionState.CONNECTED ||
+                    state == ConnectionState.LOGGED_IN
+                }
+            }
+            AppLogger.d(TAG, "Connected to CM server on retry")
+        }
+    }
+
+    private suspend fun connectOrFail() {
+        if (!isNetworkAvailable()) {
+            AppLogger.w(TAG, "No network available")
+            _authState.value = AuthState.Error("No internet connection")
+            _events.emit(AuthEvent.LoginFailed("No internet connection"))
+            return
+        }
+        try {
+            connectWithTimeout()
+        } catch (_: TimeoutCancellationException) {
+            AppLogger.e(TAG, "Connection timed out after retry")
+            _authState.value = AuthState.Error("Could not connect to Steam. Please try again.")
+            _events.emit(AuthEvent.LoginFailed("Connection timed out"))
+        }
+    }
+
     suspend fun login(username: String, password: String) {
         pendingUsername = username
         pendingPassword = password
         pendingQRLogin = false
         isUserDisconnect = false
         _authState.value = AuthState.Connecting
-        clientManager.connect()
+        connectOrFail()
     }
 
     suspend fun loginWithQR() {
@@ -91,7 +147,7 @@ class SteamAuthenticator(
         pendingQRLogin = true
         isUserDisconnect = false
         _authState.value = AuthState.Connecting
-        clientManager.connect()
+        connectOrFail()
     }
 
     fun cancelQRLogin() {
@@ -113,7 +169,7 @@ class SteamAuthenticator(
         pendingQRLogin = false
         isUserDisconnect = false
         _authState.value = AuthState.Connecting
-        clientManager.connect()
+        connectOrFail()
     }
 
     private fun onConnected() {
@@ -124,7 +180,7 @@ class SteamAuthenticator(
                 val savedUsername = sessionStore.username
 
                 if (savedRefreshToken != null && savedUsername != null) {
-                    Log.d(TAG, "Resuming session for $savedUsername")
+                    AppLogger.d(TAG, "Resuming session for $savedUsername")
                     logOnWithToken(savedUsername, savedRefreshToken)
                 } else if (pendingQRLogin) {
                     pendingQRLogin = false
@@ -137,7 +193,7 @@ class SteamAuthenticator(
                     _authState.value = AuthState.WaitingForCredentials
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error in onConnected", e)
+                AppLogger.e(TAG, "Error in onConnected", e)
                 _authState.value = AuthState.Error("Connection error: ${e.message}")
             }
         }
@@ -274,7 +330,7 @@ class SteamAuthenticator(
 
     private fun onLoggedOn(callback: LoggedOnCallback) {
         if (callback.result == EResult.OK) {
-            Log.d(TAG, "Logged on successfully")
+            AppLogger.d(TAG, "Logged on successfully")
             callback.clientSteamID?.let { steamId ->
                 sessionStore.steamId = steamId.convertToUInt64()
             }
@@ -293,7 +349,7 @@ class SteamAuthenticator(
                 EResult.Expired -> "Session expired, please log in again"
                 else -> "Login failed: ${callback.result}"
             }
-            Log.w(TAG, "Logon failed: $msg")
+            AppLogger.w(TAG, "Logon failed: $msg")
             _authState.value = AuthState.Error(msg)
             scope.launch { _events.emit(AuthEvent.LoginFailed(msg)) }
 
@@ -307,7 +363,7 @@ class SteamAuthenticator(
     }
 
     private fun onLoggedOff(callback: LoggedOffCallback) {
-        Log.d(TAG, "Logged off: ${callback.result}")
+        AppLogger.d(TAG, "Logged off: ${callback.result}")
         wasLoggedIn = false
         _authState.value = AuthState.Idle
         clientManager.onDisconnected(userInitiated = false)
@@ -317,7 +373,7 @@ class SteamAuthenticator(
     private fun onDisconnected(callback: DisconnectedCallback) {
         val userInitiated = isUserDisconnect
         val currentAuthState = _authState.value
-        Log.d(TAG, "Disconnected (userInitiated=$userInitiated, wasLoggedIn=$wasLoggedIn, authState=${currentAuthState::class.simpleName})")
+        AppLogger.d(TAG, "Disconnected (userInitiated=$userInitiated, wasLoggedIn=$wasLoggedIn, authState=${currentAuthState::class.simpleName})")
         clientManager.onDisconnected(userInitiated = userInitiated)
 
         if (!userInitiated && wasLoggedIn && sessionStore.hasSession()) {
@@ -328,21 +384,26 @@ class SteamAuthenticator(
                 currentAuthState is AuthState.Authenticating ||
                 currentAuthState is AuthState.LoggingIn
             ) {
-                Log.d(TAG, "Already connecting/authenticating, ignoring disconnect for auto-reconnect")
+                AppLogger.d(TAG, "Already connecting/authenticating, ignoring disconnect for auto-reconnect")
                 return
             }
 
-            Log.d(TAG, "Auto-reconnecting in 2s...")
+            AppLogger.d(TAG, "Auto-reconnecting in 2s...")
             _authState.value = AuthState.Connecting
             scope.launch {
                 delay(2000) // Let the client settle before reconnecting
                 try {
-                    clientManager.connect()
-                    Log.d(TAG, "Auto-reconnect: connect() returned, waiting for callbacks...")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Auto-reconnect failed", e)
+                    connectWithTimeout()
+                    AppLogger.d(TAG, "Auto-reconnect succeeded")
+                } catch (_: TimeoutCancellationException) {
+                    AppLogger.e(TAG, "Auto-reconnect timed out")
                     wasLoggedIn = false
-                    _authState.value = AuthState.Error("Disconnected: ${e.message}")
+                    _authState.value = AuthState.Idle
+                    _events.emit(AuthEvent.Disconnected)
+                } catch (e: Exception) {
+                    AppLogger.e(TAG, "Auto-reconnect failed", e)
+                    wasLoggedIn = false
+                    _authState.value = AuthState.Idle
                     _events.emit(AuthEvent.Disconnected)
                 }
             }

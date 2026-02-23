@@ -1,6 +1,6 @@
 package com.sdvsync.steam
 
-import android.util.Log
+import com.sdvsync.logging.AppLogger
 import `in`.dragonbra.javasteam.steam.steamclient.SteamClient
 import `in`.dragonbra.javasteam.steam.steamclient.callbackmgr.CallbackManager
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.SteamCloud
@@ -53,13 +53,13 @@ class SteamClientManager {
     private fun ensureCallbackLoop() {
         // If the previous callback job exited unexpectedly, reset so we can start a new one
         if (callbackJob?.isCompleted == true) {
-            Log.w(TAG, "Callback loop had stopped, will restart")
+            AppLogger.w(TAG, "Callback loop had stopped, will restart")
             isRunning.set(false)
         }
 
         if (isRunning.getAndSet(true)) return
 
-        Log.d(TAG, "Starting callback loop")
+        AppLogger.d(TAG, "Starting callback loop")
         callbackJob = callbackScope.launch {
             while (isRunning.get()) {
                 try {
@@ -71,10 +71,10 @@ class SteamClientManager {
                     // via typealias). Rethrowing would kill this coroutine and prevent reconnection.
                     // This follows the same pattern used by Pluvia (proven JavaSteam Android app).
                     if (!isRunning.get()) break
-                    Log.w(TAG, "Callback loop caught ${e::class.simpleName}: ${e.message}")
+                    AppLogger.w(TAG, "Callback loop caught ${e::class.simpleName}: ${e.message}")
                 }
             }
-            Log.d(TAG, "Callback loop stopped")
+            AppLogger.d(TAG, "Callback loop stopped")
         }
     }
 
@@ -90,9 +90,19 @@ class SteamClientManager {
         ensureCallbackLoop()
 
         withContext(Dispatchers.IO) {
-            Log.d(TAG, "Connecting to Steam CM servers...")
+            AppLogger.d(TAG, "Connecting to Steam CM servers...")
             client.connect()
+            AppLogger.d(TAG, "client.connect() returned")
         }
+    }
+
+    /**
+     * Force reconnect — resets connection state so connect() won't skip
+     * due to the CONNECTING guard.
+     */
+    suspend fun reconnect() {
+        _connectionState.value = ConnectionState.DISCONNECTED
+        connect()
     }
 
     /**
@@ -111,17 +121,17 @@ class SteamClientManager {
     }
 
     fun onConnected() {
-        Log.d(TAG, "Connected to Steam")
+        AppLogger.d(TAG, "Connected to Steam")
         _connectionState.value = ConnectionState.CONNECTED
     }
 
     fun onLoggedIn() {
-        Log.d(TAG, "Logged in to Steam")
+        AppLogger.d(TAG, "Logged in to Steam")
         _connectionState.value = ConnectionState.LOGGED_IN
     }
 
     fun onDisconnected(userInitiated: Boolean) {
-        Log.d(TAG, "Disconnected from Steam (userInitiated=$userInitiated, currentState=${_connectionState.value})")
+        AppLogger.d(TAG, "Disconnected from Steam (userInitiated=$userInitiated, currentState=${_connectionState.value})")
         // Don't reset state if we're currently CONNECTING — JavaSteam's client.connect()
         // internally calls disconnect() which triggers this callback, and resetting to
         // DISCONNECTED would cause a reconnection cascade.
