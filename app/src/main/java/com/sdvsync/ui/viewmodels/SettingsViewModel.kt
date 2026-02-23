@@ -23,6 +23,7 @@ data class SettingsState(
     val shizukuPermissionGranted: Boolean = false,
     val safEligible: Boolean = false,
     val safConfigured: Boolean = false,
+    val safIsStaging: Boolean = false,
     val isLoggedIn: Boolean = false,
     val steamUsername: String? = null,
 )
@@ -51,6 +52,7 @@ class SettingsViewModel(
             shizukuPermissionGranted = shizukuPermission,
             safEligible = SAFFileAccess.isDeviceEligible(),
             safConfigured = SAFFileAccess.isAvailable(context),
+            safIsStaging = SAFFileAccess.isStaging(context),
             isLoggedIn = authenticator.authState.value is com.sdvsync.steam.AuthState.LoggedIn,
         )
     }

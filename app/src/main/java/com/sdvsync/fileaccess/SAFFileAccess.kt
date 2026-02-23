@@ -20,14 +20,19 @@ import java.io.File
 class SAFFileAccess(
     private val context: Context,
     private val treeUri: Uri,
+    val basePath: String = SaveFileManager.SDV_SAVE_PATH,
 ) : FileAccessStrategy {
 
-    override val name = "SAF"
+    override val name: String
+        get() = if (basePath == STAGING_BASE_PATH) "SAF (Staging)" else "SAF"
 
     companion object {
         private const val TAG = "SAFFileAccess"
         private const val PREF_NAME = "saf_prefs"
         private const val KEY_TREE_URI = "tree_uri"
+
+        /** Synthetic base path used when SAF points to a staging directory. */
+        const val STAGING_BASE_PATH = "/staging"
 
         /** SAF for Android/data/ works on API 30+. May be restricted on API 34+ on some devices. */
         fun isDeviceEligible(): Boolean {
@@ -38,6 +43,15 @@ class SAFFileAccess(
         fun isAvailable(context: Context): Boolean {
             if (!isDeviceEligible()) return false
             return getPersistedUri(context) != null
+        }
+
+        /**
+         * Check if the persisted SAF URI points to a staging directory
+         * (i.e. NOT the actual Stardew Valley save folder).
+         */
+        fun isStaging(context: Context): Boolean {
+            val uri = getPersistedUri(context) ?: return false
+            return !uri.toString().contains("com.chucklefish.stardewvalley")
         }
 
         /** Persist a tree URI grant across app restarts. */
@@ -82,10 +96,11 @@ class SAFFileAccess(
             return if (valid) uri else null
         }
 
-        /** Create an instance if available, null otherwise. */
+        /** Create an instance if available, null otherwise. Auto-detects staging vs direct. */
         fun createInstance(context: Context): SAFFileAccess? {
             val uri = getPersistedUri(context) ?: return null
-            return SAFFileAccess(context, uri)
+            val basePath = if (isStaging(context)) STAGING_BASE_PATH else SaveFileManager.SDV_SAVE_PATH
+            return SAFFileAccess(context, uri, basePath)
         }
     }
 
@@ -99,7 +114,7 @@ class SAFFileAccess(
      * and walking the tree.
      */
     private fun resolveDocument(file: File): DocumentFile? {
-        val relativePath = file.absolutePath.removePrefix(SaveFileManager.SDV_SAVE_PATH)
+        val relativePath = file.absolutePath.removePrefix(basePath)
             .trimStart('/')
         if (relativePath.isEmpty()) return treeRoot
 
@@ -116,7 +131,7 @@ class SAFFileAccess(
      */
     private fun resolveParentCreating(file: File): DocumentFile? {
         val parentPath = file.parentFile?.absolutePath ?: return null
-        val relativePath = parentPath.removePrefix(SaveFileManager.SDV_SAVE_PATH)
+        val relativePath = parentPath.removePrefix(basePath)
             .trimStart('/')
         if (relativePath.isEmpty()) return treeRoot
 
@@ -211,7 +226,7 @@ class SAFFileAccess(
 
     override suspend fun mkdirs(dir: File): Boolean = withContext(Dispatchers.IO) {
         try {
-            val relativePath = dir.absolutePath.removePrefix(SaveFileManager.SDV_SAVE_PATH)
+            val relativePath = dir.absolutePath.removePrefix(basePath)
                 .trimStart('/')
             if (relativePath.isEmpty()) return@withContext treeRoot.exists()
 

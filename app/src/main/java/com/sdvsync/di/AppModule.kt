@@ -2,6 +2,7 @@ package com.sdvsync.di
 
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.FileAccessStrategy
+import com.sdvsync.fileaccess.SAFFileAccess
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadataParser
@@ -48,17 +49,21 @@ val appModule = module {
     single { SaveMetadataParser() }
     single { SaveValidator() }
     single { SaveBackupManager(androidContext()) }
-    single { SaveFileManager(get(), get()) }
+    factory {
+        val strategy = get<FileAccessStrategy>()
+        val basePath = if (strategy is SAFFileAccess) strategy.basePath else SaveFileManager.SDV_SAVE_PATH
+        SaveFileManager(strategy, get(), basePath)
+    }
 
     // Sync
     single { ConflictResolver(androidContext()) }
     single { SyncHistoryStore(androidContext()) }
-    single { SyncEngine(androidContext(), get(), get(), get(), get(), get(), get()) }
+    factory { SyncEngine(androidContext(), get(), get(), get(), get(), get(), get()) }
 
     // ViewModels
     viewModel { LoginViewModel(get()) }
     viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { SyncDetailViewModel(androidContext(), get(), get()) }
+    viewModel { SyncDetailViewModel(androidContext(), get(), get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
 }

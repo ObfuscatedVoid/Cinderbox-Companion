@@ -6,17 +6,21 @@ import java.io.File
 class SaveFileManager(
     private val fileAccess: FileAccessStrategy,
     private val metadataParser: SaveMetadataParser,
+    private val basePath: String = SDV_SAVE_PATH,
 ) {
     companion object {
         const val SDV_SAVE_PATH =
             "/storage/emulated/0/Android/data/com.chucklefish.stardewvalley/files/Saves"
     }
 
+    /** True when SAF points to a staging directory instead of the game folder. */
+    val isStaging: Boolean get() = basePath != SDV_SAVE_PATH
+
     /**
      * List all local saves with their metadata.
      */
     suspend fun listLocalSaves(): List<LocalSave> {
-        val savesDir = File(SDV_SAVE_PATH)
+        val savesDir = File(basePath)
         val folders = fileAccess.listDirectories(savesDir) ?: return emptyList()
 
         return folders.mapNotNull { folderName ->
@@ -39,7 +43,7 @@ class SaveFileManager(
      * Returns map of filename -> bytes.
      */
     suspend fun readLocalSave(saveFolderName: String): Map<String, ByteArray> {
-        val saveDir = File(SDV_SAVE_PATH, saveFolderName)
+        val saveDir = File(basePath, saveFolderName)
         val files = fileAccess.listFiles(saveDir) ?: return emptyMap()
 
         val result = mutableMapOf<String, ByteArray>()
@@ -53,11 +57,11 @@ class SaveFileManager(
     }
 
     /**
-     * Write save files to the local game directory.
+     * Write save files to the local game directory (or staging directory).
      * Creates the save folder if it doesn't exist.
      */
     suspend fun writeLocalSave(saveFolderName: String, files: Map<String, ByteArray>): Boolean {
-        val saveDir = File(SDV_SAVE_PATH, saveFolderName)
+        val saveDir = File(basePath, saveFolderName)
 
         // Ensure directory exists
         if (!fileAccess.mkdirs(saveDir)) {
@@ -88,10 +92,10 @@ class SaveFileManager(
     }
 
     /**
-     * Check if Stardew Valley save directory exists and is accessible.
+     * Check if save directory exists and is accessible.
      */
     suspend fun isSaveDirectoryAccessible(): Boolean {
-        return fileAccess.exists(File(SDV_SAVE_PATH))
+        return fileAccess.exists(File(basePath))
     }
 }
 

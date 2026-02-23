@@ -34,6 +34,7 @@ data class DashboardState(
     val saves: List<SaveEntry> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
+    val isStagingMode: Boolean = false,
 )
 
 class DashboardViewModel(
@@ -50,7 +51,11 @@ class DashboardViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.value = _state.value.copy(
+                isLoading = true,
+                error = null,
+                isStagingMode = saveFileManager.isStaging,
+            )
 
             try {
                 // Wait for Steam connection to be ready
@@ -125,7 +130,11 @@ class DashboardViewModel(
                     )
                 }
 
-                _state.value = DashboardState(saves = entries, isLoading = false)
+                _state.value = DashboardState(
+                    saves = entries,
+                    isLoading = false,
+                    isStagingMode = saveFileManager.isStaging,
+                )
 
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e

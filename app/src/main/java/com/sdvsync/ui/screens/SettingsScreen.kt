@@ -82,11 +82,12 @@ fun SettingsScreen(
                 )
             }
 
-            // SAF (Android 11-13)
+            // SAF
             if (state.safEligible && !state.availableModes.contains("Root")) {
                 Spacer(Modifier.height(12.dp))
                 SAFAccessSection(
                     configured = state.safConfigured,
+                    isStaging = state.safIsStaging,
                     onSelectDirectory = { safLauncher.launch(null) },
                     onRevoke = { viewModel.clearSafAccess() },
                 )
@@ -180,6 +181,7 @@ fun SettingsScreen(
 @Composable
 private fun SAFAccessSection(
     configured: Boolean,
+    isStaging: Boolean,
     onSelectDirectory: () -> Unit,
     onRevoke: () -> Unit,
 ) {
@@ -197,7 +199,11 @@ private fun SAFAccessSection(
 
             if (configured) {
                 Text(
-                    stringResource(R.string.settings_saf_configured),
+                    if (isStaging) {
+                        stringResource(R.string.settings_saf_staging_configured)
+                    } else {
+                        stringResource(R.string.settings_saf_configured)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -208,6 +214,12 @@ private fun SAFAccessSection(
             } else {
                 Text(
                     stringResource(R.string.settings_saf_instructions),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.settings_saf_staging_instructions),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -92,6 +92,29 @@ fun DashboardScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        if (state.isStagingMode) {
+                            item {
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                    ),
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            stringResource(R.string.staging_mode_title),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            stringResource(R.string.staging_mode_description),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         items(state.saves) { save ->
                             SaveCard(
                                 save = save,

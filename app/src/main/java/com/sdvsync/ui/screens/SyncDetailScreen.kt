@@ -51,6 +51,24 @@ fun SyncDetailScreen(
 
             Spacer(Modifier.height(32.dp))
 
+            // Staging push reminder (shown before user presses push)
+            if (state.isStagingMode) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(R.string.staging_push_reminder),
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
             // Action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -94,6 +112,22 @@ fun SyncDetailScreen(
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyLarge,
                         )
+                        if (state.isStagingMode) {
+                            Spacer(Modifier.height(12.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    stringResource(R.string.staging_pull_reminder),
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                )
+                            }
+                        }
                     }
                     is SyncResult.Error -> {
                         Text(

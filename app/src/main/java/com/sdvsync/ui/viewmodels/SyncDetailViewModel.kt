@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
+import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
 import com.sdvsync.sync.SyncResult
@@ -16,20 +17,22 @@ data class SyncDetailState(
     val isSyncing: Boolean = false,
     val progressMessage: String = "",
     val result: SyncResult? = null,
+    val isStagingMode: Boolean = false,
 )
 
 class SyncDetailViewModel(
     private val context: Context,
     private val syncEngine: SyncEngine,
     private val historyStore: SyncHistoryStore,
+    private val saveFileManager: SaveFileManager,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SyncDetailState())
+    private val _state = MutableStateFlow(SyncDetailState(isStagingMode = saveFileManager.isStaging))
     val state: StateFlow<SyncDetailState> = _state.asStateFlow()
 
     fun pullSave(saveFolderName: String, force: Boolean = false) {
         viewModelScope.launch {
-            _state.value = SyncDetailState(isSyncing = true)
+            _state.value = SyncDetailState(isSyncing = true, isStagingMode = saveFileManager.isStaging)
 
             val result = syncEngine.pullSave(
                 saveFolderName = saveFolderName,
@@ -39,7 +42,7 @@ class SyncDetailViewModel(
                 },
             )
 
-            _state.value = SyncDetailState(isSyncing = false, result = result)
+            _state.value = SyncDetailState(isSyncing = false, result = result, isStagingMode = saveFileManager.isStaging)
 
             // Log to history
             val success = result is SyncResult.Success
@@ -54,7 +57,7 @@ class SyncDetailViewModel(
 
     fun pushSave(saveFolderName: String, force: Boolean = false) {
         viewModelScope.launch {
-            _state.value = SyncDetailState(isSyncing = true)
+            _state.value = SyncDetailState(isSyncing = true, isStagingMode = saveFileManager.isStaging)
 
             val result = syncEngine.pushSave(
                 saveFolderName = saveFolderName,
@@ -64,7 +67,7 @@ class SyncDetailViewModel(
                 },
             )
 
-            _state.value = SyncDetailState(isSyncing = false, result = result)
+            _state.value = SyncDetailState(isSyncing = false, result = result, isStagingMode = saveFileManager.isStaging)
 
             val success = result is SyncResult.Success
             val message = when (result) {
