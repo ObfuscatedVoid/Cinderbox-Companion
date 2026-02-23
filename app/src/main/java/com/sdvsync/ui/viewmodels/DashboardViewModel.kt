@@ -1,18 +1,21 @@
 package com.sdvsync.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sdvsync.saves.LocalSave
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
-import com.sdvsync.steam.CloudFile
+import com.sdvsync.steam.SteamClientManager
 import com.sdvsync.steam.SteamCloudService
 import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncDirection
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class SaveEntry(
@@ -32,6 +35,7 @@ data class DashboardState(
 )
 
 class DashboardViewModel(
+    private val clientManager: SteamClientManager,
     private val cloudService: SteamCloudService,
     private val saveFileManager: SaveFileManager,
     private val metadataParser: SaveMetadataParser,
@@ -47,20 +51,41 @@ class DashboardViewModel(
             _state.value = _state.value.copy(isLoading = true, error = null)
 
             try {
-                // Fetch cloud saves
-                val cloudSaves = cloudService.listCloudSaves()
+                // Wait for Steam connection to be ready
+                if (!clientManager.isLoggedIn) {
+                    Log.d(TAG, "Waiting for Steam login...")
+                    val loggedIn = clientManager.awaitLoggedIn(timeoutMs = 30_000)
+                    if (!loggedIn) {
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            error = "Not connected to Steam. Please go back and log in.",
+                        )
+                        return@launch
+                    }
+                }
+
+                Log.d(TAG, "Fetching cloud saves...")
+
+                // Fetch cloud saves with retry (Steam may disconnect/reconnect after login)
+                val cloudSaves = retryOnDisconnect {
+                    cloudService.listCloudSaves()
+                }
+                Log.d(TAG, "Got ${cloudSaves.size} cloud save folders")
+
                 val cloudMetadata = mutableMapOf<String, SaveMetadata>()
 
                 for ((folderName, files) in cloudSaves) {
                     val infoFile = files.find { it.filename == "SaveGameInfo" }
                     if (infoFile != null) {
                         try {
-                            val data = cloudService.downloadFile(infoFile.fullPath)
+                            val data = retryOnDisconnect {
+                                cloudService.downloadFile(infoFile.fullPath)
+                            }
                             metadataParser.parseFromBytes(data)?.let {
                                 cloudMetadata[folderName] = it
                             }
-                        } catch (_: Exception) {
-                            // Skip saves we can't parse
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to parse SaveGameInfo for $folderName", e)
                         }
                     }
                 }
@@ -73,8 +98,9 @@ class DashboardViewModel(
                 }
                 val localMap = localSaves.associateBy { it.folderName }
 
-                // Merge into unified list
-                val allFolderNames = (cloudMetadata.keys + localMap.keys).distinct()
+                // Merge into a unified list (use cloudSaves.keys so saves appear
+                // even if SaveGameInfo metadata couldn't be parsed)
+                val allFolderNames = (cloudSaves.keys + localMap.keys).distinct()
                 val entries = allFolderNames.map { folderName ->
                     val cloudMeta = cloudMetadata[folderName]
                     val localMeta = localMap[folderName]?.metadata
@@ -87,11 +113,10 @@ class DashboardViewModel(
                         localMeta = localMeta,
                         syncDirection = comparison.direction,
                         statusMessage = comparison.message,
-                        hasCloud = cloudMeta != null,
+                        hasCloud = folderName in cloudSaves,
                         hasLocal = localMeta != null,
                     )
                 }.sortedByDescending {
-                    // Sort by most recent activity
                     maxOf(
                         it.cloudMeta?.daysPlayed ?: 0,
                         it.localMeta?.daysPlayed ?: 0,
@@ -101,11 +126,66 @@ class DashboardViewModel(
                 _state.value = DashboardState(saves = entries, isLoading = false)
 
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e(TAG, "Failed to load saves", e)
                 _state.value = _state.value.copy(
                     isLoading = false,
                     error = "Failed to load saves: ${e.message}",
                 )
             }
         }
+    }
+
+    /**
+     * Retry an operation up to [maxRetries] times if it fails due to a Steam disconnect.
+     * Waits for the connection to be re-established between retries.
+     *
+     * Steam often disconnects ~50ms after login (CM server redirect). The disconnect callback
+     * takes up to ~1s to be processed by the callback loop, and auto-reconnect adds a 2s delay.
+     * So we must wait long enough for the full disconnect→reconnect cycle to complete.
+     */
+    private suspend fun <T> retryOnDisconnect(
+        maxRetries: Int = 5,
+        block: suspend () -> T,
+    ): T {
+        var lastException: Exception? = null
+        repeat(maxRetries) { attempt ->
+            try {
+                return block()
+            } catch (e: Exception) {
+                // If the coroutine itself was cancelled, propagate immediately.
+                // Don't just check `is CancellationException` because
+                // kotlinx.coroutines.CancellationException is a typealias for
+                // java.util.concurrent.CancellationException, which Steam's
+                // AsyncJobManager also throws when it cancels pending futures on disconnect.
+                if (!currentCoroutineContext().isActive) throw e
+
+                lastException = e
+                Log.w(TAG, "Cloud request failed (attempt ${attempt + 1}/$maxRetries): ${e::class.simpleName}")
+
+                // Wait for the disconnect callback to be processed by the callback loop
+                // and for auto-reconnect to kick in (callback loop ~1s + reconnect delay 2s)
+                Log.d(TAG, "Waiting 5s for disconnect processing + auto-reconnect...")
+                delay(5000)
+
+                // If still not logged in, wait for the auto-reconnect to fully complete
+                if (!clientManager.isLoggedIn) {
+                    Log.d(TAG, "Not logged in yet (state=${clientManager.connectionState.value}), waiting for reconnection...")
+                    val reconnected = clientManager.awaitLoggedIn(timeoutMs = 30_000)
+                    if (!reconnected) {
+                        throw RuntimeException("Lost connection to Steam", e)
+                    }
+                    // Extra stabilization delay after reconnect
+                    delay(2000)
+                }
+
+                Log.d(TAG, "Ready to retry (state=${clientManager.connectionState.value})")
+            }
+        }
+        throw lastException ?: RuntimeException("Failed after $maxRetries retries")
+    }
+
+    companion object {
+        private const val TAG = "Dashboard"
     }
 }

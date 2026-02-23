@@ -1,13 +1,15 @@
 package com.sdvsync.steam
 
+import android.util.Log
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.util.Date
 
@@ -18,13 +20,18 @@ data class CloudFile(
     val timestamp: Long,
     val pathPrefix: String,
 ) {
-    /** Full path including prefix, e.g. "FarmerYas_839201/FarmerYas_839201" */
-    val fullPath: String get() = if (pathPrefix.isNotEmpty()) "$pathPrefix/$filename" else filename
+    /** Full path including prefix, e.g. "%WinAppDataRoaming%StardewValley/Saves/CHAD_419795178/SaveGameInfo" */
+    val fullPath: String get() {
+        if (pathPrefix.isEmpty()) return filename
+        // Prefix already ends with "/" — don't add another
+        return if (pathPrefix.endsWith("/")) "$pathPrefix$filename" else "$pathPrefix/$filename"
+    }
 
-    /** The save folder name, e.g. "FarmerYas_839201" */
+    /** The save folder name (parent directory), e.g. "CHAD_419795178" */
     val saveFolderName: String? get() {
         val parts = fullPath.split("/")
-        return if (parts.size >= 2) parts[0] else null
+        // Save folder is the second-to-last component (parent dir of the file)
+        return if (parts.size >= 2) parts[parts.size - 2] else null
     }
 
     override fun equals(other: Any?): Boolean {
@@ -41,6 +48,7 @@ class SteamCloudService(
     private val httpClient: OkHttpClient,
 ) {
     companion object {
+        private const val TAG = "SteamCloud"
         const val STARDEW_APP_ID = 413150
     }
 
@@ -51,12 +59,20 @@ class SteamCloudService(
     suspend fun listCloudFiles(): List<CloudFile> = withContext(Dispatchers.IO) {
         val cloud = clientManager.cloud
 
-        val changeList = cloud.getAppFileListChange(STARDEW_APP_ID, 0).get()
+        Log.d(TAG, "Requesting cloud file list for AppID $STARDEW_APP_ID...")
+        val changeList = cloud.getAppFileListChange(STARDEW_APP_ID, 0).await()
+
+        Log.d(TAG, "Cloud response: changeNumber=${changeList.currentChangeNumber}, " +
+                "files=${changeList.files.size}, isOnlyDelta=${changeList.isOnlyDelta}, " +
+                "pathPrefixes=${changeList.pathPrefixes}, machineNames=${changeList.machineNames}")
 
         changeList.files.map { file ->
             val prefix = if (file.pathPrefixIndex in changeList.pathPrefixes.indices) {
                 changeList.pathPrefixes[file.pathPrefixIndex]
             } else ""
+
+            Log.d(TAG, "  File: prefix='$prefix' filename='${file.filename}' " +
+                    "size=${file.rawFileSize} prefixIdx=${file.pathPrefixIndex}")
 
             CloudFile(
                 filename = file.filename,
@@ -90,7 +106,7 @@ class SteamCloudService(
         val downloadInfo = cloud.clientFileDownload(
             STARDEW_APP_ID,
             filename,
-        ).get()
+        ).await()
 
         val protocol = if (downloadInfo.useHttps) "https" else "http"
         val url = "$protocol://${downloadInfo.urlHost}${downloadInfo.urlPath}"
@@ -154,7 +170,7 @@ class SteamCloudService(
             filesToDelete = emptyList(),
             clientId = 0L,
             appBuildId = 0L,
-        ).get()
+        ).await()
 
         val batchId = batchResponse.batchID
 
@@ -177,7 +193,7 @@ class SteamCloudService(
                     timestamp = Date(),
                     filename = fullPath,
                     uploadBatchId = batchId,
-                ).get()
+                ).await()
 
                 // Upload each block via HTTP
                 for (block in uploadInfo.blockRequests) {
@@ -214,7 +230,7 @@ class SteamCloudService(
                     appId = STARDEW_APP_ID,
                     fileSha = sha,
                     filename = fullPath,
-                ).get()
+                ).await()
 
                 if (!committed) {
                     throw RuntimeException("Failed to commit upload for $fullPath")
@@ -230,7 +246,7 @@ class SteamCloudService(
                 appId = STARDEW_APP_ID,
                 batchId = batchId,
                 batchEResult = EResult.OK,
-            ).get()
+            ).await()
 
         } catch (e: Exception) {
             // Always complete batch, even on failure
@@ -239,7 +255,7 @@ class SteamCloudService(
                     appId = STARDEW_APP_ID,
                     batchId = batchId,
                     batchEResult = EResult.Fail,
-                ).get()
+                ).await()
             } catch (_: Exception) {
                 // Ignore cleanup errors
             }

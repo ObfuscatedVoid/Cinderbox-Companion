@@ -57,7 +57,7 @@ val appModule = module {
 
     // ViewModels
     viewModel { LoginViewModel(get()) }
-    viewModel { DashboardViewModel(get(), get(), get()) }
+    viewModel { DashboardViewModel(get(), get(), get(), get()) }
     viewModel { SyncDetailViewModel(get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
