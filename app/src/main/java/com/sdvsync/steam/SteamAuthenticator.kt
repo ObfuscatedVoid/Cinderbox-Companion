@@ -1,5 +1,6 @@
 package com.sdvsync.steam
 
+import android.util.Log
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.authentication.*
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.LogOnDetails
@@ -9,6 +10,7 @@ import `in`.dragonbra.javasteam.steam.steamclient.callbacks.ConnectedCallback
 import `in`.dragonbra.javasteam.steam.steamclient.callbacks.DisconnectedCallback
 import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.*
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -21,6 +23,7 @@ sealed class AuthState {
     data object Connecting : AuthState()
     data object WaitingForCredentials : AuthState()
     data class WaitingFor2FA(val is2FACode: Boolean) : AuthState()
+    data class WaitingForQRScan(val challengeUrl: String) : AuthState()
     data object Authenticating : AuthState()
     data object LoggingIn : AuthState()
     data object LoggedIn : AuthState()
@@ -37,6 +40,10 @@ class SteamAuthenticator(
     private val clientManager: SteamClientManager,
     private val sessionStore: SteamSessionStore,
 ) {
+    companion object {
+        private const val TAG = "SteamAuth"
+    }
+
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
@@ -46,7 +53,21 @@ class SteamAuthenticator(
     private var credentialsSession: CredentialsAuthSession? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    fun registerCallbacks() {
+    // Pending credentials stored between connect() and onConnected()
+    private var pendingUsername: String? = null
+    private var pendingPassword: String? = null
+    private var pendingQRLogin = false
+    private var qrPollJob: Job? = null
+
+    // Track if we were logged in (for auto-reconnect)
+    private var wasLoggedIn = false
+    private var isUserDisconnect = false
+
+    init {
+        registerCallbacks()
+    }
+
+    private fun registerCallbacks() {
         val cbMgr = clientManager.callbackMgr
 
         cbMgr.subscribe(ConnectedCallback::class.java) { onConnected() }
@@ -56,18 +77,41 @@ class SteamAuthenticator(
     }
 
     suspend fun login(username: String, password: String) {
+        pendingUsername = username
+        pendingPassword = password
+        pendingQRLogin = false
+        isUserDisconnect = false
         _authState.value = AuthState.Connecting
         clientManager.connect()
+    }
+
+    suspend fun loginWithQR() {
+        pendingUsername = null
+        pendingPassword = null
+        pendingQRLogin = true
+        isUserDisconnect = false
+        _authState.value = AuthState.Connecting
+        clientManager.connect()
+    }
+
+    fun cancelQRLogin() {
+        qrPollJob?.cancel()
+        qrPollJob = null
+        pendingQRLogin = false
+        _authState.value = AuthState.Idle
     }
 
     suspend fun loginWithSavedSession() {
         val username = sessionStore.username
         val refreshToken = sessionStore.refreshToken
         if (username == null || refreshToken == null) {
-            _authState.value = AuthState.Error("No saved session")
             return
         }
 
+        pendingUsername = null
+        pendingPassword = null
+        pendingQRLogin = false
+        isUserDisconnect = false
         _authState.value = AuthState.Connecting
         clientManager.connect()
     }
@@ -80,17 +124,26 @@ class SteamAuthenticator(
                 val savedUsername = sessionStore.username
 
                 if (savedRefreshToken != null && savedUsername != null) {
+                    Log.d(TAG, "Resuming session for $savedUsername")
                     logOnWithToken(savedUsername, savedRefreshToken)
+                } else if (pendingQRLogin) {
+                    pendingQRLogin = false
+                    startQRAuthentication()
+                } else if (pendingUsername != null && pendingPassword != null) {
+                    authenticateWithCredentials(pendingUsername!!, pendingPassword!!)
+                    pendingUsername = null
+                    pendingPassword = null
                 } else {
                     _authState.value = AuthState.WaitingForCredentials
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Error in onConnected", e)
                 _authState.value = AuthState.Error("Connection error: ${e.message}")
             }
         }
     }
 
-    suspend fun authenticateWithCredentials(username: String, password: String) {
+    private suspend fun authenticateWithCredentials(username: String, password: String) {
         _authState.value = AuthState.Authenticating
 
         try {
@@ -126,22 +179,18 @@ class SteamAuthenticator(
                 }
             }
 
-            // beginAuthSessionViaCredentials returns CompletableFuture<CredentialsAuthSession>
             val session = SteamAuthentication(clientManager.client)
                 .beginAuthSessionViaCredentials(authDetails)
-                .get()
+                .await()
 
             credentialsSession = session
 
-            // pollingWaitForResult returns CompletableFuture<AuthPollResult>
-            val pollResponse = session.pollingWaitForResult().get()
+            val pollResponse = session.pollingWaitForResult().await()
 
-            // Save session tokens
             sessionStore.username = username
             sessionStore.accessToken = pollResponse.accessToken
             sessionStore.refreshToken = pollResponse.refreshToken
 
-            // Log on with the new tokens
             logOnWithToken(username, pollResponse.refreshToken)
 
         } catch (e: AuthenticationException) {
@@ -161,6 +210,56 @@ class SteamAuthenticator(
         pending2FAFuture = null
     }
 
+    private suspend fun startQRAuthentication() {
+        try {
+            val authDetails = AuthSessionDetails().apply {
+                deviceFriendlyName = "SDV-Sync Android"
+                persistentSession = true
+            }
+
+            val qrSession = SteamAuthentication(clientManager.client)
+                .beginAuthSessionViaQR(authDetails)
+                .await()
+
+            _authState.value = AuthState.WaitingForQRScan(qrSession.challengeUrl)
+
+            qrSession.challengeUrlChanged = IChallengeUrlChanged { session ->
+                session?.let {
+                    _authState.value = AuthState.WaitingForQRScan(it.challengeUrl)
+                }
+            }
+
+            qrPollJob = scope.launch {
+                var pollResult: AuthPollResult? = null
+                while (isActive && pollResult == null) {
+                    try {
+                        pollResult = qrSession.pollAuthSessionStatus().await()
+                    } catch (e: AuthenticationException) {
+                        _authState.value = AuthState.Error("QR login expired. Try again.")
+                        _events.emit(AuthEvent.LoginFailed("QR session expired"))
+                        return@launch
+                    }
+
+                    if (pollResult == null) {
+                        delay((qrSession.pollingInterval * 1000).toLong())
+                    }
+                }
+
+                if (pollResult != null) {
+                    sessionStore.username = pollResult.accountName
+                    sessionStore.accessToken = pollResult.accessToken
+                    sessionStore.refreshToken = pollResult.refreshToken
+
+                    logOnWithToken(pollResult.accountName, pollResult.refreshToken)
+                }
+            }
+
+        } catch (e: Exception) {
+            _authState.value = AuthState.Error("QR login failed: ${e.message}")
+            scope.launch { _events.emit(AuthEvent.LoginFailed(e.message ?: "Unknown error")) }
+        }
+    }
+
     private fun logOnWithToken(username: String, refreshToken: String) {
         _authState.value = AuthState.LoggingIn
 
@@ -175,11 +274,13 @@ class SteamAuthenticator(
 
     private fun onLoggedOn(callback: LoggedOnCallback) {
         if (callback.result == EResult.OK) {
+            Log.d(TAG, "Logged on successfully")
             callback.clientSteamID?.let { steamId ->
                 sessionStore.steamId = steamId.convertToUInt64()
             }
             sessionStore.cellId = callback.cellID
 
+            wasLoggedIn = true
             clientManager.onLoggedIn()
             _authState.value = AuthState.LoggedIn
             scope.launch { _events.emit(AuthEvent.LoginSuccess) }
@@ -187,11 +288,12 @@ class SteamAuthenticator(
             val msg = when (callback.result) {
                 EResult.AccountLogonDenied -> "Steam Guard email code required"
                 EResult.AccountLoginDeniedNeedTwoFactor -> "Steam Guard mobile code required"
-                EResult.InvalidPassword -> "Invalid password"
+                EResult.InvalidPassword -> "Invalid password or expired token"
                 EResult.TwoFactorCodeMismatch -> "Invalid 2FA code"
                 EResult.Expired -> "Session expired, please log in again"
                 else -> "Login failed: ${callback.result}"
             }
+            Log.w(TAG, "Logon failed: $msg")
             _authState.value = AuthState.Error(msg)
             scope.launch { _events.emit(AuthEvent.LoginFailed(msg)) }
 
@@ -205,20 +307,54 @@ class SteamAuthenticator(
     }
 
     private fun onLoggedOff(callback: LoggedOffCallback) {
+        Log.d(TAG, "Logged off: ${callback.result}")
+        wasLoggedIn = false
         _authState.value = AuthState.Idle
-        clientManager.onDisconnected()
+        clientManager.onDisconnected(userInitiated = false)
         scope.launch { _events.emit(AuthEvent.Disconnected) }
     }
 
     private fun onDisconnected(callback: DisconnectedCallback) {
-        clientManager.onDisconnected()
-        if (_authState.value is AuthState.LoggedIn) {
+        val userInitiated = isUserDisconnect
+        val currentAuthState = _authState.value
+        Log.d(TAG, "Disconnected (userInitiated=$userInitiated, wasLoggedIn=$wasLoggedIn, authState=${currentAuthState::class.simpleName})")
+        clientManager.onDisconnected(userInitiated = userInitiated)
+
+        if (!userInitiated && wasLoggedIn && sessionStore.hasSession()) {
+            // Don't auto-reconnect if we're already in a connecting/authenticating state.
+            // JavaSteam's client.connect() internally calls disconnect(), which fires this
+            // callback again — without this guard we'd get an infinite reconnection cascade.
+            if (currentAuthState is AuthState.Connecting ||
+                currentAuthState is AuthState.Authenticating ||
+                currentAuthState is AuthState.LoggingIn
+            ) {
+                Log.d(TAG, "Already connecting/authenticating, ignoring disconnect for auto-reconnect")
+                return
+            }
+
+            Log.d(TAG, "Auto-reconnecting in 2s...")
+            _authState.value = AuthState.Connecting
+            scope.launch {
+                delay(2000) // Let the client settle before reconnecting
+                try {
+                    clientManager.connect()
+                    Log.d(TAG, "Auto-reconnect: connect() returned, waiting for callbacks...")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Auto-reconnect failed", e)
+                    wasLoggedIn = false
+                    _authState.value = AuthState.Error("Disconnected: ${e.message}")
+                    _events.emit(AuthEvent.Disconnected)
+                }
+            }
+        } else if (!userInitiated && currentAuthState is AuthState.LoggedIn) {
             _authState.value = AuthState.Idle
             scope.launch { _events.emit(AuthEvent.Disconnected) }
         }
     }
 
     fun logout() {
+        isUserDisconnect = true
+        wasLoggedIn = false
         sessionStore.clear()
         _authState.value = AuthState.Idle
         clientManager.disconnect()

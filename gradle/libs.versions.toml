@@ -25,6 +25,9 @@ koinCompose = "3.5.6"
 # Coroutines
 coroutines = "1.9.0"
 
+# QR Code
+zxing = "3.5.3"
+
 # Shizuku
 shizuku = "13.1.5"
 
@@ -61,6 +64,9 @@ koin-androidx-compose = { group = "io.insert-koin", name = "koin-androidx-compos
 
 # Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# QR Code
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 # Shizuku
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }

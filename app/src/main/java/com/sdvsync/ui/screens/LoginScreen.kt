@@ -1,22 +1,36 @@
 package com.sdvsync.ui.screens
 
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
 import com.sdvsync.steam.AuthState
 import com.sdvsync.ui.viewmodels.LoginViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,30 +60,30 @@ fun LoginScreen(
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("SDV Sync - Steam Login") })
-        }
+        },
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
+            Spacer(Modifier.weight(1f))
+
             when (val state = authState) {
                 is AuthState.Idle, is AuthState.WaitingForCredentials -> {
-                    UsernamePasswordForm(
+                    LoginOptions(
                         username = username,
                         password = password,
                         passwordVisible = passwordVisible,
                         onUsernameChange = viewModel::updateUsername,
                         onPasswordChange = viewModel::updatePassword,
                         onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
-                        onSubmit = {
-                            viewModel.login()
-                            viewModel.submitCredentials()
-                        },
-                        enabled = true,
+                        onLogin = { viewModel.login() },
+                        onQRLogin = { viewModel.loginWithQR() },
                     )
                 }
 
@@ -84,6 +98,13 @@ fun LoginScreen(
                             else -> ""
                         },
                         style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+
+                is AuthState.WaitingForQRScan -> {
+                    QRLoginView(
+                        challengeUrl = state.challengeUrl,
+                        onCancel = { viewModel.cancelQRLogin() },
                     )
                 }
 
@@ -104,7 +125,7 @@ fun LoginScreen(
                             imeAction = ImeAction.Done,
                         ),
                         keyboardActions = KeyboardActions(
-                            onDone = { viewModel.submit2FA() }
+                            onDone = { viewModel.submit2FA() },
                         ),
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -125,47 +146,77 @@ fun LoginScreen(
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Spacer(Modifier.height(24.dp))
-                    UsernamePasswordForm(
+                    LoginOptions(
                         username = username,
                         password = password,
                         passwordVisible = passwordVisible,
                         onUsernameChange = viewModel::updateUsername,
                         onPasswordChange = viewModel::updatePassword,
                         onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
-                        onSubmit = {
-                            viewModel.login()
-                            viewModel.submitCredentials()
-                        },
-                        enabled = true,
+                        onLogin = { viewModel.login() },
+                        onQRLogin = { viewModel.loginWithQR() },
                     )
                 }
 
                 is AuthState.LoggedIn -> {
-                    // Will navigate away via LaunchedEffect
                     CircularProgressIndicator()
                 }
             }
+
+            Spacer(Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun UsernamePasswordForm(
+private fun LoginOptions(
     username: String,
     password: String,
     passwordVisible: Boolean,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
-    onSubmit: () -> Unit,
-    enabled: Boolean,
+    onLogin: () -> Unit,
+    onQRLogin: () -> Unit,
 ) {
+    // QR Code login button (primary)
+    OutlinedButton(
+        onClick = onQRLogin,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            Icons.Default.QrCode2,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text("Sign in with QR Code")
+    }
+
+    Spacer(Modifier.height(24.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        HorizontalDivider(Modifier.weight(1f))
+        Text(
+            "or",
+            modifier = Modifier.padding(horizontal = 16.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HorizontalDivider(Modifier.weight(1f))
+    }
+
+    Spacer(Modifier.height(24.dp))
+
+    // Username/password fields
     OutlinedTextField(
         value = username,
         onValueChange = onUsernameChange,
         label = { Text("Steam Username") },
         singleLine = true,
-        enabled = enabled,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth(),
     )
@@ -175,7 +226,6 @@ private fun UsernamePasswordForm(
         onValueChange = onPasswordChange,
         label = { Text("Password") },
         singleLine = true,
-        enabled = enabled,
         visualTransformation = if (passwordVisible) VisualTransformation.None
         else PasswordVisualTransformation(),
         trailingIcon = {
@@ -191,15 +241,103 @@ private fun UsernamePasswordForm(
             keyboardType = KeyboardType.Password,
             imeAction = ImeAction.Done,
         ),
-        keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+        keyboardActions = KeyboardActions(onDone = { onLogin() }),
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(24.dp))
     Button(
-        onClick = onSubmit,
+        onClick = onLogin,
         modifier = Modifier.fillMaxWidth(),
-        enabled = enabled && username.isNotBlank() && password.isNotBlank(),
+        enabled = username.isNotBlank() && password.isNotBlank(),
     ) {
         Text("Log In")
+    }
+}
+
+@Composable
+private fun QRLoginView(
+    challengeUrl: String,
+    onCancel: () -> Unit,
+) {
+    Text(
+        "Scan with Steam Mobile App",
+        style = MaterialTheme.typography.titleLarge,
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "Open the Steam app on your phone,\ntap the shield icon, then \"Approve a sign-in\"",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.height(24.dp))
+
+    Card(
+        modifier = Modifier.size(240.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            QrCodeImage(
+                data = challengeUrl,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+
+    Spacer(Modifier.height(24.dp))
+    OutlinedButton(onClick = onCancel) {
+        Text("Cancel")
+    }
+}
+
+@Composable
+private fun QrCodeImage(
+    data: String,
+    modifier: Modifier = Modifier,
+) {
+    val density = LocalDensity.current
+    val sizePx = with(density) { 200.dp.roundToPx() }
+
+    var bitmap by remember(data) { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(data) {
+        bitmap = withContext(Dispatchers.IO) {
+            val writer = QRCodeWriter()
+            val hints = mapOf(EncodeHintType.MARGIN to 1)
+            val matrix = writer.encode(data, BarcodeFormat.QR_CODE, sizePx, sizePx, hints)
+            val w = matrix.width
+            val h = matrix.height
+            val pixels = IntArray(w * h)
+            for (y in 0 until h) {
+                for (x in 0 until w) {
+                    pixels[y * w + x] = if (matrix[x, y]) {
+                        android.graphics.Color.BLACK
+                    } else {
+                        android.graphics.Color.WHITE
+                    }
+                }
+            }
+            Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also {
+                it.setPixels(pixels, 0, w, 0, 0, w, h)
+            }
+        }
+    }
+
+    bitmap?.let {
+        Image(
+            painter = BitmapPainter(it.asImageBitmap()),
+            contentDescription = "Steam login QR code",
+            modifier = modifier,
+        )
+    } ?: Box(modifier, contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(modifier = Modifier.size(48.dp))
     }
 }

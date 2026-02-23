@@ -26,8 +26,6 @@ class LoginViewModel(
     val twoFactorCode: StateFlow<String> = _twoFactorCode.asStateFlow()
 
     init {
-        authenticator.registerCallbacks()
-
         viewModelScope.launch {
             authenticator.events.collect { event ->
                 when (event) {
@@ -49,10 +47,14 @@ class LoginViewModel(
         }
     }
 
-    fun submitCredentials() {
+    fun loginWithQR() {
         viewModelScope.launch {
-            authenticator.authenticateWithCredentials(_username.value, _password.value)
+            authenticator.loginWithQR()
         }
+    }
+
+    fun cancelQRLogin() {
+        authenticator.cancelQRLogin()
     }
 
     fun submit2FA() {
@@ -66,8 +68,4 @@ class LoginViewModel(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        authenticator.destroy()
-    }
 }

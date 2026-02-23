@@ -89,6 +89,9 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
+    // QR Code
+    implementation(libs.zxing.core)
+
     // Shizuku
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
