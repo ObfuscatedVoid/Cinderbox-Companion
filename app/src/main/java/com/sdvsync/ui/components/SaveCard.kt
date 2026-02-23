@@ -47,7 +47,7 @@ fun SaveCard(
                         )
                     }
                 }
-                SyncStatusBadge(save.syncDirection)
+                SyncStatusBadge(save)
             }
 
             Spacer(Modifier.height(8.dp))
@@ -90,26 +90,54 @@ fun SaveCard(
 }
 
 @Composable
-fun SyncStatusBadge(direction: SyncDirection) {
-    val (icon, color, label) = when (direction) {
-        SyncDirection.PULL -> Triple(Icons.Default.CloudDownload, CloudBlue, stringResource(R.string.action_pull))
-        SyncDirection.PUSH -> Triple(Icons.Default.CloudUpload, StardewGreen, stringResource(R.string.action_push))
-        SyncDirection.SKIP -> Triple(Icons.Default.CheckCircle, SyncedGreen, stringResource(R.string.save_status_synced))
-        SyncDirection.CONFLICT -> Triple(Icons.Default.Warning, ConflictOrange, stringResource(R.string.save_status_conflict))
+fun SyncStatusBadge(save: SaveEntry) {
+    val (icon, color, label) = when (save.syncDirection) {
+        SyncDirection.PULL -> Triple(
+            Icons.Default.CloudDownload,
+            CloudBlue,
+            if (!save.hasLocal) stringResource(R.string.save_status_cloud)
+            else stringResource(R.string.save_status_cloud_newer),
+        )
+        SyncDirection.PUSH -> Triple(
+            Icons.Default.CloudUpload,
+            StardewGreen,
+            if (!save.hasCloud) stringResource(R.string.save_status_local)
+            else stringResource(R.string.save_status_local_newer),
+        )
+        SyncDirection.SKIP -> Triple(
+            Icons.Default.CheckCircle,
+            SyncedGreen,
+            stringResource(R.string.save_status_synced),
+        )
+        SyncDirection.CONFLICT -> Triple(
+            Icons.Default.Warning,
+            ConflictOrange,
+            stringResource(R.string.save_status_conflict),
+        )
     }
 
-    AssistChip(
-        onClick = {},
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-        leadingIcon = {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = color.copy(alpha = 0.12f),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
             Icon(
                 icon,
                 contentDescription = label,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(14.dp),
                 tint = color,
             )
-        },
-    )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = color,
+            )
+        }
+    }
 }
 
 @Composable

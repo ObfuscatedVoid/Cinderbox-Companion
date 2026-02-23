@@ -99,6 +99,7 @@
     <string name="sync_error_cloud_newer">Cloud save is newer. Pull first or use force push.</string>
     <string name="sync_error_push_failed">Push failed: %1$s</string>
     <string name="sync_error_backup_failed">Failed to create backup before push: %1$s</string>
+    <string name="sync_error_save_in_progress">Save appears to be in progress (temp files found). Wait for the game to finish saving, then try again.</string>
 
     <!-- Conflict resolver -->
     <string name="conflict_cloud_only">Save exists only on Steam Cloud</string>

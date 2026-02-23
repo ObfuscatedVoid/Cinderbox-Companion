@@ -33,6 +33,7 @@ data class SaveEntry(
 data class DashboardState(
     val saves: List<SaveEntry> = emptyList(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val isStagingMode: Boolean = false,
 )
@@ -49,10 +50,11 @@ class DashboardViewModel(
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
-    fun refresh() {
+    fun refresh(isUserRefresh: Boolean = false) {
         viewModelScope.launch {
             _state.value = _state.value.copy(
-                isLoading = true,
+                isLoading = !isUserRefresh,
+                isRefreshing = isUserRefresh,
                 error = null,
                 isStagingMode = saveFileManager.isStaging,
             )
@@ -65,6 +67,7 @@ class DashboardViewModel(
                     if (!loggedIn) {
                         _state.value = _state.value.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             error = context.getString(R.string.error_not_connected),
                         )
                         return@launch
@@ -133,6 +136,7 @@ class DashboardViewModel(
                 _state.value = DashboardState(
                     saves = entries,
                     isLoading = false,
+                    isRefreshing = false,
                     isStagingMode = saveFileManager.isStaging,
                 )
 
@@ -141,6 +145,7 @@ class DashboardViewModel(
                 Log.e(TAG, "Failed to load saves", e)
                 _state.value = _state.value.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     error = context.getString(R.string.error_load_saves_failed, e.message ?: "Unknown error"),
                 )
             }

@@ -112,6 +112,22 @@ fun SyncDetailScreen(
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyLarge,
                         )
+                        if (result.warning != null) {
+                            Spacer(Modifier.height(12.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    result.warning,
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
+                        }
                         if (state.isStagingMode) {
                             Spacer(Modifier.height(12.dp))
                             Card(

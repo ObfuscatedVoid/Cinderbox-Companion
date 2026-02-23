@@ -11,7 +11,7 @@ import com.sdvsync.saves.SaveValidator
 import com.sdvsync.steam.SteamCloudService
 
 sealed class SyncResult {
-    data class Success(val message: String) : SyncResult()
+    data class Success(val message: String, val warning: String? = null) : SyncResult()
     data class Error(val message: String) : SyncResult()
     data class NeedsConflictResolution(val comparison: SyncComparison) : SyncResult()
 }
@@ -88,10 +88,18 @@ class SyncEngine(
                 }
             }
 
-            // Backup existing local save
-            onProgress?.invoke(context.getString(R.string.sync_progress_backing_up))
+            // Check version compatibility (warn but don't block)
             val localSaves = saveFileManager.listLocalSaves()
             val existingLocal = localSaves.find { it.folderName == saveFolderName }
+            val versionWarning = if (cloudMeta != null) {
+                conflictResolver.checkVersionCompatibility(
+                    cloudMeta.gameVersion,
+                    existingLocal?.metadata?.gameVersion,
+                )
+            } else null
+
+            // Backup existing local save
+            onProgress?.invoke(context.getString(R.string.sync_progress_backing_up))
             if (existingLocal != null) {
                 val localFiles = saveFileManager.readLocalSave(saveFolderName)
                 if (localFiles.isNotEmpty()) {
@@ -107,11 +115,12 @@ class SyncEngine(
             }
 
             val dayInfo = cloudMeta?.let { formatDisplayDate(it) }
-            return if (dayInfo != null) {
-                SyncResult.Success(context.getString(R.string.sync_pull_success_with_day, dayInfo))
+            val successMsg = if (dayInfo != null) {
+                context.getString(R.string.sync_pull_success_with_day, dayInfo)
             } else {
-                SyncResult.Success(context.getString(R.string.sync_pull_success))
+                context.getString(R.string.sync_pull_success)
             }
+            return SyncResult.Success(successMsg, warning = versionWarning)
 
         } catch (e: Exception) {
             Log.e(TAG, "Pull failed for $saveFolderName", e)
@@ -135,6 +144,12 @@ class SyncEngine(
             val localFiles = saveFileManager.readLocalSave(saveFolderName)
             if (localFiles.isEmpty()) {
                 return SyncResult.Error(context.getString(R.string.sync_error_no_local_files, saveFolderName))
+            }
+
+            // Check for in-progress saves (temp files from game still writing)
+            val tempFiles = localFiles.keys.filter { it.contains("_STARDEWVALLEYSAVETMP") }
+            if (tempFiles.isNotEmpty()) {
+                return SyncResult.Error(context.getString(R.string.sync_error_save_in_progress))
             }
 
             val localInfoData = localFiles["SaveGameInfo"]

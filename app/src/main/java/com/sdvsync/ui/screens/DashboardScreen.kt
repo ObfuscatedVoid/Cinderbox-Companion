@@ -4,10 +4,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +38,7 @@ fun DashboardScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.dashboard_title)) },
                 actions = {
-                    IconButton(onClick = { viewModel.refresh() }) {
+                    IconButton(onClick = { viewModel.refresh(isUserRefresh = true) }) {
                         Icon(Icons.Default.Refresh, stringResource(R.string.action_refresh))
                     }
                     IconButton(onClick = onSyncLogClick) {
@@ -50,41 +51,49 @@ fun DashboardScreen(
             )
         },
     ) { padding ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { viewModel.refresh(isUserRefresh = true) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
             when {
                 state.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                 }
                 state.error != null -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            state.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Button(onClick = { viewModel.refresh() }) {
-                            Text(stringResource(R.string.action_retry))
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                state.error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Button(onClick = { viewModel.refresh() }) {
+                                Text(stringResource(R.string.action_retry))
+                            }
                         }
                     }
                 }
                 state.saves.isEmpty() -> {
-                    Text(
-                        stringResource(R.string.dashboard_no_saves),
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Text(
+                            stringResource(R.string.dashboard_no_saves),
+                            modifier = Modifier.align(Alignment.Center),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
                 }
                 else -> {
                     LazyColumn(
