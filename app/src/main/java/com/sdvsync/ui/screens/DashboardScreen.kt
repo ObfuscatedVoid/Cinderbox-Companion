@@ -3,10 +3,6 @@ package com.sdvsync.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -16,7 +12,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.ui.animation.StaggeredAnimatedItem
+import com.sdvsync.ui.components.ClockData
 import com.sdvsync.ui.components.EmptyState
+import com.sdvsync.ui.components.GearData
+import com.sdvsync.ui.components.PixelIconButton
+import com.sdvsync.ui.components.PixelLoadingSpinner
+import com.sdvsync.ui.components.RefreshData
 import com.sdvsync.ui.components.SaveCard
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewCard
@@ -43,15 +44,21 @@ fun DashboardScreen(
             StardewTopAppBar(
                 title = stringResource(R.string.dashboard_title),
                 actions = {
-                    IconButton(onClick = { viewModel.refresh(isUserRefresh = true) }) {
-                        Icon(Icons.Default.Refresh, stringResource(R.string.action_refresh))
-                    }
-                    IconButton(onClick = onSyncLogClick) {
-                        Icon(Icons.Default.History, stringResource(R.string.sync_log_title))
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, stringResource(R.string.settings_title))
-                    }
+                    PixelIconButton(
+                        pixelData = RefreshData,
+                        onClick = { viewModel.refresh(isUserRefresh = true) },
+                        contentDescription = stringResource(R.string.action_refresh),
+                    )
+                    PixelIconButton(
+                        pixelData = ClockData,
+                        onClick = onSyncLogClick,
+                        contentDescription = stringResource(R.string.sync_log_title),
+                    )
+                    PixelIconButton(
+                        pixelData = GearData,
+                        onClick = onSettingsClick,
+                        contentDescription = stringResource(R.string.settings_title),
+                    )
                 },
             )
         },
@@ -66,9 +73,8 @@ fun DashboardScreen(
             when {
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        CircularProgressIndicator(
+                        PixelLoadingSpinner(
                             modifier = Modifier.align(Alignment.Center),
-                            color = MaterialTheme.colorScheme.tertiary,
                         )
                     }
                 }

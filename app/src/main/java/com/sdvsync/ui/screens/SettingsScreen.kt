@@ -8,8 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +18,9 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveBackupManager
+import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.PixelDivider
+import com.sdvsync.ui.components.PixelIconButton
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
@@ -96,9 +97,12 @@ fun SettingsScreen(
             StardewTopAppBar(
                 title = stringResource(R.string.settings_title),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
-                    }
+                    PixelIconButton(
+                        pixelData = ArrowLeftData,
+                        onClick = onBack,
+                        contentDescription = stringResource(R.string.action_back),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 },
             )
         },
@@ -198,7 +202,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
+            PixelDivider()
             Spacer(Modifier.height(24.dp))
 
             // Backups
@@ -234,7 +238,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
+            PixelDivider()
             Spacer(Modifier.height(24.dp))
 
             // Auto-sync
@@ -276,7 +280,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
+            PixelDivider()
             Spacer(Modifier.height(24.dp))
 
             // Account
@@ -293,7 +297,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
+            PixelDivider()
             Spacer(Modifier.height(24.dp))
 
             // About
@@ -314,7 +318,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
+            PixelDivider()
             Spacer(Modifier.height(24.dp))
 
             // Diagnostics

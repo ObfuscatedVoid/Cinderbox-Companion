@@ -7,14 +7,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalDensity
@@ -30,6 +27,15 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.sdvsync.R
 import com.sdvsync.steam.AuthState
+import com.sdvsync.ui.components.BarnData
+import com.sdvsync.ui.components.BarnPalette
+import com.sdvsync.ui.components.EyeClosedData
+import com.sdvsync.ui.components.EyeOpenData
+import com.sdvsync.ui.components.PixelDivider
+import com.sdvsync.ui.components.PixelIcon
+import com.sdvsync.ui.components.PixelLoadingSpinner
+import com.sdvsync.ui.components.QrCodeData
+import com.sdvsync.ui.components.SparkleOverlay
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
@@ -83,6 +89,22 @@ fun LoginScreen(
         ) {
             Spacer(Modifier.weight(1f))
 
+            // Farm illustration + sparkle overlay
+            Box(
+                contentAlignment = Alignment.Center,
+            ) {
+                SparkleOverlay(
+                    modifier = Modifier
+                        .size(width = 200.dp, height = 100.dp),
+                )
+                PixelIcon(
+                    pixelData = BarnData,
+                    palette = BarnPalette,
+                    size = 64.dp,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
             // Branded header
             Text(
                 "SDV Sync",
@@ -112,9 +134,7 @@ fun LoginScreen(
                 }
 
                 is AuthState.Connecting, is AuthState.Authenticating, is AuthState.LoggingIn -> {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
+                    PixelLoadingSpinner()
                     Spacer(Modifier.height(16.dp))
                     Text(
                         when (state) {
@@ -147,6 +167,7 @@ fun LoginScreen(
                         label = { Text(stringResource(R.string.login_2fa_label)) },
                         singleLine = true,
                         colors = warmTextFieldColors,
+                        shape = RectangleShape,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Done,
@@ -187,9 +208,7 @@ fun LoginScreen(
                 }
 
                 is AuthState.LoggedIn -> {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
+                    PixelLoadingSpinner()
                 }
             }
 
@@ -210,14 +229,16 @@ private fun LoginOptions(
     onLogin: () -> Unit,
     onQRLogin: () -> Unit,
 ) {
+    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
+
     StardewOutlinedButton(
         onClick = onQRLogin,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Icon(
-            Icons.Default.QrCode2,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
+        PixelIcon(
+            pixelData = QrCodeData,
+            palette = listOf(androidx.compose.ui.graphics.Color.Transparent, iconTint),
+            size = 20.dp,
         )
         Spacer(Modifier.width(8.dp))
         Text(stringResource(R.string.login_qr_button))
@@ -229,14 +250,14 @@ private fun LoginOptions(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HorizontalDivider(Modifier.weight(1f))
+        PixelDivider(Modifier.weight(1f))
         Text(
             stringResource(R.string.login_or_divider),
             modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        HorizontalDivider(Modifier.weight(1f))
+        PixelDivider(Modifier.weight(1f))
     }
 
     Spacer(Modifier.height(24.dp))
@@ -247,6 +268,7 @@ private fun LoginOptions(
         label = { Text(stringResource(R.string.login_username_hint)) },
         singleLine = true,
         colors = textFieldColors,
+        shape = RectangleShape,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth(),
     )
@@ -257,14 +279,18 @@ private fun LoginOptions(
         label = { Text(stringResource(R.string.login_password_hint)) },
         singleLine = true,
         colors = textFieldColors,
+        shape = RectangleShape,
         visualTransformation = if (passwordVisible) VisualTransformation.None
         else PasswordVisualTransformation(),
         trailingIcon = {
             IconButton(onClick = onTogglePasswordVisibility) {
-                Icon(
-                    if (passwordVisible) Icons.Filled.Visibility
-                    else Icons.Filled.VisibilityOff,
-                    contentDescription = stringResource(R.string.login_toggle_password),
+                PixelIcon(
+                    pixelData = if (passwordVisible) EyeOpenData else EyeClosedData,
+                    palette = listOf(
+                        androidx.compose.ui.graphics.Color.Transparent,
+                        iconTint,
+                    ),
+                    size = 20.dp,
                 )
             }
         },
@@ -365,9 +391,6 @@ private fun QrCodeImage(
             modifier = modifier,
         )
     } ?: Box(modifier, contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(48.dp),
-            color = MaterialTheme.colorScheme.tertiary,
-        )
+        PixelLoadingSpinner(size = 48.dp)
     }
 }

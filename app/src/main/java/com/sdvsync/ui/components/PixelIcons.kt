@@ -1,5 +1,7 @@
 package com.sdvsync.ui.components
 
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -244,7 +246,167 @@ val StarIconData = arrayOf(
     intArrayOf(0, 0, 0, 0, 0, 0, 0, 0),
 )
 
+// ── Arrow Left (8x8) — back navigation ────────────────────────────────
+// Palette: 1=icon color (provided at render time)
+val ArrowLeftData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(1, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(1, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(0, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 0, 0, 0, 0),
+)
+
+// ── Refresh (10x10) — circular arrows ─────────────────────────────────
+val RefreshData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 1, 0, 0, 0, 0, 1, 0, 1),
+    intArrayOf(0, 1, 0, 0, 0, 0, 0, 0, 1, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 1, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 0),
+    intArrayOf(1, 0, 1, 0, 0, 0, 0, 1, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+)
+
+// ── Clock (10x10) — history/time icon ─────────────────────────────────
+val ClockData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 1, 1, 0, 0, 0, 0, 1, 1, 0),
+    intArrayOf(1, 1, 0, 0, 1, 0, 0, 0, 1, 1),
+    intArrayOf(1, 1, 0, 0, 1, 0, 0, 0, 1, 1),
+    intArrayOf(1, 1, 0, 0, 1, 1, 1, 0, 1, 1),
+    intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
+    intArrayOf(0, 1, 1, 0, 0, 0, 0, 1, 1, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+)
+
+// ── Gear (10x10) — settings icon ──────────────────────────────────────
+val GearData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 0, 0, 1, 1, 0, 0),
+    intArrayOf(0, 1, 1, 0, 0, 0, 0, 1, 1, 0),
+    intArrayOf(1, 1, 0, 0, 1, 1, 0, 0, 1, 1),
+    intArrayOf(1, 0, 0, 1, 1, 1, 1, 0, 0, 1),
+    intArrayOf(1, 0, 0, 1, 1, 1, 1, 0, 0, 1),
+    intArrayOf(1, 1, 0, 0, 1, 1, 0, 0, 1, 1),
+    intArrayOf(0, 1, 1, 0, 0, 0, 0, 1, 1, 0),
+    intArrayOf(0, 0, 1, 1, 0, 0, 1, 1, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+)
+
+// ── Trash (10x10) — delete icon ───────────────────────────────────────
+val TrashData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 0, 1, 0, 1, 1, 0, 1, 0, 0),
+    intArrayOf(0, 0, 1, 0, 1, 1, 0, 1, 0, 0),
+    intArrayOf(0, 0, 1, 0, 1, 1, 0, 1, 0, 0),
+    intArrayOf(0, 0, 1, 0, 1, 1, 0, 1, 0, 0),
+    intArrayOf(0, 0, 1, 0, 1, 1, 0, 1, 0, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+)
+
+// ── QR Code (10x10) — simplified QR icon ──────────────────────────────
+val QrCodeData = arrayOf(
+    intArrayOf(1, 1, 1, 0, 0, 0, 0, 1, 1, 1),
+    intArrayOf(1, 0, 1, 0, 1, 0, 0, 1, 0, 1),
+    intArrayOf(1, 1, 1, 0, 0, 1, 0, 1, 1, 1),
+    intArrayOf(0, 0, 0, 0, 1, 0, 1, 0, 0, 0),
+    intArrayOf(0, 1, 0, 1, 0, 1, 0, 0, 1, 0),
+    intArrayOf(0, 0, 1, 0, 1, 0, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 0, 1, 0, 0, 0, 0),
+    intArrayOf(1, 1, 1, 0, 0, 0, 0, 1, 0, 1),
+    intArrayOf(1, 0, 1, 0, 1, 0, 0, 0, 1, 0),
+    intArrayOf(1, 1, 1, 0, 0, 1, 0, 1, 0, 1),
+)
+
+// ── Eye Open (10x10) — password visibility ────────────────────────────
+val EyeOpenData = arrayOf(
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 1, 0, 0, 0, 0, 1, 0, 0),
+    intArrayOf(0, 1, 0, 0, 1, 1, 0, 0, 1, 0),
+    intArrayOf(0, 1, 0, 0, 1, 1, 0, 0, 1, 0),
+    intArrayOf(0, 0, 1, 0, 0, 0, 0, 1, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+)
+
+// ── Eye Closed (10x10) — password hidden ──────────────────────────────
+val EyeClosedData = arrayOf(
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 0, 1, 0, 0, 0, 1, 0, 0, 0),
+    intArrayOf(0, 1, 0, 0, 1, 1, 0, 0, 1, 0),
+    intArrayOf(0, 1, 0, 1, 1, 0, 0, 0, 1, 0),
+    intArrayOf(0, 0, 1, 0, 0, 0, 0, 1, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 1, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+)
+
+// ── Barn (16x12) — pixel farm scene for login ─────────────────────────
+// Palette: 1=brown wall, 2=red roof, 3=green ground, 4=gold star, 5=dark door, 6=lighter brown
+val BarnPalette = listOf(
+    Color.Transparent,
+    Color(0xFF8B5E3C), // brown wall
+    Color(0xFFC03020), // red roof
+    Color(0xFF4CAF50), // green ground
+    GoldBright,        // gold star
+    Color(0xFF3D1E00), // dark door
+    Color(0xFFA87048), // lighter brown
+)
+
+val BarnData = arrayOf(
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 6, 6, 6, 6, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 6, 6, 6, 6, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1, 0, 0, 0),
+    intArrayOf(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
+    intArrayOf(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
+)
+
 // ── Convenience composables ─────────────────────────────────────────────
+
+/**
+ * Pixel art icon button for toolbars.
+ * Uses a single-color palette (color index 1).
+ */
+@Composable
+fun PixelIconButton(
+    pixelData: Array<IntArray>,
+    onClick: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    size: Dp = 20.dp,
+) {
+    IconButton(onClick = onClick, modifier = modifier) {
+        PixelIcon(
+            pixelData = pixelData,
+            palette = listOf(Color.Transparent, tint),
+            size = size,
+        )
+    }
+}
 
 @Composable
 fun PixelSeasonIcon(

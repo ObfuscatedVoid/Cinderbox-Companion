@@ -3,9 +3,6 @@ package com.sdvsync.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,13 +11,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.sync.SyncHistoryEntry
+import com.sdvsync.ui.components.ArrowLeftData
 import com.sdvsync.ui.components.EmptyState
+import com.sdvsync.ui.components.PixelIconButton
+import com.sdvsync.ui.components.PixelLoadingSpinner
 import com.sdvsync.ui.components.PixelSyncLogIcon
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.TrashData
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
-import com.sdvsync.ui.viewmodels.SyncLogViewModel
 import org.koin.androidx.compose.koinViewModel
+import com.sdvsync.ui.viewmodels.SyncLogViewModel
 
 @Composable
 fun SyncLogScreen(
@@ -38,15 +39,20 @@ fun SyncLogScreen(
             StardewTopAppBar(
                 title = stringResource(R.string.sync_log_title),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
-                    }
+                    PixelIconButton(
+                        pixelData = ArrowLeftData,
+                        onClick = onBack,
+                        contentDescription = stringResource(R.string.action_back),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 },
                 actions = {
                     if (state.entries.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.clearHistory() }) {
-                            Icon(Icons.Default.DeleteSweep, stringResource(R.string.sync_log_clear))
-                        }
+                        PixelIconButton(
+                            pixelData = TrashData,
+                            onClick = { viewModel.clearHistory() },
+                            contentDescription = stringResource(R.string.sync_log_clear),
+                        )
                     }
                 },
             )
@@ -59,9 +65,8 @@ fun SyncLogScreen(
         ) {
             when {
                 state.isLoading -> {
-                    CircularProgressIndicator(
+                    PixelLoadingSpinner(
                         modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
                 state.entries.isEmpty() -> {

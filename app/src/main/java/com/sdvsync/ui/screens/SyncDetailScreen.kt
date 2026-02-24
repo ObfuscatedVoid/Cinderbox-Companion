@@ -6,8 +6,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,10 +16,14 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.sync.SyncResult
 import com.sdvsync.sync.SyncDirection
+import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.PixelIconButton
+import com.sdvsync.ui.components.PixelLoadingSpinner
 import com.sdvsync.ui.components.PixelSyncIcon
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
+import com.sdvsync.ui.components.StardewDialog
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
@@ -44,9 +46,12 @@ fun SyncDetailScreen(
             StardewTopAppBar(
                 title = saveFolderName.substringBefore("_"),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
-                    }
+                    PixelIconButton(
+                        pixelData = ArrowLeftData,
+                        onClick = onBack,
+                        contentDescription = stringResource(R.string.action_back),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 },
             )
         },
@@ -113,7 +118,7 @@ fun SyncDetailScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Sync status with pulsing gold spinner
+            // Sync status with pulsing pixel spinner
             if (state.isSyncing) {
                 val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                 val pulseAlpha by infiniteTransition.animateFloat(
@@ -125,9 +130,8 @@ fun SyncDetailScreen(
                     ),
                     label = "pulseAlpha",
                 )
-                CircularProgressIndicator(
+                PixelLoadingSpinner(
                     modifier = Modifier.alpha(pulseAlpha),
-                    color = MaterialTheme.colorScheme.tertiary,
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(state.progressMessage, style = MaterialTheme.typography.bodyMedium)
@@ -215,24 +219,20 @@ fun SyncDetailScreen(
     }
 
     if (showPullConfirm) {
-        AlertDialog(
+        StardewDialog(
             onDismissRequest = { showPullConfirm = false },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            title = { Text(stringResource(R.string.sync_confirm_pull_title)) },
-            text = { Text(stringResource(R.string.sync_confirm_pull_message)) },
+            title = stringResource(R.string.sync_confirm_pull_title),
+            text = stringResource(R.string.sync_confirm_pull_message),
             confirmButton = {
-                TextButton(onClick = {
+                StardewButton(onClick = {
                     showPullConfirm = false
                     viewModel.pullSave(saveFolderName)
                 }) {
-                    Text(
-                        stringResource(R.string.sync_confirm_continue),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    Text(stringResource(R.string.sync_confirm_continue))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showPullConfirm = false }) {
+                StardewOutlinedButton(onClick = { showPullConfirm = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             },
@@ -240,24 +240,20 @@ fun SyncDetailScreen(
     }
 
     if (showPushConfirm) {
-        AlertDialog(
+        StardewDialog(
             onDismissRequest = { showPushConfirm = false },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            title = { Text(stringResource(R.string.sync_confirm_push_title)) },
-            text = { Text(stringResource(R.string.sync_confirm_push_message)) },
+            title = stringResource(R.string.sync_confirm_push_title),
+            text = stringResource(R.string.sync_confirm_push_message),
             confirmButton = {
-                TextButton(onClick = {
+                StardewButton(onClick = {
                     showPushConfirm = false
                     viewModel.pushSave(saveFolderName)
                 }) {
-                    Text(
-                        stringResource(R.string.sync_confirm_continue),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    Text(stringResource(R.string.sync_confirm_continue))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showPushConfirm = false }) {
+                StardewOutlinedButton(onClick = { showPushConfirm = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             },
