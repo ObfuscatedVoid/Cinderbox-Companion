@@ -96,6 +96,10 @@ data class StardewColors(
     val seasonSummer: Color,
     val seasonFall: Color,
     val seasonWinter: Color,
+    val pixelBorderDark: Color,
+    val pixelBorderPlank: Color,
+    val pixelBorderHighlight: Color,
+    val pixelBorderShadow: Color,
 )
 
 val LocalStardewColors = staticCompositionLocalOf {
@@ -109,10 +113,14 @@ val LocalStardewColors = staticCompositionLocalOf {
         seasonSummer = SeasonSummer,
         seasonFall = SeasonFall,
         seasonWinter = SeasonWinter,
+        pixelBorderDark = PixelBorderDark,
+        pixelBorderPlank = PixelBorderPlank,
+        pixelBorderHighlight = PixelBorderHighlight,
+        pixelBorderShadow = PixelBorderShadow,
     )
 }
 
-private val StardewColorValues = StardewColors(
+private val LightStardewColors = StardewColors(
     pullBlue = SyncPullBlue,
     pushGreen = SyncPushGreen,
     synced = SyncSynced,
@@ -122,6 +130,26 @@ private val StardewColorValues = StardewColors(
     seasonSummer = SeasonSummer,
     seasonFall = SeasonFall,
     seasonWinter = SeasonWinter,
+    pixelBorderDark = PixelBorderDark,
+    pixelBorderPlank = PixelBorderPlank,
+    pixelBorderHighlight = PixelBorderHighlight,
+    pixelBorderShadow = PixelBorderShadow,
+)
+
+private val DarkStardewColors = StardewColors(
+    pullBlue = SyncPullBlue,
+    pushGreen = SyncPushGreen,
+    synced = SyncSynced,
+    conflict = SyncConflict,
+    syncError = SyncError,
+    seasonSpring = SeasonSpring,
+    seasonSummer = SeasonSummer,
+    seasonFall = SeasonFall,
+    seasonWinter = SeasonWinter,
+    pixelBorderDark = PixelBorderDarkDk,
+    pixelBorderPlank = PixelBorderPlankDk,
+    pixelBorderHighlight = PixelBorderHighlightDk,
+    pixelBorderShadow = PixelBorderShadowDk,
 )
 
 val StardewShapes = Shapes(
@@ -144,9 +172,10 @@ fun SdvSyncTheme(
     content: @Composable () -> Unit,
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val stardewColors = if (darkTheme) DarkStardewColors else LightStardewColors
 
     CompositionLocalProvider(
-        LocalStardewColors provides StardewColorValues,
+        LocalStardewColors provides stardewColors,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

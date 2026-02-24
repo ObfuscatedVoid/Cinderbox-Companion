@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.sync.SyncHistoryEntry
 import com.sdvsync.ui.components.EmptyState
+import com.sdvsync.ui.components.PixelSyncLogIcon
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
@@ -91,7 +92,6 @@ fun SyncLogScreen(
 @Composable
 private fun SyncLogEntryCard(entry: SyncHistoryEntry) {
     val extras = SdvSyncThemeExtras.colors
-    val icon = if (entry.direction == "pull") Icons.Default.CloudDownload else Icons.Default.CloudUpload
     val statusColor = if (entry.success) {
         if (entry.direction == "pull") extras.pullBlue else extras.pushGreen
     } else {
@@ -103,11 +103,10 @@ private fun SyncLogEntryCard(entry: SyncHistoryEntry) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                icon,
-                contentDescription = entry.direction,
-                tint = statusColor,
-                modifier = Modifier.size(24.dp),
+            PixelSyncLogIcon(
+                direction = entry.direction,
+                success = entry.success,
+                size = 24.dp,
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {

@@ -9,6 +9,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sdvsync.ui.theme.ErrorLight
@@ -40,9 +42,42 @@ fun StardewButton(
         StardewButtonVariant.Danger -> ErrorLight to Color.White
     }
 
+    val highlightColor = Color.White.copy(alpha = 0.25f)
+    val shadowColor = Color.Black.copy(alpha = 0.25f)
+
     Button(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.drawBehind {
+            val strokeWidth = 1.dp.toPx()
+            // Top highlight
+            drawLine(
+                highlightColor,
+                Offset(strokeWidth, strokeWidth),
+                Offset(size.width - strokeWidth, strokeWidth),
+                strokeWidth,
+            )
+            // Left highlight
+            drawLine(
+                highlightColor,
+                Offset(strokeWidth, strokeWidth),
+                Offset(strokeWidth, size.height - strokeWidth),
+                strokeWidth,
+            )
+            // Bottom shadow
+            drawLine(
+                shadowColor,
+                Offset(strokeWidth, size.height - strokeWidth),
+                Offset(size.width - strokeWidth, size.height - strokeWidth),
+                strokeWidth,
+            )
+            // Right shadow
+            drawLine(
+                shadowColor,
+                Offset(size.width - strokeWidth, strokeWidth),
+                Offset(size.width - strokeWidth, size.height - strokeWidth),
+                strokeWidth,
+            )
+        },
         enabled = enabled,
         shape = ButtonShape,
         contentPadding = ButtonPadding,

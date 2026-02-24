@@ -23,6 +23,18 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        PixelIcon(
+            pixelData = ChickenIconData,
+            palette = listOf(
+                androidx.compose.ui.graphics.Color.Transparent,
+                androidx.compose.ui.graphics.Color.White,
+                androidx.compose.ui.graphics.Color(0xFFE03030),
+                androidx.compose.ui.graphics.Color(0xFFE8A030),
+                androidx.compose.ui.graphics.Color(0xFF2A1A00),
+            ),
+            size = 48.dp,
+        )
+        Spacer(Modifier.height(12.dp))
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,

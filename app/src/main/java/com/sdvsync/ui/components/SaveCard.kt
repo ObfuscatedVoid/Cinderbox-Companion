@@ -1,8 +1,6 @@
 package com.sdvsync.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -102,26 +100,26 @@ fun SaveCard(
 @Composable
 fun SyncStatusBadge(save: SaveEntry) {
     val extras = SdvSyncThemeExtras.colors
-    val (icon, color, label) = when (save.syncDirection) {
+    val (direction, color, label) = when (save.syncDirection) {
         SyncDirection.PULL -> Triple(
-            Icons.Default.CloudDownload,
+            save.syncDirection,
             extras.pullBlue,
             if (!save.hasLocal) stringResource(R.string.save_status_cloud)
             else stringResource(R.string.save_status_cloud_newer),
         )
         SyncDirection.PUSH -> Triple(
-            Icons.Default.CloudUpload,
+            save.syncDirection,
             extras.pushGreen,
             if (!save.hasCloud) stringResource(R.string.save_status_local)
             else stringResource(R.string.save_status_local_newer),
         )
         SyncDirection.SKIP -> Triple(
-            Icons.Default.CheckCircle,
+            save.syncDirection,
             extras.synced,
             stringResource(R.string.save_status_synced),
         )
         SyncDirection.CONFLICT -> Triple(
-            Icons.Default.Warning,
+            save.syncDirection,
             extras.conflict,
             stringResource(R.string.save_status_conflict),
         )
@@ -136,11 +134,9 @@ fun SyncStatusBadge(save: SaveEntry) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Icon(
-                icon,
-                contentDescription = label,
-                modifier = Modifier.size(14.dp),
-                tint = color,
+            PixelSyncIcon(
+                direction = direction,
+                size = 14.dp,
             )
             Text(
                 label,

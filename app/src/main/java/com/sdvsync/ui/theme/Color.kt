@@ -69,3 +69,15 @@ val ErrorContainerLight = Color(0xFFFFDAD6)
 val ErrorContainerDark = Color(0xFF8C1D18)
 val OnErrorContainerLight = Color(0xFF410E0B)
 val OnErrorContainerDark = Color(0xFFFFDAD6)
+
+// ── Pixel Border Colors (Light) ─────────────────────────────────────────
+val PixelBorderDark = Color(0xFF3D1E00)
+val PixelBorderPlank = Color(0xFF8B5E3C)
+val PixelBorderHighlight = Color(0xFFD4A574)
+val PixelBorderShadow = Color(0xFF5A3A1E)
+
+// ── Pixel Border Colors (Dark) ──────────────────────────────────────────
+val PixelBorderDarkDk = Color(0xFF1A0E00)
+val PixelBorderPlankDk = Color(0xFF5C3D20)
+val PixelBorderHighlightDk = Color(0xFF8B6B4A)
+val PixelBorderShadowDk = Color(0xFF3D2510)
