@@ -8,8 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.sync.SyncResult
+import com.sdvsync.sync.SyncDirection
+import com.sdvsync.ui.components.PixelSyncIcon
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
@@ -91,7 +91,7 @@ fun SyncDetailScreen(
                     variant = StardewButtonVariant.Primary,
                     enabled = !state.isSyncing,
                 ) {
-                    Icon(Icons.Default.CloudDownload, null)
+                    PixelSyncIcon(direction = SyncDirection.PULL, size = 18.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.action_pull))
                 }
@@ -105,7 +105,7 @@ fun SyncDetailScreen(
                     variant = StardewButtonVariant.Action,
                     enabled = !state.isSyncing,
                 ) {
-                    Icon(Icons.Default.CloudUpload, null)
+                    PixelSyncIcon(direction = SyncDirection.PUSH, size = 18.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.action_push))
                 }

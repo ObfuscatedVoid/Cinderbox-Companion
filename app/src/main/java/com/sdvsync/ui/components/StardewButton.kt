@@ -2,7 +2,6 @@ package com.sdvsync.ui.components
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -11,11 +10,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.sdvsync.ui.theme.ErrorLight
 import com.sdvsync.ui.theme.ForestGreen
 import com.sdvsync.ui.theme.GoldAmber
+import com.sdvsync.ui.theme.SdvSyncThemeExtras
 
 enum class StardewButtonVariant {
     Primary,
@@ -24,7 +26,6 @@ enum class StardewButtonVariant {
     Danger,
 }
 
-private val ButtonShape = RoundedCornerShape(8.dp)
 private val ButtonPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
 
 @Composable
@@ -42,44 +43,40 @@ fun StardewButton(
         StardewButtonVariant.Danger -> ErrorLight to Color.White
     }
 
-    val highlightColor = Color.White.copy(alpha = 0.25f)
-    val shadowColor = Color.Black.copy(alpha = 0.25f)
+    val borderColors = SdvSyncThemeExtras.colors
+    val borderDark = borderColors.pixelBorderDark
+    val borderHighlight = Color.White.copy(alpha = 0.30f)
+    val borderShadow = Color.Black.copy(alpha = 0.30f)
 
     Button(
         onClick = onClick,
         modifier = modifier.drawBehind {
-            val strokeWidth = 1.dp.toPx()
+            val px = 2.dp.toPx()
+            val w = size.width
+            val h = size.height
+
+            // Outer dark edge (1px border)
+            // Top
+            drawRect(borderDark, Offset(0f, 0f), Size(w, px))
+            // Bottom
+            drawRect(borderDark, Offset(0f, h - px), Size(w, px))
+            // Left
+            drawRect(borderDark, Offset(0f, px), Size(px, h - 2 * px))
+            // Right
+            drawRect(borderDark, Offset(w - px, px), Size(px, h - 2 * px))
+
+            // Inner bevel: highlight top+left, shadow bottom+right
             // Top highlight
-            drawLine(
-                highlightColor,
-                Offset(strokeWidth, strokeWidth),
-                Offset(size.width - strokeWidth, strokeWidth),
-                strokeWidth,
-            )
+            drawRect(borderHighlight, Offset(px, px), Size(w - 2 * px, px))
             // Left highlight
-            drawLine(
-                highlightColor,
-                Offset(strokeWidth, strokeWidth),
-                Offset(strokeWidth, size.height - strokeWidth),
-                strokeWidth,
-            )
+            drawRect(borderHighlight, Offset(px, 2 * px), Size(px, h - 4 * px))
             // Bottom shadow
-            drawLine(
-                shadowColor,
-                Offset(strokeWidth, size.height - strokeWidth),
-                Offset(size.width - strokeWidth, size.height - strokeWidth),
-                strokeWidth,
-            )
+            drawRect(borderShadow, Offset(px, h - 2 * px), Size(w - 2 * px, px))
             // Right shadow
-            drawLine(
-                shadowColor,
-                Offset(size.width - strokeWidth, strokeWidth),
-                Offset(size.width - strokeWidth, size.height - strokeWidth),
-                strokeWidth,
-            )
+            drawRect(borderShadow, Offset(w - 2 * px, 2 * px), Size(px, h - 4 * px))
         },
         enabled = enabled,
-        shape = ButtonShape,
+        shape = RectangleShape,
         contentPadding = ButtonPadding,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
@@ -96,12 +93,33 @@ fun StardewOutlinedButton(
     enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) {
+    val borderColors = SdvSyncThemeExtras.colors
+    val borderDark = borderColors.pixelBorderDark
+    val borderPlank = borderColors.pixelBorderPlank
+
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.drawBehind {
+            val px = 2.dp.toPx()
+            val w = size.width
+            val h = size.height
+
+            // Outer dark edge
+            drawRect(borderDark, Offset(0f, 0f), Size(w, px))
+            drawRect(borderDark, Offset(0f, h - px), Size(w, px))
+            drawRect(borderDark, Offset(0f, px), Size(px, h - 2 * px))
+            drawRect(borderDark, Offset(w - px, px), Size(px, h - 2 * px))
+
+            // Inner plank edge
+            drawRect(borderPlank, Offset(px, px), Size(w - 2 * px, px))
+            drawRect(borderPlank, Offset(px, h - 2 * px), Size(w - 2 * px, px))
+            drawRect(borderPlank, Offset(px, 2 * px), Size(px, h - 4 * px))
+            drawRect(borderPlank, Offset(w - 2 * px, 2 * px), Size(px, h - 4 * px))
+        },
         enabled = enabled,
-        shape = ButtonShape,
+        shape = RectangleShape,
         contentPadding = ButtonPadding,
+        border = null,
         content = content,
     )
 }
