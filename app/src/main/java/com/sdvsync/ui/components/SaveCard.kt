@@ -12,7 +12,8 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.sync.SyncDirection
-import com.sdvsync.ui.theme.*
+import com.sdvsync.ui.animation.PulseOnChange
+import com.sdvsync.ui.theme.SdvSyncThemeExtras
 import com.sdvsync.ui.viewmodels.SaveEntry
 
 @Composable
@@ -22,10 +23,11 @@ fun SaveCard(
 ) {
     val meta = save.cloudMeta ?: save.localMeta
 
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    StardewCard(onClick = onClick) {
+        if (meta != null) {
+            SeasonAccentBar(season = meta.season)
+        }
+
         Column(
             modifier = Modifier.padding(16.dp),
         ) {
@@ -38,6 +40,7 @@ fun SaveCard(
                     Text(
                         meta?.farmerName ?: save.folderName,
                         style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     if (meta?.farmName?.isNotEmpty() == true) {
                         Text(
@@ -47,7 +50,9 @@ fun SaveCard(
                         )
                     }
                 }
-                SyncStatusBadge(save)
+                PulseOnChange(key = save.syncDirection) {
+                    SyncStatusBadge(save)
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -55,10 +60,15 @@ fun SaveCard(
             if (meta != null) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         formatDisplayDate(meta),
                         style = MaterialTheme.typography.bodyMedium,
+                    )
+                    SeasonBadge(
+                        season = meta.season,
+                        seasonName = seasonName(meta.season),
                     )
                     if (meta.millisecondsPlayed > 0) {
                         val hours = meta.millisecondsPlayed / 3_600_000
@@ -91,27 +101,28 @@ fun SaveCard(
 
 @Composable
 fun SyncStatusBadge(save: SaveEntry) {
+    val extras = SdvSyncThemeExtras.colors
     val (icon, color, label) = when (save.syncDirection) {
         SyncDirection.PULL -> Triple(
             Icons.Default.CloudDownload,
-            CloudBlue,
+            extras.pullBlue,
             if (!save.hasLocal) stringResource(R.string.save_status_cloud)
             else stringResource(R.string.save_status_cloud_newer),
         )
         SyncDirection.PUSH -> Triple(
             Icons.Default.CloudUpload,
-            StardewGreen,
+            extras.pushGreen,
             if (!save.hasCloud) stringResource(R.string.save_status_local)
             else stringResource(R.string.save_status_local_newer),
         )
         SyncDirection.SKIP -> Triple(
             Icons.Default.CheckCircle,
-            SyncedGreen,
+            extras.synced,
             stringResource(R.string.save_status_synced),
         )
         SyncDirection.CONFLICT -> Triple(
             Icons.Default.Warning,
-            ConflictOrange,
+            extras.conflict,
             stringResource(R.string.save_status_conflict),
         )
     }
@@ -141,13 +152,16 @@ fun SyncStatusBadge(save: SaveEntry) {
 }
 
 @Composable
+fun seasonName(season: Int): String = when (season) {
+    0 -> stringResource(R.string.save_season_spring)
+    1 -> stringResource(R.string.save_season_summer)
+    2 -> stringResource(R.string.save_season_fall)
+    3 -> stringResource(R.string.save_season_winter)
+    else -> stringResource(R.string.save_season_unknown)
+}
+
+@Composable
 private fun formatDisplayDate(meta: SaveMetadata): String {
-    val seasonName = when (meta.season) {
-        0 -> stringResource(R.string.save_season_spring)
-        1 -> stringResource(R.string.save_season_summer)
-        2 -> stringResource(R.string.save_season_fall)
-        3 -> stringResource(R.string.save_season_winter)
-        else -> stringResource(R.string.save_season_unknown)
-    }
-    return stringResource(R.string.save_display_date, seasonName, meta.dayOfMonth, meta.year)
+    val name = seasonName(meta.season)
+    return stringResource(R.string.save_display_date, name, meta.dayOfMonth, meta.year)
 }

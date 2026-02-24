@@ -2,7 +2,6 @@ package com.sdvsync.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,8 +20,13 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveBackupManager
-import kotlin.math.roundToInt
+import com.sdvsync.ui.components.StardewButton
+import com.sdvsync.ui.components.StardewButtonVariant
+import com.sdvsync.ui.components.StardewCard
+import com.sdvsync.ui.components.StardewOutlinedButton
+import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.SettingsViewModel
+import kotlin.math.roundToInt
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -36,7 +40,16 @@ private fun strategyDisplayName(name: String): String = when (name.lowercase()) 
     else -> name
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -65,10 +78,23 @@ fun SettingsScreen(
         viewModel.load()
     }
 
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.primary,
+        activeTrackColor = MaterialTheme.colorScheme.primary,
+    )
+    val switchColors = SwitchDefaults.colors(
+        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+        checkedTrackColor = MaterialTheme.colorScheme.primary,
+    )
+    val filterChipColors = FilterChipDefaults.filterChipColors(
+        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    )
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+            StardewTopAppBar(
+                title = stringResource(R.string.settings_title),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
@@ -85,49 +111,50 @@ fun SettingsScreen(
                 .padding(16.dp),
         ) {
             // File access mode
-            Text(
-                stringResource(R.string.settings_file_access),
-                style = MaterialTheme.typography.titleLarge,
-            )
+            SectionHeader(stringResource(R.string.settings_file_access))
             Spacer(Modifier.height(8.dp))
-            val currentModeDisplay = strategyDisplayName(state.fileAccessMode)
-            val availableModesDisplay = state.availableModes.map { strategyDisplayName(it) }
-            Text(
-                stringResource(R.string.settings_file_access_current, currentModeDisplay),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                stringResource(
-                    R.string.settings_file_access_available,
-                    availableModesDisplay.joinToString(", "),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            // Strategy picker
-            Spacer(Modifier.height(12.dp))
-            Text(
-                stringResource(R.string.settings_file_access_choose),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Spacer(Modifier.height(8.dp))
-            @OptIn(ExperimentalLayoutApi::class)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                FilterChip(
-                    selected = state.preferredStrategy == null,
-                    onClick = { viewModel.setFileAccessMode(null) },
-                    label = { Text(stringResource(R.string.settings_file_access_auto)) },
-                )
-                state.availableModes.forEach { mode ->
-                    FilterChip(
-                        selected = state.preferredStrategy.equals(mode, ignoreCase = true),
-                        onClick = { viewModel.setFileAccessMode(mode) },
-                        label = { Text(strategyDisplayName(mode)) },
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    val currentModeDisplay = strategyDisplayName(state.fileAccessMode)
+                    val availableModesDisplay = state.availableModes.map { strategyDisplayName(it) }
+                    Text(
+                        stringResource(R.string.settings_file_access_current, currentModeDisplay),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
+                    Text(
+                        stringResource(
+                            R.string.settings_file_access_available,
+                            availableModesDisplay.joinToString(", "),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.settings_file_access_choose),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        FilterChip(
+                            selected = state.preferredStrategy == null,
+                            onClick = { viewModel.setFileAccessMode(null) },
+                            label = { Text(stringResource(R.string.settings_file_access_auto)) },
+                            colors = filterChipColors,
+                        )
+                        state.availableModes.forEach { mode ->
+                            FilterChip(
+                                selected = state.preferredStrategy.equals(mode, ignoreCase = true),
+                                onClick = { viewModel.setFileAccessMode(mode) },
+                                label = { Text(strategyDisplayName(mode)) },
+                                colors = filterChipColors,
+                            )
+                        }
+                    }
                 }
             }
 
@@ -175,73 +202,77 @@ fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
 
             // Backups
-            Text(
-                stringResource(R.string.settings_backups_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
+            SectionHeader(stringResource(R.string.settings_backups_title))
             Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.settings_backups_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(12.dp))
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.settings_backups_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
 
-            var sliderValue by remember(state.maxBackups) {
-                mutableFloatStateOf(state.maxBackups.toFloat())
+                    var sliderValue by remember(state.maxBackups) {
+                        mutableFloatStateOf(state.maxBackups.toFloat())
+                    }
+                    Text(
+                        stringResource(R.string.settings_backups_count, sliderValue.roundToInt()),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Slider(
+                        value = sliderValue,
+                        onValueChange = { sliderValue = it },
+                        onValueChangeFinished = {
+                            viewModel.setMaxBackups(sliderValue.roundToInt())
+                        },
+                        valueRange = SaveBackupManager.MIN_MAX_BACKUPS.toFloat()..SaveBackupManager.MAX_MAX_BACKUPS.toFloat(),
+                        steps = SaveBackupManager.MAX_MAX_BACKUPS - SaveBackupManager.MIN_MAX_BACKUPS - 1,
+                        colors = sliderColors,
+                    )
+                }
             }
-            Text(
-                stringResource(R.string.settings_backups_count, sliderValue.roundToInt()),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = sliderValue,
-                onValueChange = { sliderValue = it },
-                onValueChangeFinished = {
-                    viewModel.setMaxBackups(sliderValue.roundToInt())
-                },
-                valueRange = SaveBackupManager.MIN_MAX_BACKUPS.toFloat()..SaveBackupManager.MAX_MAX_BACKUPS.toFloat(),
-                steps = SaveBackupManager.MAX_MAX_BACKUPS - SaveBackupManager.MIN_MAX_BACKUPS - 1,
-            )
 
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
 
-            // Auto-sync (root only)
-            Text(
-                stringResource(R.string.settings_auto_sync_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
+            // Auto-sync
+            SectionHeader(stringResource(R.string.settings_auto_sync_title))
             Spacer(Modifier.height(8.dp))
-            if (state.autoSyncAvailable) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    if (state.autoSyncAvailable) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.settings_auto_sync),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_auto_sync_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.autoSyncEnabled,
+                                onCheckedChange = { viewModel.toggleAutoSync(it) },
+                                colors = switchColors,
+                            )
+                        }
+                    } else {
                         Text(
-                            stringResource(R.string.settings_auto_sync),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            stringResource(R.string.settings_auto_sync_desc),
+                            stringResource(R.string.settings_auto_sync_root_only),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(
-                        checked = state.autoSyncEnabled,
-                        onCheckedChange = { viewModel.toggleAutoSync(it) },
-                    )
                 }
-            } else {
-                Text(
-                    stringResource(R.string.settings_auto_sync_root_only),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
 
             Spacer(Modifier.height(24.dp))
@@ -249,19 +280,14 @@ fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
 
             // Account
-            Text(
-                stringResource(R.string.settings_steam_account),
-                style = MaterialTheme.typography.titleLarge,
-            )
+            SectionHeader(stringResource(R.string.settings_steam_account))
             Spacer(Modifier.height(16.dp))
-            Button(
+            StardewButton(
                 onClick = {
                     viewModel.logout()
                     onLogout()
                 },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                ),
+                variant = StardewButtonVariant.Danger,
             ) {
                 Text(stringResource(R.string.settings_logout))
             }
@@ -271,39 +297,41 @@ fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
 
             // About
-            Text(
-                stringResource(R.string.settings_about_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
+            SectionHeader(stringResource(R.string.settings_about_title))
             Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.settings_about),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                stringResource(R.string.settings_about_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.settings_about),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        stringResource(R.string.settings_about_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
 
             // Diagnostics
-            Text(
-                stringResource(R.string.settings_diagnostics_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
+            SectionHeader(stringResource(R.string.settings_diagnostics_title))
             Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.settings_share_logs_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(onClick = { AppLogger.shareLogs(context) }) {
-                Text(stringResource(R.string.settings_share_logs))
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.settings_share_logs_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    StardewOutlinedButton(onClick = { AppLogger.shareLogs(context) }) {
+                        Text(stringResource(R.string.settings_share_logs))
+                    }
+                }
             }
         }
     }
@@ -316,11 +344,7 @@ private fun SAFAccessSection(
     onSelectDirectory: () -> Unit,
     onRevoke: () -> Unit,
 ) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
+    StardewCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_saf_title),
@@ -339,7 +363,7 @@ private fun SAFAccessSection(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onRevoke) {
+                StardewOutlinedButton(onClick = onRevoke) {
                     Text(stringResource(R.string.settings_saf_revoke))
                 }
             } else {
@@ -355,7 +379,7 @@ private fun SAFAccessSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onSelectDirectory) {
+                StardewOutlinedButton(onClick = onSelectDirectory) {
                     Text(stringResource(R.string.settings_saf_select))
                 }
             }
@@ -371,11 +395,7 @@ private fun ShizukuStatusSection(
     onRequestPermission: () -> Unit,
     onBindService: () -> Unit,
 ) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
+    StardewCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_shizuku_title),
@@ -404,7 +424,7 @@ private fun ShizukuStatusSection(
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = onRequestPermission) {
+                    StardewOutlinedButton(onClick = onRequestPermission) {
                         Text(stringResource(R.string.settings_shizuku_grant_permission))
                     }
                 }
@@ -415,7 +435,7 @@ private fun ShizukuStatusSection(
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = onBindService) {
+                    StardewOutlinedButton(onClick = onBindService) {
                         Text(stringResource(R.string.settings_shizuku_connect))
                     }
                 }
@@ -430,11 +450,7 @@ private fun AllFilesAccessSection(
     accessWorking: Boolean,
     onGrantPermission: () -> Unit,
 ) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
+    StardewCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_all_files_title),
@@ -464,7 +480,7 @@ private fun AllFilesAccessSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = onGrantPermission) {
+                    StardewOutlinedButton(onClick = onGrantPermission) {
                         Text(stringResource(R.string.settings_all_files_grant))
                     }
                 }

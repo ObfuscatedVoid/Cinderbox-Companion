@@ -30,12 +30,16 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.sdvsync.R
 import com.sdvsync.steam.AuthState
+import com.sdvsync.ui.components.StardewButton
+import com.sdvsync.ui.components.StardewButtonVariant
+import com.sdvsync.ui.components.StardewCard
+import com.sdvsync.ui.components.StardewOutlinedButton
+import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.LoginViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
@@ -47,21 +51,25 @@ fun LoginScreen(
     val twoFactorCode by viewModel.twoFactorCode.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Navigate on successful login
     LaunchedEffect(authState) {
         if (authState is AuthState.LoggedIn) {
             onLoginSuccess()
         }
     }
 
-    // Try resuming existing session on first load
     LaunchedEffect(Unit) {
         viewModel.tryResumeSession()
     }
 
+    val warmTextFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+    )
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.login_title)) })
+            StardewTopAppBar(title = stringResource(R.string.login_title))
         },
     ) { padding ->
         Column(
@@ -75,12 +83,26 @@ fun LoginScreen(
         ) {
             Spacer(Modifier.weight(1f))
 
+            // Branded header
+            Text(
+                "SDV Sync",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                "Stardew Valley Save Sync",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(32.dp))
+
             when (val state = authState) {
                 is AuthState.Idle, is AuthState.WaitingForCredentials -> {
                     LoginOptions(
                         username = username,
                         password = password,
                         passwordVisible = passwordVisible,
+                        textFieldColors = warmTextFieldColors,
                         onUsernameChange = viewModel::updateUsername,
                         onPasswordChange = viewModel::updatePassword,
                         onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
@@ -90,7 +112,9 @@ fun LoginScreen(
                 }
 
                 is AuthState.Connecting, is AuthState.Authenticating, is AuthState.LoggingIn -> {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
                     Spacer(Modifier.height(16.dp))
                     Text(
                         when (state) {
@@ -122,6 +146,7 @@ fun LoginScreen(
                         onValueChange = viewModel::updateTwoFactorCode,
                         label = { Text(stringResource(R.string.login_2fa_label)) },
                         singleLine = true,
+                        colors = warmTextFieldColors,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Done,
@@ -132,7 +157,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(16.dp))
-                    Button(
+                    StardewButton(
                         onClick = { viewModel.submit2FA() },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = twoFactorCode.isNotBlank(),
@@ -152,6 +177,7 @@ fun LoginScreen(
                         username = username,
                         password = password,
                         passwordVisible = passwordVisible,
+                        textFieldColors = warmTextFieldColors,
                         onUsernameChange = viewModel::updateUsername,
                         onPasswordChange = viewModel::updatePassword,
                         onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
@@ -161,7 +187,9 @@ fun LoginScreen(
                 }
 
                 is AuthState.LoggedIn -> {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
                 }
             }
 
@@ -175,14 +203,14 @@ private fun LoginOptions(
     username: String,
     password: String,
     passwordVisible: Boolean,
+    textFieldColors: TextFieldColors,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
     onLogin: () -> Unit,
     onQRLogin: () -> Unit,
 ) {
-    // QR Code login button (primary)
-    OutlinedButton(
+    StardewOutlinedButton(
         onClick = onQRLogin,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -213,12 +241,12 @@ private fun LoginOptions(
 
     Spacer(Modifier.height(24.dp))
 
-    // Username/password fields
     OutlinedTextField(
         value = username,
         onValueChange = onUsernameChange,
         label = { Text(stringResource(R.string.login_username_hint)) },
         singleLine = true,
+        colors = textFieldColors,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth(),
     )
@@ -228,6 +256,7 @@ private fun LoginOptions(
         onValueChange = onPasswordChange,
         label = { Text(stringResource(R.string.login_password_hint)) },
         singleLine = true,
+        colors = textFieldColors,
         visualTransformation = if (passwordVisible) VisualTransformation.None
         else PasswordVisualTransformation(),
         trailingIcon = {
@@ -247,9 +276,10 @@ private fun LoginOptions(
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(24.dp))
-    Button(
+    StardewButton(
         onClick = onLogin,
         modifier = Modifier.fillMaxWidth(),
+        variant = StardewButtonVariant.Action,
         enabled = username.isNotBlank() && password.isNotBlank(),
     ) {
         Text(stringResource(R.string.login_button))
@@ -274,13 +304,7 @@ private fun QRLoginView(
     )
     Spacer(Modifier.height(24.dp))
 
-    Card(
-        modifier = Modifier.size(240.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-    ) {
+    StardewCard(modifier = Modifier.size(240.dp)) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -295,7 +319,7 @@ private fun QRLoginView(
     }
 
     Spacer(Modifier.height(24.dp))
-    OutlinedButton(onClick = onCancel) {
+    StardewOutlinedButton(onClick = onCancel) {
         Text(stringResource(R.string.action_cancel))
     }
 }
@@ -341,6 +365,9 @@ private fun QrCodeImage(
             modifier = modifier,
         )
     } ?: Box(modifier, contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(modifier = Modifier.size(48.dp))
+        CircularProgressIndicator(
+            modifier = Modifier.size(48.dp),
+            color = MaterialTheme.colorScheme.tertiary,
+        )
     }
 }

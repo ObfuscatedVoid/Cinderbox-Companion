@@ -4,6 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -31,13 +36,44 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private const val NAV_ANIM_DURATION = 300
+private const val FADE_ANIM_DURATION = 400
+
 @Composable
 fun SdvSyncNavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
         startDestination = "login",
+        enterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut),
+            ) + fadeIn(tween(NAV_ANIM_DURATION))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut),
+            ) + fadeOut(tween(NAV_ANIM_DURATION))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut),
+            ) + fadeIn(tween(NAV_ANIM_DURATION))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut),
+            ) + fadeOut(tween(NAV_ANIM_DURATION))
+        },
     ) {
-        composable("login") {
+        composable(
+            route = "login",
+            enterTransition = { fadeIn(tween(FADE_ANIM_DURATION)) },
+            exitTransition = { fadeOut(tween(FADE_ANIM_DURATION)) },
+        ) {
             LoginScreen(
                 onLoginSuccess = {
                     navController.navigate("dashboard") {

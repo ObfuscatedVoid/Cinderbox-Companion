@@ -2,7 +2,7 @@ package com.sdvsync.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
@@ -15,7 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
+import com.sdvsync.ui.animation.StaggeredAnimatedItem
+import com.sdvsync.ui.components.EmptyState
 import com.sdvsync.ui.components.SaveCard
+import com.sdvsync.ui.components.StardewButton
+import com.sdvsync.ui.components.StardewCard
+import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.DashboardViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -35,8 +40,8 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.dashboard_title)) },
+            StardewTopAppBar(
+                title = stringResource(R.string.dashboard_title),
                 actions = {
                     IconButton(onClick = { viewModel.refresh(isUserRefresh = true) }) {
                         Icon(Icons.Default.Refresh, stringResource(R.string.action_refresh))
@@ -62,7 +67,8 @@ fun DashboardScreen(
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize()) {
                         CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.tertiary,
                         )
                     }
                 }
@@ -80,7 +86,7 @@ fun DashboardScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Spacer(Modifier.height(16.dp))
-                            Button(onClick = { viewModel.refresh() }) {
+                            StardewButton(onClick = { viewModel.refresh() }) {
                                 Text(stringResource(R.string.action_retry))
                             }
                         }
@@ -88,10 +94,12 @@ fun DashboardScreen(
                 }
                 state.saves.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        Text(
-                            stringResource(R.string.dashboard_no_saves),
-                            modifier = Modifier.align(Alignment.Center),
-                            style = MaterialTheme.typography.bodyLarge,
+                        EmptyState(
+                            title = stringResource(R.string.dashboard_no_saves),
+                            subtitle = "Pull to refresh or check your save files",
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(24.dp),
                         )
                     }
                 }
@@ -103,32 +111,30 @@ fun DashboardScreen(
                     ) {
                         if (state.isStagingMode) {
                             item {
-                                Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                    ),
-                                ) {
+                                StardewCard {
                                     Column(modifier = Modifier.padding(12.dp)) {
                                         Text(
                                             stringResource(R.string.staging_mode_title),
                                             style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            color = MaterialTheme.colorScheme.tertiary,
                                         )
                                         Spacer(Modifier.height(4.dp))
                                         Text(
                                             stringResource(R.string.staging_mode_description),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
                             }
                         }
-                        items(state.saves) { save ->
-                            SaveCard(
-                                save = save,
-                                onClick = { onSaveClick(save.folderName, save.hasCloud, save.hasLocal) },
-                            )
+                        itemsIndexed(state.saves) { index, save ->
+                            StaggeredAnimatedItem(index = index) {
+                                SaveCard(
+                                    save = save,
+                                    onClick = { onSaveClick(save.folderName, save.hasCloud, save.hasLocal) },
+                                )
+                            }
                         }
                     }
                 }

@@ -1,5 +1,10 @@
 package com.sdvsync.ui.screens
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -9,14 +14,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.sync.SyncResult
+import com.sdvsync.ui.components.StardewButton
+import com.sdvsync.ui.components.StardewButtonVariant
+import com.sdvsync.ui.components.StardewCard
+import com.sdvsync.ui.components.StardewOutlinedButton
+import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncDetailScreen(
     saveFolderName: String,
@@ -31,8 +41,8 @@ fun SyncDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(saveFolderName.substringBefore("_")) },
+            StardewTopAppBar(
+                title = saveFolderName.substringBefore("_"),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
@@ -55,19 +65,13 @@ fun SyncDetailScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // Staging push reminder (shown before user presses push)
             if (state.isStagingMode) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+                StardewCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         stringResource(R.string.staging_push_reminder),
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
                 Spacer(Modifier.height(16.dp))
@@ -78,12 +82,13 @@ fun SyncDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Button(
+                StardewButton(
                     onClick = {
                         if (hasLocal) showPullConfirm = true
                         else viewModel.pullSave(saveFolderName)
                     },
                     modifier = Modifier.weight(1f),
+                    variant = StardewButtonVariant.Primary,
                     enabled = !state.isSyncing,
                 ) {
                     Icon(Icons.Default.CloudDownload, null)
@@ -91,12 +96,13 @@ fun SyncDetailScreen(
                     Text(stringResource(R.string.action_pull))
                 }
 
-                Button(
+                StardewButton(
                     onClick = {
                         if (hasCloud) showPushConfirm = true
                         else viewModel.pushSave(saveFolderName)
                     },
                     modifier = Modifier.weight(1f),
+                    variant = StardewButtonVariant.Action,
                     enabled = !state.isSyncing,
                 ) {
                     Icon(Icons.Default.CloudUpload, null)
@@ -107,9 +113,22 @@ fun SyncDetailScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Sync status
+            // Sync status with pulsing gold spinner
             if (state.isSyncing) {
-                CircularProgressIndicator()
+                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0.5f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(800),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                    label = "pulseAlpha",
+                )
+                CircularProgressIndicator(
+                    modifier = Modifier.alpha(pulseAlpha),
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
                 Spacer(Modifier.height(12.dp))
                 Text(state.progressMessage, style = MaterialTheme.typography.bodyMedium)
             }
@@ -124,33 +143,23 @@ fun SyncDetailScreen(
                         )
                         if (result.warning != null) {
                             Spacer(Modifier.height(12.dp))
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                ),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
+                            StardewCard(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     result.warning,
                                     modifier = Modifier.padding(12.dp),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             }
                         }
                         if (state.isStagingMode) {
                             Spacer(Modifier.height(12.dp))
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                ),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
+                            StardewCard(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     stringResource(R.string.staging_pull_reminder),
                                     modifier = Modifier.padding(12.dp),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    color = MaterialTheme.colorScheme.tertiary,
                                 )
                             }
                         }
@@ -163,15 +172,12 @@ fun SyncDetailScreen(
                         )
                     }
                     is SyncResult.NeedsConflictResolution -> {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                            ),
-                        ) {
+                        StardewCard {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     stringResource(R.string.sync_conflict_title),
                                     style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 Text(
@@ -182,7 +188,7 @@ fun SyncDetailScreen(
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 ) {
-                                    OutlinedButton(
+                                    StardewOutlinedButton(
                                         onClick = {
                                             viewModel.clearResult()
                                             viewModel.pullSave(saveFolderName, force = true)
@@ -190,11 +196,12 @@ fun SyncDetailScreen(
                                     ) {
                                         Text(stringResource(R.string.sync_keep_cloud))
                                     }
-                                    Button(
+                                    StardewButton(
                                         onClick = {
                                             viewModel.clearResult()
                                             viewModel.pushSave(saveFolderName, force = true)
                                         },
+                                        variant = StardewButtonVariant.Action,
                                     ) {
                                         Text(stringResource(R.string.sync_keep_local))
                                     }
@@ -210,6 +217,7 @@ fun SyncDetailScreen(
     if (showPullConfirm) {
         AlertDialog(
             onDismissRequest = { showPullConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             title = { Text(stringResource(R.string.sync_confirm_pull_title)) },
             text = { Text(stringResource(R.string.sync_confirm_pull_message)) },
             confirmButton = {
@@ -217,7 +225,10 @@ fun SyncDetailScreen(
                     showPullConfirm = false
                     viewModel.pullSave(saveFolderName)
                 }) {
-                    Text(stringResource(R.string.sync_confirm_continue))
+                    Text(
+                        stringResource(R.string.sync_confirm_continue),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             },
             dismissButton = {
@@ -231,6 +242,7 @@ fun SyncDetailScreen(
     if (showPushConfirm) {
         AlertDialog(
             onDismissRequest = { showPushConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             title = { Text(stringResource(R.string.sync_confirm_push_title)) },
             text = { Text(stringResource(R.string.sync_confirm_push_message)) },
             confirmButton = {
@@ -238,7 +250,10 @@ fun SyncDetailScreen(
                     showPushConfirm = false
                     viewModel.pushSave(saveFolderName)
                 }) {
-                    Text(stringResource(R.string.sync_confirm_continue))
+                    Text(
+                        stringResource(R.string.sync_confirm_continue),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             },
             dismissButton = {

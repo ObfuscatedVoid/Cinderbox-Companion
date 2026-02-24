@@ -14,10 +14,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.sync.SyncHistoryEntry
+import com.sdvsync.ui.components.EmptyState
+import com.sdvsync.ui.components.StardewCard
+import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.theme.SdvSyncThemeExtras
 import com.sdvsync.ui.viewmodels.SyncLogViewModel
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncLogScreen(
     onBack: () -> Unit,
@@ -31,8 +34,8 @@ fun SyncLogScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.sync_log_title)) },
+            StardewTopAppBar(
+                title = stringResource(R.string.sync_log_title),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
@@ -57,14 +60,16 @@ fun SyncLogScreen(
                 state.isLoading -> {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
                 state.entries.isEmpty() -> {
-                    Text(
-                        stringResource(R.string.sync_log_empty),
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    EmptyState(
+                        title = stringResource(R.string.sync_log_empty),
+                        subtitle = "Sync history will appear here",
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp),
                     )
                 }
                 else -> {
@@ -74,7 +79,7 @@ fun SyncLogScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(state.entries) { entry ->
-                            SyncLogEntry(entry)
+                            SyncLogEntryCard(entry)
                         }
                     }
                 }
@@ -84,15 +89,16 @@ fun SyncLogScreen(
 }
 
 @Composable
-private fun SyncLogEntry(entry: SyncHistoryEntry) {
+private fun SyncLogEntryCard(entry: SyncHistoryEntry) {
+    val extras = SdvSyncThemeExtras.colors
     val icon = if (entry.direction == "pull") Icons.Default.CloudDownload else Icons.Default.CloudUpload
     val statusColor = if (entry.success) {
-        MaterialTheme.colorScheme.primary
+        if (entry.direction == "pull") extras.pullBlue else extras.pushGreen
     } else {
-        MaterialTheme.colorScheme.error
+        extras.syncError
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    StardewCard {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -126,7 +132,7 @@ private fun SyncLogEntry(entry: SyncHistoryEntry) {
                     color = if (entry.success) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
-                        MaterialTheme.colorScheme.error
+                        extras.syncError
                     },
                 )
                 Text(
