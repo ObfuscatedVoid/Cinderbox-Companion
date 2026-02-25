@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import java.io.InputStream
+import java.util.zip.ZipInputStream
 import kotlin.coroutines.coroutineContext
 
 enum class DownloadState {
@@ -55,6 +57,9 @@ class GameDownloadManager(
         )
         const val CINDERBOX_CONTENT_DIR = "Content"
         const val CINDERBOX_DEST = "/storage/emulated/0/StardewValley/GameFiles"
+        const val SMAPI_ASSET_NAME = "smapi-internal.zip"
+        const val SMAPI_DEST = "/storage/emulated/0/StardewValley/smapi-internal"
+        const val MODS_DIR = "/storage/emulated/0/StardewValley/Mods"
     }
 
     val progress: StateFlow<DownloadProgress> = _progress.asStateFlow()
@@ -80,11 +85,22 @@ class GameDownloadManager(
         GameDownloadService.stop(context)
     }
 
+    private fun countZipEntries(inputStream: InputStream): Int {
+        var count = 0
+        ZipInputStream(inputStream).use { zip ->
+            while (zip.nextEntry != null) {
+                count++
+                zip.closeEntry()
+            }
+        }
+        return count
+    }
+
     suspend fun copyToCinderbox(installDir: String) {
         val srcDir = File(installDir)
         val destDir = File(CINDERBOX_DEST)
 
-        // Enumerate source files: DLLs + Content/ tree
+        // --- Count total files up front ---
         val filesToCopy = mutableListOf<Pair<File, File>>() // source -> dest
 
         for (dll in CINDERBOX_DLLS) {
@@ -102,8 +118,10 @@ class GameDownloadManager(
             }
         }
 
-        val totalFiles = filesToCopy.size
-        AppLogger.i(TAG, "Copying $totalFiles files to Cinderbox: $CINDERBOX_DEST")
+        val smapiEntryCount = context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) }
+        val totalFiles = filesToCopy.size + smapiEntryCount + 1 // +1 for Mods/ dir
+
+        AppLogger.i(TAG, "Cinderbox setup: ${filesToCopy.size} game files + $smapiEntryCount SMAPI files + Mods dir = $totalFiles total")
 
         _progress.value = _progress.value.copy(
             state = DownloadState.COPYING,
@@ -117,6 +135,7 @@ class GameDownloadManager(
         var copied = 0
         val buffer = ByteArray(256 * 1024)
 
+        // --- Phase 1: Copy DLLs + Content ---
         for ((src, dest) in filesToCopy) {
             coroutineContext.ensureActive()
 
@@ -146,7 +165,70 @@ class GameDownloadManager(
             }
         }
 
-        AppLogger.i(TAG, "Cinderbox copy complete: $copied/$totalFiles files, ${errors.size} errors")
+        // --- Phase 2: Extract SMAPI zip ---
+        val smapiDestDir = File(SMAPI_DEST)
+        try {
+            context.assets.open(SMAPI_ASSET_NAME).use { assetStream ->
+                ZipInputStream(assetStream).use { zip ->
+                    var entry = zip.nextEntry
+                    while (entry != null) {
+                        coroutineContext.ensureActive()
+
+                        val entryName = entry.name
+                        val displayName = "smapi-internal/$entryName"
+
+                        _progress.value = _progress.value.copy(
+                            currentFile = displayName,
+                            copiedFiles = copied,
+                            overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f,
+                        )
+
+                        if (!entry.isDirectory) {
+                            try {
+                                val destFile = File(smapiDestDir, entryName)
+                                destFile.parentFile?.mkdirs()
+                                destFile.outputStream().buffered().use { output ->
+                                    var bytesRead: Int
+                                    while (zip.read(buffer).also { bytesRead = it } != -1) {
+                                        coroutineContext.ensureActive()
+                                        output.write(buffer, 0, bytesRead)
+                                    }
+                                }
+                                copied++
+                            } catch (e: Exception) {
+                                if (e is kotlinx.coroutines.CancellationException) throw e
+                                AppLogger.e(TAG, "Failed to extract $displayName", e)
+                                errors.add(displayName)
+                            }
+                        }
+
+                        zip.closeEntry()
+                        entry = zip.nextEntry
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            AppLogger.e(TAG, "Failed to open SMAPI asset", e)
+            errors.add(SMAPI_ASSET_NAME)
+        }
+
+        // --- Phase 3: Create Mods/ directory ---
+        _progress.value = _progress.value.copy(
+            currentFile = "Mods/",
+            copiedFiles = copied,
+            overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f,
+        )
+        try {
+            File(MODS_DIR).mkdirs()
+            copied++
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            AppLogger.e(TAG, "Failed to create Mods directory", e)
+            errors.add("Mods/")
+        }
+
+        AppLogger.i(TAG, "Cinderbox setup complete: $copied/$totalFiles files, ${errors.size} errors")
 
         _progress.value = _progress.value.copy(
             state = DownloadState.COMPLETED,

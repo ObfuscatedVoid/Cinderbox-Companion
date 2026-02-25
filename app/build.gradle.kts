@@ -42,6 +42,10 @@ android {
         aidl = true
     }
 
+    androidResources {
+        noCompress += "zip"
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
