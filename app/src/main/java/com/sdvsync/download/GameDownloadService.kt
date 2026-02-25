@@ -65,6 +65,8 @@ class GameDownloadService : Service() {
     private var downloadJob: Job? = null
     private var lastSpeedUpdateMs = 0L
     private var lastSpeedBytes = 0L
+    // Track cumulative bytes per depot (callback values are cumulative, not deltas)
+    private val depotBytes = mutableMapOf<Int, Long>()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -150,6 +152,7 @@ class GameDownloadService : Service() {
 
             lastSpeedUpdateMs = System.currentTimeMillis()
             lastSpeedBytes = 0L
+            depotBytes.clear()
 
             downloader.addListener(object : IDownloadListener {
                 override fun onDownloadStarted(item: DownloadItem) {
@@ -166,23 +169,25 @@ class GameDownloadService : Service() {
                     compressedBytes: Long,
                     uncompressedBytes: Long,
                 ) {
-                    val current = GameDownloadManager._progress.value
-                    val newDownloaded = current.downloadedBytes + uncompressedBytes
+                    // Values are cumulative per-depot, not per-chunk deltas
+                    depotBytes[depotId] = uncompressedBytes
+                    val totalDownloaded = depotBytes.values.sum()
 
                     // Calculate speed every 500ms
                     val now = System.currentTimeMillis()
+                    val current = GameDownloadManager._progress.value
                     var speed = current.bytesPerSecond
                     if (now - lastSpeedUpdateMs >= 500) {
                         val elapsedMs = now - lastSpeedUpdateMs
-                        val bytesDelta = newDownloaded - lastSpeedBytes
+                        val bytesDelta = totalDownloaded - lastSpeedBytes
                         speed = if (elapsedMs > 0) (bytesDelta * 1000 / elapsedMs) else 0L
                         lastSpeedUpdateMs = now
-                        lastSpeedBytes = newDownloaded
+                        lastSpeedBytes = totalDownloaded
                     }
 
                     GameDownloadManager._progress.value = current.copy(
                         overallPercent = depotPercentComplete,
-                        downloadedBytes = newDownloaded,
+                        downloadedBytes = totalDownloaded,
                         bytesPerSecond = speed,
                     )
                 }
@@ -206,9 +211,11 @@ class GameDownloadService : Service() {
                     uncompressedBytes: Long,
                 ) {
                     AppLogger.d(TAG, "Depot $depotId completed: ${uncompressedBytes / 1024 / 1024} MB")
+                    // uncompressedBytes here is the final cumulative total for this depot
+                    depotBytes[depotId] = uncompressedBytes
                     val current = GameDownloadManager._progress.value
                     GameDownloadManager._progress.value = current.copy(
-                        totalBytes = current.totalBytes + uncompressedBytes,
+                        totalBytes = depotBytes.values.sum(),
                     )
                 }
 
