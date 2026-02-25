@@ -310,10 +310,10 @@
 
     <!-- Nexus API key -->
     <string name="mods_api_key_title">Nexus Mods API Key</string>
-    <string name="mods_api_key_description">Enter your Nexus Mods API key to browse and download mods</string>
+    <string name="mods_api_key_description">A free Nexus Mods API key is required to browse and download mods. Create an account on nexusmods.com, then go to your API keys page to generate one.</string>
     <string name="mods_api_key_hint">API key</string>
     <string name="mods_api_key_save">Save</string>
-    <string name="mods_api_key_get">Get your free API key at nexusmods.com</string>
+    <string name="mods_api_key_get">Get your free API key →</string>
     <string name="mods_api_key_valid">API key validated</string>
     <string name="mods_api_key_invalid">Invalid API key</string>
     <string name="mods_api_key_remove">Remove API Key</string>
