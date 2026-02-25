@@ -357,6 +357,76 @@ val EyeClosedData = arrayOf(
     intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 )
 
+// ── Wheat (10x10) — wheat stalk for Saves tab ─────────────────────────
+val WheatData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 0, 0, 1, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 0, 0, 1, 1, 0, 0),
+    intArrayOf(0, 0, 1, 1, 0, 0, 1, 1, 0, 0),
+    intArrayOf(0, 1, 1, 0, 1, 1, 0, 1, 1, 0),
+    intArrayOf(0, 1, 0, 0, 1, 1, 0, 0, 1, 0),
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+)
+
+// ── Puzzle (10x10) — puzzle piece for Mods tab ─────────────────────────
+val PuzzleData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+)
+
+// ── Search (10x10) — magnifying glass for browse ───────────────────────
+val SearchData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 1, 0, 0, 0, 1, 0, 0, 0),
+    intArrayOf(0, 1, 0, 0, 0, 0, 0, 1, 0, 0),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 1, 0, 0),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 1, 0, 0),
+    intArrayOf(1, 0, 0, 0, 0, 0, 1, 0, 0, 0),
+    intArrayOf(0, 1, 0, 0, 0, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 1, 1, 0, 0),
+)
+
+// ── Folder (10x10) — folder icon for import ────────────────────────────
+val FolderData = arrayOf(
+    intArrayOf(0, 1, 1, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
+    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+)
+
+// ── UpdateArrow (10x10) — circular arrow for update indicator ──────────
+val UpdateArrowData = arrayOf(
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 0, 1, 0, 0, 0, 0, 1, 1, 0),
+    intArrayOf(0, 1, 0, 0, 0, 0, 0, 0, 1, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+    intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 0),
+    intArrayOf(0, 1, 1, 0, 0, 0, 0, 1, 0, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 0, 0, 0),
+)
+
 // ── Download (10x10) — downward arrow with tray ────────────────────────
 val DownloadData = arrayOf(
     intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),

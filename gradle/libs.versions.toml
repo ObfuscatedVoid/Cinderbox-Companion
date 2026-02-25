@@ -32,6 +32,9 @@ zxing = "3.5.3"
 # Compression
 xz = "1.10"
 
+# Image loading
+coil = "3.1.0"
+
 # Shizuku
 shizuku = "13.1.5"
 
@@ -76,6 +79,10 @@ zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" 
 
 # Compression
 xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
+
+# Image loading
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # Shizuku
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }

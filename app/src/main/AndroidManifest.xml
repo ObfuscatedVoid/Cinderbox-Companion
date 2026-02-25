@@ -45,6 +45,11 @@
             android:foregroundServiceType="dataSync"
             android:exported="false" />
 
+        <service
+            android:name=".mods.ModDownloadService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
         <!-- FileProvider for log sharing -->
         <provider
             android:name="androidx.core.content.FileProvider"

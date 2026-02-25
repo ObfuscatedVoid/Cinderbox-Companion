@@ -13,9 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.ui.animation.StaggeredAnimatedItem
 import com.sdvsync.ui.components.ClockData
-import com.sdvsync.ui.components.DownloadData
 import com.sdvsync.ui.components.EmptyState
-import com.sdvsync.ui.components.GearData
 import com.sdvsync.ui.components.PixelIconButton
 import com.sdvsync.ui.components.PixelLoadingSpinner
 import com.sdvsync.ui.components.RefreshData
@@ -30,8 +28,6 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun DashboardScreen(
     onSaveClick: (String, Boolean, Boolean) -> Unit,
-    onSettingsClick: () -> Unit,
-    onGameDownloadClick: () -> Unit = {},
     onSyncLogClick: () -> Unit = {},
     viewModel: DashboardViewModel = koinViewModel(),
 ) {
@@ -47,11 +43,6 @@ fun DashboardScreen(
                 title = stringResource(R.string.dashboard_title),
                 actions = {
                     PixelIconButton(
-                        pixelData = DownloadData,
-                        onClick = onGameDownloadClick,
-                        contentDescription = stringResource(R.string.download_title),
-                    )
-                    PixelIconButton(
                         pixelData = RefreshData,
                         onClick = { viewModel.refresh(isUserRefresh = true) },
                         contentDescription = stringResource(R.string.action_refresh),
@@ -60,11 +51,6 @@ fun DashboardScreen(
                         pixelData = ClockData,
                         onClick = onSyncLogClick,
                         contentDescription = stringResource(R.string.sync_log_title),
-                    )
-                    PixelIconButton(
-                        pixelData = GearData,
-                        onClick = onSettingsClick,
-                        contentDescription = stringResource(R.string.settings_title),
                     )
                 },
             )

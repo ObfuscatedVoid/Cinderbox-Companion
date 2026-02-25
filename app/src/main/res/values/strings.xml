@@ -246,6 +246,106 @@
     <string name="cinderbox_copy_failed">Copy failed for %1$d file(s):</string>
     <string name="cinderbox_error_unknown">Unknown copy error</string>
 
+    <!-- Bottom navigation tabs -->
+    <string name="tab_saves">Saves</string>
+    <string name="tab_mods">Mods</string>
+    <string name="tab_download">Download</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Mod Manager -->
+    <string name="mods_title">Mods</string>
+    <string name="mods_empty_title">No mods installed</string>
+    <string name="mods_empty_subtitle">Browse Nexus Mods or import a ZIP file to get started</string>
+    <string name="mods_browse_button">Browse Mods</string>
+    <string name="mods_import_button">Import ZIP</string>
+    <string name="mods_import">Import Mod</string>
+    <string name="mods_update_banner">%1$d mod(s) have updates available</string>
+    <string name="mods_update_single">1 mod has an update available</string>
+    <string name="mods_checking_updates">Checking for updates\u2026</string>
+    <string name="mods_up_to_date">Up to date</string>
+    <string name="mods_update_available">Update available</string>
+    <string name="mods_disabled">Disabled</string>
+    <string name="mods_enabled">Enabled</string>
+    <string name="mods_smapi_mod">SMAPI Mod</string>
+    <string name="mods_content_pack">Content Pack</string>
+    <string name="mods_installed">Installed</string>
+    <string name="mods_not_installed">Not installed</string>
+    <string name="mods_install">Install</string>
+    <string name="mods_update">Update</string>
+    <string name="mods_reinstall">Reinstall</string>
+    <string name="mods_remove">Remove Mod</string>
+    <string name="mods_remove_confirm_title">Remove %1$s?</string>
+    <string name="mods_remove_confirm_message">This will permanently delete this mod from the Mods folder.</string>
+    <string name="mods_remove_confirm">Remove</string>
+    <string name="mods_enable">Enable</string>
+    <string name="mods_disable">Disable</string>
+    <string name="mods_check_update">Check for Update</string>
+    <string name="mods_folder_size">Folder size: %1$s</string>
+    <string name="mods_installed_on">Installed: %1$s</string>
+    <string name="mods_unique_id">Unique ID: %1$s</string>
+    <string name="mods_version">Version: %1$s</string>
+    <string name="mods_author">By %1$s</string>
+    <string name="mods_entry_dll">Entry DLL: %1$s</string>
+    <string name="mods_content_pack_for">Content pack for: %1$s</string>
+    <string name="mods_min_api_version">Minimum SMAPI: %1$s</string>
+    <string name="mods_update_keys">Update keys: %1$s</string>
+    <string name="mods_folder_path">Folder: %1$s</string>
+    <string name="mods_dependencies">Dependencies</string>
+    <string name="mods_dependency_required">Required</string>
+    <string name="mods_dependency_optional">Optional</string>
+    <string name="mods_details">Details</string>
+    <string name="mods_info">Info</string>
+    <string name="mods_actions">Actions</string>
+    <string name="mods_no_description">No description available</string>
+
+    <!-- Mod Browse -->
+    <string name="mods_browse_title">Browse Mods</string>
+    <string name="mods_search_hint">Search mods\u2026</string>
+    <string name="mods_trending">Trending</string>
+    <string name="mods_latest">Latest</string>
+    <string name="mods_recently_updated">Recently Updated</string>
+    <string name="mods_no_results">No mods found</string>
+    <string name="mods_downloads">%1$s downloads</string>
+    <string name="mods_endorsements">%1$s endorsements</string>
+
+    <!-- Nexus API key -->
+    <string name="mods_api_key_title">Nexus Mods API Key</string>
+    <string name="mods_api_key_description">Enter your Nexus Mods API key to browse and download mods</string>
+    <string name="mods_api_key_hint">API key</string>
+    <string name="mods_api_key_save">Save</string>
+    <string name="mods_api_key_get">Get your free API key at nexusmods.com</string>
+    <string name="mods_api_key_valid">API key validated</string>
+    <string name="mods_api_key_invalid">Invalid API key</string>
+    <string name="mods_api_key_remove">Remove API Key</string>
+
+    <!-- Mod Detail -->
+    <string name="mods_detail_files">Files</string>
+    <string name="mods_detail_description">Description</string>
+    <string name="mods_detail_last_updated">Last updated: %1$s</string>
+    <string name="mods_detail_file_size">%1$s</string>
+    <string name="mods_detail_main_file">Main file</string>
+    <string name="mods_detail_optional">Optional</string>
+    <string name="mods_detail_old_version">Old version</string>
+
+    <!-- Mod download -->
+    <string name="mods_download_notification_channel">Mod Download</string>
+    <string name="mods_download_notification_channel_desc">Mod download progress</string>
+    <string name="mods_download_notification_title">Downloading mod</string>
+    <string name="mods_download_downloading">Downloading %1$s\u2026</string>
+    <string name="mods_download_extracting">Extracting\u2026</string>
+    <string name="mods_download_installing">Installing\u2026</string>
+    <string name="mods_download_complete">%1$s installed successfully</string>
+    <string name="mods_download_failed">Failed to install mod: %1$s</string>
+
+    <!-- Mod install errors -->
+    <string name="mods_error_no_manifest">No manifest.json found in archive</string>
+    <string name="mods_error_extract_failed">Failed to extract archive: %1$s</string>
+    <string name="mods_error_copy_failed">Failed to copy mod files: %1$s</string>
+    <string name="mods_error_mods_dir_inaccessible">Cannot access Mods directory</string>
+    <string name="mods_error_api_key_required">A Nexus API key is required to browse mods</string>
+    <string name="mods_error_rate_limited">Nexus API rate limit reached. Please try again later.</string>
+    <string name="mods_error_network">Network error. Check your connection.</string>
+
     <!-- Auto-sync notification -->
     <string name="notification_channel_sync">Save Sync</string>
     <string name="notification_auto_sync_title">SDV Sync</string>

@@ -3,6 +3,12 @@ package com.sdvsync.di
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.FileAccessStrategy
 import com.sdvsync.fileaccess.SAFFileAccess
+import com.sdvsync.mods.ModDataStore
+import com.sdvsync.mods.ModDownloadManager
+import com.sdvsync.mods.ModFileManager
+import com.sdvsync.mods.ModManifestParser
+import com.sdvsync.mods.api.NexusModSource
+import com.sdvsync.mods.api.SmapiUpdateChecker
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadataParser
@@ -17,7 +23,11 @@ import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
 import com.sdvsync.ui.viewmodels.DashboardViewModel
+import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import com.sdvsync.ui.viewmodels.LoginViewModel
+import com.sdvsync.ui.viewmodels.ModBrowseViewModel
+import com.sdvsync.ui.viewmodels.ModDetailViewModel
+import com.sdvsync.ui.viewmodels.ModManagerViewModel
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
@@ -65,6 +75,14 @@ val appModule = module {
     single { SyncHistoryStore(androidContext()) }
     factory { SyncEngine(androidContext(), get(), get(), get(), get(), get(), get()) }
 
+    // Mod management
+    single { ModManifestParser() }
+    single { ModFileManager(androidContext(), get()) }
+    single { ModDataStore(androidContext()) }
+    single { ModDownloadManager(androidContext()) }
+    single { NexusModSource(get(), get()) }
+    single { SmapiUpdateChecker(get()) }
+
     // ViewModels
     viewModel { LoginViewModel(get()) }
     viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get()) }
@@ -72,4 +90,8 @@ val appModule = module {
     viewModel { SettingsViewModel(androidContext(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
     viewModel { GameDownloadViewModel(androidContext(), get(), get()) }
+    viewModel { ModManagerViewModel(androidContext(), get(), get(), get()) }
+    viewModel { ModBrowseViewModel(get(), get(), get()) }
+    viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), modId, source) }
+    viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), uniqueId) }
 }

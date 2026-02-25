@@ -9,20 +9,40 @@ import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.sdvsync.ui.components.BottomTab
+import com.sdvsync.ui.components.StardewBottomBar
 import com.sdvsync.ui.screens.DashboardScreen
 import com.sdvsync.ui.screens.GameDownloadScreen
 import com.sdvsync.ui.screens.LoginScreen
+import com.sdvsync.ui.screens.InstalledModDetailScreen
+import com.sdvsync.ui.screens.ModBrowseScreen
+import com.sdvsync.ui.screens.ModDetailScreen
+import com.sdvsync.ui.screens.ModManagerScreen
 import com.sdvsync.ui.screens.SettingsScreen
 import com.sdvsync.ui.screens.SyncDetailScreen
 import com.sdvsync.ui.screens.SyncLogScreen
 import com.sdvsync.ui.theme.SdvSyncTheme
+import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
+import com.sdvsync.ui.viewmodels.ModBrowseViewModel
+import com.sdvsync.ui.viewmodels.ModDetailViewModel
+import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,8 +60,32 @@ class MainActivity : ComponentActivity() {
 private const val NAV_ANIM_DURATION = 300
 private const val FADE_ANIM_DURATION = 400
 
+// Routes that should show the bottom bar
+private val BOTTOM_BAR_ROUTES = setOf("saves", "mods", "game_download", "settings")
+
 @Composable
 fun SdvSyncNavGraph(navController: NavHostController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute by remember(navBackStackEntry) {
+        derivedStateOf { navBackStackEntry?.destination?.route }
+    }
+
+    val showBottomBar by remember(currentRoute) {
+        derivedStateOf { currentRoute in BOTTOM_BAR_ROUTES }
+    }
+
+    val selectedTab by remember(currentRoute) {
+        derivedStateOf {
+            when (currentRoute) {
+                "saves" -> BottomTab.SAVES
+                "mods" -> BottomTab.MODS
+                "game_download" -> BottomTab.DOWNLOAD
+                "settings" -> BottomTab.SETTINGS
+                else -> BottomTab.SAVES
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = "login",
@@ -70,6 +114,7 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             ) + fadeOut(tween(NAV_ANIM_DURATION))
         },
     ) {
+        // Login screen — outside the bottom bar
         composable(
             route = "login",
             enterTransition = { fadeIn(tween(FADE_ANIM_DURATION)) },
@@ -77,36 +122,23 @@ fun SdvSyncNavGraph(navController: NavHostController) {
         ) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate("dashboard") {
+                    navController.navigate("main") {
                         popUpTo("login") { inclusive = true }
                     }
                 },
             )
         }
 
-        composable("dashboard") {
-            DashboardScreen(
-                onSaveClick = { folderName, hasCloud, hasLocal ->
-                    navController.navigate("sync_detail/$folderName/$hasCloud/$hasLocal")
-                },
-                onSettingsClick = {
-                    navController.navigate("settings")
-                },
-                onGameDownloadClick = {
-                    navController.navigate("game_download")
-                },
-                onSyncLogClick = {
-                    navController.navigate("sync_log")
-                },
+        // Main section with bottom bar
+        composable("main") {
+            MainScreen(
+                parentNavController = navController,
+                showBottomBar = showBottomBar,
+                selectedTab = selectedTab,
             )
         }
 
-        composable("game_download") {
-            GameDownloadScreen(
-                onBack = { navController.popBackStack() },
-            )
-        }
-
+        // Saves sub-screens (outside bottom bar scaffold for clean back stack)
         composable(
             route = "sync_detail/{saveFolderName}/{hasCloud}/{hasLocal}",
             arguments = listOf(
@@ -132,15 +164,163 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             )
         }
 
-        composable("settings") {
-            SettingsScreen(
+        // Mod sub-screens
+        composable(
+            route = "installed_mod/{uniqueId}",
+            arguments = listOf(
+                navArgument("uniqueId") { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val uniqueId = backStackEntry.arguments?.getString("uniqueId") ?: return@composable
+            val viewModel: InstalledModDetailViewModel = koinViewModel { parametersOf(uniqueId) }
+            InstalledModDetailScreen(
+                viewModel = viewModel,
                 onBack = { navController.popBackStack() },
-                onLogout = {
-                    navController.navigate("login") {
-                        popUpTo(0) { inclusive = true }
-                    }
+            )
+        }
+
+        composable("mods_browse") {
+            val viewModel: ModBrowseViewModel = koinViewModel()
+            ModBrowseScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onModClick = { modId, source ->
+                    navController.navigate("mod_detail/$modId/$source")
                 },
             )
+        }
+
+        composable(
+            route = "mod_detail/{modId}/{source}",
+            arguments = listOf(
+                navArgument("modId") { type = NavType.StringType },
+                navArgument("source") { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val modId = backStackEntry.arguments?.getString("modId") ?: return@composable
+            val source = backStackEntry.arguments?.getString("source") ?: return@composable
+            val viewModel: ModDetailViewModel = koinViewModel { parametersOf(modId, source) }
+            ModDetailScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
+    }
+}
+
+@Composable
+fun MainScreen(
+    parentNavController: NavHostController,
+    showBottomBar: Boolean,
+    selectedTab: BottomTab,
+) {
+    val mainNavController = rememberNavController()
+    val mainBackStackEntry by mainNavController.currentBackStackEntryAsState()
+    val mainCurrentRoute by remember(mainBackStackEntry) {
+        derivedStateOf { mainBackStackEntry?.destination?.route }
+    }
+
+    val isMainShowBottomBar by remember(mainCurrentRoute) {
+        derivedStateOf { mainCurrentRoute in BOTTOM_BAR_ROUTES }
+    }
+
+    val mainSelectedTab by remember(mainCurrentRoute) {
+        derivedStateOf {
+            when (mainCurrentRoute) {
+                "saves" -> BottomTab.SAVES
+                "mods" -> BottomTab.MODS
+                "game_download" -> BottomTab.DOWNLOAD
+                "settings" -> BottomTab.SETTINGS
+                else -> BottomTab.SAVES
+            }
+        }
+    }
+
+    Scaffold(
+        bottomBar = {
+            if (isMainShowBottomBar) {
+                StardewBottomBar(
+                    selectedTab = mainSelectedTab,
+                    onTabSelected = { tab ->
+                        mainNavController.navigate(tab.route) {
+                            popUpTo(mainNavController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+        },
+    ) { innerPadding ->
+        NavHost(
+            navController = mainNavController,
+            startDestination = "saves",
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
+            exitTransition = { fadeOut(tween(NAV_ANIM_DURATION)) },
+            popEnterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
+            popExitTransition = { fadeOut(tween(NAV_ANIM_DURATION)) },
+        ) {
+            // Saves tab
+            composable("saves") {
+                DashboardScreen(
+                    onSaveClick = { folderName, hasCloud, hasLocal ->
+                        parentNavController.navigate("sync_detail/$folderName/$hasCloud/$hasLocal")
+                    },
+                    onSyncLogClick = {
+                        parentNavController.navigate("sync_log")
+                    },
+                )
+            }
+
+            // Mods tab
+            composable("mods") {
+                ModManagerScreen(
+                    onBrowseClick = {
+                        parentNavController.navigate("mods_browse")
+                    },
+                    onModClick = { uniqueId ->
+                        parentNavController.navigate("installed_mod/$uniqueId")
+                    },
+                )
+            }
+
+            // Download tab
+            composable("game_download") {
+                GameDownloadScreen(
+                    onBack = {
+                        mainNavController.navigate("saves") {
+                            popUpTo(mainNavController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+
+            // Settings tab
+            composable("settings") {
+                SettingsScreen(
+                    onBack = {
+                        mainNavController.navigate("saves") {
+                            popUpTo(mainNavController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onLogout = {
+                        parentNavController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                )
+            }
         }
     }
 }

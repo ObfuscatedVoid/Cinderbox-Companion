@@ -99,6 +99,10 @@ dependencies {
     // QR Code
     implementation(libs.zxing.core)
 
+    // Image loading
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+
     // Shizuku
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
