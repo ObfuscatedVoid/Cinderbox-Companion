@@ -126,21 +126,24 @@ class GameDownloadService : Service() {
             // Scale concurrency based on available heap to avoid OOM on low-end devices
             val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val heapMb = am.largeMemoryClass
-            val (downloads, decompress) = when {
-                heapMb >= 512 -> 8 to 4
-                heapMb >= 384 -> 6 to 3
-                heapMb >= 256 -> 4 to 2
-                else -> 2 to 2
+            data class ConcurrencyProfile(val downloads: Int, val decompress: Int, val writes: Int)
+            val profile = when {
+                heapMb >= 1024 -> ConcurrencyProfile(16, 8, 8)
+                heapMb >= 768  -> ConcurrencyProfile(12, 6, 6)
+                heapMb >= 512  -> ConcurrencyProfile(8, 4, 4)
+                heapMb >= 384  -> ConcurrencyProfile(6, 3, 2)
+                heapMb >= 256  -> ConcurrencyProfile(4, 2, 1)
+                else           -> ConcurrencyProfile(2, 2, 1)
             }
-            AppLogger.d(TAG, "Heap: ${heapMb}MB → maxDownloads=$downloads, maxDecompress=$decompress")
+            AppLogger.d(TAG, "Heap: ${heapMb}MB → downloads=${profile.downloads}, decompress=${profile.decompress}, writes=${profile.writes}")
 
             val downloader = DepotDownloader(
                 steamClient = clientManager.client,
                 licenses = licenses,
                 debug = false,
-                maxDownloads = downloads,
-                maxDecompress = decompress,
-                maxFileWrites = 4,
+                maxDownloads = profile.downloads,
+                maxDecompress = profile.decompress,
+                maxFileWrites = profile.writes,
                 parentJob = currentCoroutineContext()[Job],
             )
             depotDownloader = downloader
