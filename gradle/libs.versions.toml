@@ -29,6 +29,9 @@ coroutines = "1.9.0"
 # QR Code
 zxing = "3.5.3"
 
+# Compression
+xz = "1.10"
+
 # Shizuku
 shizuku = "13.1.5"
 
@@ -55,6 +58,7 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 
 # Steam
 javasteam = { group = "in.dragonbra", name = "javasteam", version.ref = "javasteam" }
+javasteam-depotdownloader = { group = "in.dragonbra", name = "javasteam-depotdownloader", version.ref = "javasteam" }
 spongycastle = { group = "com.madgag.spongycastle", name = "prov", version.ref = "spongycastle" }
 
 # Networking
@@ -69,6 +73,9 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 # QR Code
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+
+# Compression
+xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
 
 # Shizuku
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }

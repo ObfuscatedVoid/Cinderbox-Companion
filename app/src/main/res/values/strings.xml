@@ -195,6 +195,42 @@
     <string name="error_save_corrupt">Save file appears corrupt</string>
     <string name="error_version_mismatch">Warning: Cloud save version (%1$s) may not be compatible with your game version</string>
 
+    <!-- Game Download -->
+    <string name="download_title">Download Game</string>
+    <string name="download_app_name">Stardew Valley</string>
+    <string name="download_app_id">App ID: 413150</string>
+    <string name="download_section_version">Version</string>
+    <string name="download_section_platform">Platform</string>
+    <string name="download_section_location">Download Location</string>
+    <string name="download_branch_password">Branch Password</string>
+    <string name="download_install_path">Install path</string>
+    <string name="download_change_folder">Change Folder</string>
+    <string name="download_done">Done</string>
+    <string name="download_button">Download Stardew Valley</string>
+    <string name="download_preparing">Preparing download\u2026</string>
+    <string name="download_downloading">Downloading\u2026</string>
+    <string name="download_complete">Download complete!</string>
+    <string name="download_complete_desc">Game files saved to:\n%1$s</string>
+    <string name="download_again">Download Again</string>
+    <string name="download_error">Download failed</string>
+    <string name="download_cancelled">Download cancelled</string>
+    <string name="download_notification_channel">Game Download</string>
+    <string name="download_notification_channel_desc">Game download progress</string>
+    <string name="download_notification_title">Downloading Stardew Valley</string>
+    <string name="download_notification_progress">%1$d%% \u2014 %2$s</string>
+    <string name="download_notification_error">Error: %1$s</string>
+    <string name="download_notification_failed">Download failed: %1$s</string>
+    <string name="download_error_no_licenses">No Steam licenses available. Please ensure you own the game.</string>
+    <string name="download_error_unknown">Unknown error</string>
+    <string name="download_error_load_branches">Failed to load branches: %1$s</string>
+    <string name="download_error_no_directory">Please set an install directory</string>
+    <string name="download_error_password_required">This branch requires a password</string>
+    <string name="download_branch_build">Build %1$d</string>
+    <string name="download_branch_build_date">Build %1$d \u2022 %2$s</string>
+    <string name="download_platform_windows">Windows</string>
+    <string name="download_platform_macos">macOS</string>
+    <string name="download_platform_linux">Linux</string>
+
     <!-- Auto-sync notification -->
     <string name="notification_channel_sync">Save Sync</string>
     <string name="notification_auto_sync_title">SDV Sync</string>

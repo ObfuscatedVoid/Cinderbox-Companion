@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.sdvsync.ui.screens.DashboardScreen
+import com.sdvsync.ui.screens.GameDownloadScreen
 import com.sdvsync.ui.screens.LoginScreen
 import com.sdvsync.ui.screens.SettingsScreen
 import com.sdvsync.ui.screens.SyncDetailScreen
@@ -91,9 +92,18 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 onSettingsClick = {
                     navController.navigate("settings")
                 },
+                onGameDownloadClick = {
+                    navController.navigate("game_download")
+                },
                 onSyncLogClick = {
                     navController.navigate("sync_log")
                 },
+            )
+        }
+
+        composable("game_download") {
+            GameDownloadScreen(
+                onBack = { navController.popBackStack() },
             )
         }
 

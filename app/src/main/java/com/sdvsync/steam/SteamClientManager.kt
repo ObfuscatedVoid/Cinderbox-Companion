@@ -3,6 +3,8 @@ package com.sdvsync.steam
 import com.sdvsync.logging.AppLogger
 import `in`.dragonbra.javasteam.steam.steamclient.SteamClient
 import `in`.dragonbra.javasteam.steam.steamclient.callbackmgr.CallbackManager
+import `in`.dragonbra.javasteam.steam.handlers.steamapps.SteamApps
+import `in`.dragonbra.javasteam.steam.handlers.steamapps.License
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.SteamCloud
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.SteamUser
 import kotlinx.coroutines.*
@@ -43,6 +45,17 @@ class SteamClientManager {
     val cloud: SteamCloud
         get() = client.getHandler(SteamCloud::class.java)
             ?: throw IllegalStateException("SteamCloud handler not available")
+
+    val apps: SteamApps
+        get() = client.getHandler(SteamApps::class.java)
+            ?: throw IllegalStateException("SteamApps handler not available")
+
+    private val _licenses = MutableStateFlow<List<License>>(emptyList())
+    val licenses: StateFlow<List<License>> = _licenses.asStateFlow()
+
+    fun updateLicenses(licenseList: List<License>) {
+        _licenses.value = licenseList
+    }
 
     val isLoggedIn: Boolean
         get() = _connectionState.value == ConnectionState.LOGGED_IN

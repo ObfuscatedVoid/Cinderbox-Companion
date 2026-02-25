@@ -6,6 +6,7 @@ import android.net.NetworkCapabilities
 import com.sdvsync.logging.AppLogger
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.authentication.*
+import `in`.dragonbra.javasteam.steam.handlers.steamapps.callback.LicenseListCallback
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.LogOnDetails
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.callback.LoggedOffCallback
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.callback.LoggedOnCallback
@@ -79,6 +80,10 @@ class SteamAuthenticator(
         cbMgr.subscribe(DisconnectedCallback::class.java) { onDisconnected(it) }
         cbMgr.subscribe(LoggedOnCallback::class.java) { onLoggedOn(it) }
         cbMgr.subscribe(LoggedOffCallback::class.java) { onLoggedOff(it) }
+        cbMgr.subscribe(LicenseListCallback::class.java) { callback ->
+            AppLogger.d(TAG, "Received ${callback.licenseList.size} licenses")
+            clientManager.updateLicenses(callback.licenseList)
+        }
     }
 
     private fun isNetworkAvailable(): Boolean {

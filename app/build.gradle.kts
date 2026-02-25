@@ -78,7 +78,9 @@ dependencies {
 
     // Steam
     implementation(libs.javasteam)
+    implementation(libs.javasteam.depotdownloader)
     implementation(libs.spongycastle)
+    implementation(libs.xz)
 
     // Networking
     implementation(libs.okhttp)

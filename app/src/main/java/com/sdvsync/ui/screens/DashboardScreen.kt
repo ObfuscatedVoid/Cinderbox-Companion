@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.ui.animation.StaggeredAnimatedItem
 import com.sdvsync.ui.components.ClockData
+import com.sdvsync.ui.components.DownloadData
 import com.sdvsync.ui.components.EmptyState
 import com.sdvsync.ui.components.GearData
 import com.sdvsync.ui.components.PixelIconButton
@@ -30,6 +31,7 @@ import org.koin.androidx.compose.koinViewModel
 fun DashboardScreen(
     onSaveClick: (String, Boolean, Boolean) -> Unit,
     onSettingsClick: () -> Unit,
+    onGameDownloadClick: () -> Unit = {},
     onSyncLogClick: () -> Unit = {},
     viewModel: DashboardViewModel = koinViewModel(),
 ) {
@@ -44,6 +46,11 @@ fun DashboardScreen(
             StardewTopAppBar(
                 title = stringResource(R.string.dashboard_title),
                 actions = {
+                    PixelIconButton(
+                        pixelData = DownloadData,
+                        onClick = onGameDownloadClick,
+                        contentDescription = stringResource(R.string.download_title),
+                    )
                     PixelIconButton(
                         pixelData = RefreshData,
                         onClick = { viewModel.refresh(isUserRefresh = true) },

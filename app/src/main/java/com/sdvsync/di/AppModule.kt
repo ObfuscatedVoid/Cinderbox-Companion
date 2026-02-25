@@ -7,9 +7,11 @@ import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadataParser
 import com.sdvsync.saves.SaveValidator
+import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.steam.SteamAuthenticator
 import com.sdvsync.steam.SteamClientManager
 import com.sdvsync.steam.SteamCloudService
+import com.sdvsync.steam.SteamContentService
 import com.sdvsync.steam.SteamSessionStore
 import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncEngine
@@ -18,6 +20,7 @@ import com.sdvsync.ui.viewmodels.DashboardViewModel
 import com.sdvsync.ui.viewmodels.LoginViewModel
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
+import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import com.sdvsync.ui.viewmodels.SyncLogViewModel
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
@@ -40,6 +43,8 @@ val appModule = module {
     single { SteamClientManager() }
     single { SteamAuthenticator(androidContext(), get(), get()) }
     single { SteamCloudService(get(), get()) }
+    single { SteamContentService(get()) }
+    single { GameDownloadManager(androidContext()) }
 
     // File access
     single { FileAccessDetector(androidContext()) }
@@ -66,4 +71,5 @@ val appModule = module {
     viewModel { SyncDetailViewModel(androidContext(), get(), get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
+    viewModel { GameDownloadViewModel(androidContext(), get(), get()) }
 }

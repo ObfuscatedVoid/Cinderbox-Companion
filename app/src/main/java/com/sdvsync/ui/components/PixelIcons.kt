@@ -357,6 +357,20 @@ val EyeClosedData = arrayOf(
     intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 )
 
+// ── Download (10x10) — downward arrow with tray ────────────────────────
+val DownloadData = arrayOf(
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
+    intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+)
+
 // ── Barn (16x12) — pixel farm scene for login ─────────────────────────
 // Palette: 1=brown wall, 2=red roof, 3=green ground, 4=gold star, 5=dark door, 6=lighter brown
 val BarnPalette = listOf(
