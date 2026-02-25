@@ -60,6 +60,9 @@ data class RemoteModFile(
     val isPrimary: Boolean,
     val categoryName: String,
     val uploadedAt: Long,
+    val description: String = "",
+    val changelogHtml: String? = null,
+    val modVersion: String? = null,
 )
 
 data class ModUpdateInfo(

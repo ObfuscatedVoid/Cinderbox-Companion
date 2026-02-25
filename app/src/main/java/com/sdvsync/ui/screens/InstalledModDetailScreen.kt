@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
@@ -17,6 +18,7 @@ import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewDialog
+import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import java.text.SimpleDateFormat
@@ -130,6 +132,56 @@ fun InstalledModDetailScreen(
                 }
             }
 
+            // Update card
+            val updateInfo = state.updateInfo
+            if (updateInfo != null) {
+                Spacer(Modifier.height(16.dp))
+                val uriHandler = LocalUriHandler.current
+                StardewCard {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            stringResource(R.string.mods_update_available),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(
+                                R.string.mods_update_available_version,
+                                updateInfo.installedVersion,
+                                updateInfo.latestVersion,
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        updateInfo.updateUrl?.let { url ->
+                            Spacer(Modifier.height(8.dp))
+                            StardewButton(
+                                onClick = { uriHandler.openUri(url) },
+                                variant = StardewButtonVariant.Gold,
+                            ) {
+                                Text(stringResource(R.string.mods_view_update))
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Nexus link
+            val nexusModId = state.metadata?.installedFrom
+                ?.takeIf { it.startsWith("nexus:") }
+                ?.removePrefix("nexus:")
+            if (nexusModId != null) {
+                Spacer(Modifier.height(12.dp))
+                val uriHandler = LocalUriHandler.current
+                StardewOutlinedButton(
+                    onClick = {
+                        uriHandler.openUri("https://www.nexusmods.com/stardewvalley/mods/$nexusModId")
+                    },
+                ) {
+                    Text(stringResource(R.string.mods_view_on_nexus))
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
             PixelDivider()
             Spacer(Modifier.height(24.dp))
@@ -156,6 +208,23 @@ fun InstalledModDetailScreen(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary,
                             ),
                         )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    StardewOutlinedButton(
+                        onClick = { viewModel.checkForUpdate() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isCheckingUpdate,
+                    ) {
+                        if (state.isCheckingUpdate) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.mods_checking_update))
+                        } else {
+                            Text(stringResource(R.string.mods_check_for_update))
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
                     StardewButton(

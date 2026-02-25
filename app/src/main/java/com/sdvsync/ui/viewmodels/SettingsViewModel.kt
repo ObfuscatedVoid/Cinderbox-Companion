@@ -3,17 +3,22 @@ package com.sdvsync.ui.viewmodels
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.sdvsync.autosync.AutoSyncService
 import com.sdvsync.fileaccess.AllFilesAccess
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.RootFileAccess
 import com.sdvsync.fileaccess.SAFFileAccess
 import com.sdvsync.fileaccess.ShizukuFileAccess
+import com.sdvsync.mods.ModDataStore
+import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.steam.SteamAuthenticator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class SettingsState(
     val fileAccessMode: String = "auto",
@@ -34,6 +39,10 @@ data class SettingsState(
     val isLoggedIn: Boolean = false,
     val steamUsername: String? = null,
     val maxBackups: Int = SaveBackupManager.DEFAULT_MAX_BACKUPS,
+    val hasNexusApiKey: Boolean = false,
+    val nexusApiKeyMasked: String? = null,
+    val isValidatingApiKey: Boolean = false,
+    val apiKeyError: String? = null,
 )
 
 class SettingsViewModel(
@@ -41,6 +50,8 @@ class SettingsViewModel(
     private val fileAccessDetector: FileAccessDetector,
     private val authenticator: SteamAuthenticator,
     private val backupManager: SaveBackupManager,
+    private val modDataStore: ModDataStore,
+    private val nexusSource: NexusModSource,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -51,6 +62,11 @@ class SettingsViewModel(
         val shizukuInstalled = ShizukuFileAccess.isInstalled(context.packageManager)
         val shizukuRunning = ShizukuFileAccess.isRunning()
         val shizukuPermission = ShizukuFileAccess.isPermissionGranted()
+
+        val apiKey = modDataStore.getNexusApiKey()
+        val maskedKey = apiKey?.let {
+            if (it.length > 4) "****${it.takeLast(4)}" else "****"
+        }
 
         _state.value = SettingsState(
             availableModes = fileAccessDetector.availableMethods(),
@@ -69,6 +85,8 @@ class SettingsViewModel(
             safIsStaging = SAFFileAccess.isStaging(context),
             isLoggedIn = authenticator.authState.value is com.sdvsync.steam.AuthState.LoggedIn,
             maxBackups = backupManager.maxBackups,
+            hasNexusApiKey = apiKey != null,
+            nexusApiKeyMasked = maskedKey,
         )
     }
 
@@ -111,5 +129,30 @@ class SettingsViewModel(
 
     fun logout() {
         authenticator.logout()
+    }
+
+    fun validateAndSaveApiKey(key: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.value = _state.value.copy(isValidatingApiKey = true, apiKeyError = null)
+            val valid = nexusSource.validateApiKey(key.trim())
+            if (valid) {
+                modDataStore.setNexusApiKey(key.trim())
+                load()
+            } else {
+                _state.value = _state.value.copy(
+                    isValidatingApiKey = false,
+                    apiKeyError = "Invalid API key",
+                )
+            }
+        }
+    }
+
+    fun removeNexusApiKey() {
+        modDataStore.setNexusApiKey(null)
+        load()
+    }
+
+    fun clearApiKeyError() {
+        _state.value = _state.value.copy(apiKeyError = null)
     }
 }

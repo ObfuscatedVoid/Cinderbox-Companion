@@ -11,6 +11,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.UpdateBanner
+import com.sdvsync.ui.viewmodels.ModFilter
 import com.sdvsync.ui.viewmodels.ModManagerViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -154,6 +156,58 @@ fun ModManagerScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        // Search bar
+                        item {
+                            OutlinedTextField(
+                                value = state.searchQuery,
+                                onValueChange = { viewModel.setSearchQuery(it) },
+                                placeholder = { Text(stringResource(R.string.mods_search_installed_hint)) },
+                                singleLine = true,
+                                shape = RectangleShape,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+
+                        // Filter chips
+                        item {
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                val filterChipColors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                                FilterChip(
+                                    selected = state.filter == ModFilter.ALL,
+                                    onClick = { viewModel.setFilter(ModFilter.ALL) },
+                                    label = { Text(stringResource(R.string.mods_filter_all)) },
+                                    colors = filterChipColors,
+                                )
+                                FilterChip(
+                                    selected = state.filter == ModFilter.ENABLED,
+                                    onClick = { viewModel.setFilter(ModFilter.ENABLED) },
+                                    label = { Text(stringResource(R.string.mods_filter_enabled)) },
+                                    colors = filterChipColors,
+                                )
+                                FilterChip(
+                                    selected = state.filter == ModFilter.DISABLED,
+                                    onClick = { viewModel.setFilter(ModFilter.DISABLED) },
+                                    label = { Text(stringResource(R.string.mods_filter_disabled)) },
+                                    colors = filterChipColors,
+                                )
+                                if (state.updates.isNotEmpty()) {
+                                    FilterChip(
+                                        selected = state.filter == ModFilter.HAS_UPDATE,
+                                        onClick = { viewModel.setFilter(ModFilter.HAS_UPDATE) },
+                                        label = { Text(stringResource(R.string.mods_filter_has_update)) },
+                                        colors = filterChipColors,
+                                    )
+                                }
+                            }
+                        }
+
                         // Update checking indicator
                         if (state.isCheckingUpdates) {
                             item {
@@ -181,16 +235,33 @@ fun ModManagerScreen(
 
                         // Update banner
                         val updateCount = state.updates.size
-                        if (updateCount > 0) {
+                        if (updateCount > 0 && state.filter != ModFilter.HAS_UPDATE) {
                             item {
                                 UpdateBanner(
                                     updateCount = updateCount,
-                                    onClick = { /* TODO: show update list */ },
+                                    onClick = { viewModel.setFilter(ModFilter.HAS_UPDATE) },
                                 )
                             }
                         }
 
-                        itemsIndexed(state.installedMods) { index, mod ->
+                        if (state.displayedMods.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 32.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        stringResource(R.string.mods_no_matching),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        itemsIndexed(state.displayedMods) { index, mod ->
                             StaggeredAnimatedItem(index = index) {
                                 ModCard(
                                     mod = mod,

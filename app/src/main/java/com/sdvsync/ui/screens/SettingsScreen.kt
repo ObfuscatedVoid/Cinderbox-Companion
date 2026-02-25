@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,7 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
@@ -283,6 +286,21 @@ fun SettingsScreen(
             PixelDivider()
             Spacer(Modifier.height(24.dp))
 
+            // Mods - Nexus API Key
+            NexusApiKeySection(
+                hasKey = state.hasNexusApiKey,
+                maskedKey = state.nexusApiKeyMasked,
+                isValidating = state.isValidatingApiKey,
+                error = state.apiKeyError,
+                onSaveKey = { viewModel.validateAndSaveApiKey(it) },
+                onRemoveKey = { viewModel.removeNexusApiKey() },
+                onClearError = { viewModel.clearApiKeyError() },
+            )
+
+            Spacer(Modifier.height(24.dp))
+            PixelDivider()
+            Spacer(Modifier.height(24.dp))
+
             // Account
             SectionHeader(stringResource(R.string.settings_steam_account))
             Spacer(Modifier.height(16.dp))
@@ -445,6 +463,155 @@ private fun ShizukuStatusSection(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun NexusApiKeySection(
+    hasKey: Boolean,
+    maskedKey: String?,
+    isValidating: Boolean,
+    error: String?,
+    onSaveKey: (String) -> Unit,
+    onRemoveKey: () -> Unit,
+    onClearError: () -> Unit,
+) {
+    val uriHandler = LocalUriHandler.current
+    var showChangeDialog by remember { mutableStateOf(false) }
+    var keyInput by remember { mutableStateOf("") }
+
+    SectionHeader(stringResource(R.string.settings_mods_title))
+    Spacer(Modifier.height(8.dp))
+    StardewCard {
+        Column(modifier = Modifier.padding(12.dp)) {
+            if (hasKey) {
+                Text(
+                    stringResource(R.string.settings_nexus_key_configured),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (maskedKey != null) {
+                    Text(
+                        maskedKey,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StardewOutlinedButton(onClick = {
+                        keyInput = ""
+                        onClearError()
+                        showChangeDialog = true
+                    }) {
+                        Text(stringResource(R.string.settings_nexus_key_change))
+                    }
+                    StardewButton(
+                        onClick = onRemoveKey,
+                        variant = StardewButtonVariant.Danger,
+                    ) {
+                        Text(stringResource(R.string.settings_nexus_key_remove))
+                    }
+                }
+            } else {
+                Text(
+                    stringResource(R.string.mods_api_key_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = keyInput,
+                    onValueChange = {
+                        keyInput = it
+                        onClearError()
+                    },
+                    label = { Text(stringResource(R.string.mods_api_key_hint)) },
+                    singleLine = true,
+                    shape = RectangleShape,
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = error != null,
+                    supportingText = if (error != null) {
+                        { Text(error) }
+                    } else null,
+                )
+                Spacer(Modifier.height(8.dp))
+                StardewButton(
+                    onClick = { onSaveKey(keyInput) },
+                    variant = StardewButtonVariant.Action,
+                    enabled = keyInput.isNotBlank() && !isValidating,
+                ) {
+                    if (isValidating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.mods_api_key_save))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.mods_api_key_get),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable {
+                        uriHandler.openUri("https://www.nexusmods.com/users/myaccount?tab=api+access")
+                    },
+                )
+            }
+        }
+    }
+
+    // Change key dialog
+    if (showChangeDialog) {
+        AlertDialog(
+            onDismissRequest = { showChangeDialog = false },
+            title = { Text(stringResource(R.string.settings_nexus_key_change_title)) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = keyInput,
+                        onValueChange = {
+                            keyInput = it
+                            onClearError()
+                        },
+                        label = { Text(stringResource(R.string.mods_api_key_hint)) },
+                        singleLine = true,
+                        shape = RectangleShape,
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = error != null,
+                        supportingText = if (error != null) {
+                            { Text(error) }
+                        } else null,
+                    )
+                }
+            },
+            confirmButton = {
+                StardewButton(
+                    onClick = {
+                        onSaveKey(keyInput)
+                        showChangeDialog = false
+                    },
+                    variant = StardewButtonVariant.Action,
+                    enabled = keyInput.isNotBlank() && !isValidating,
+                ) {
+                    if (isValidating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(stringResource(R.string.mods_api_key_save))
+                    }
+                }
+            },
+            dismissButton = {
+                StardewButton(onClick = { showChangeDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 }
 

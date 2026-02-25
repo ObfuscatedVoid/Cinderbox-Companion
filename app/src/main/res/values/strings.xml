@@ -297,6 +297,21 @@
     <string name="mods_info">Info</string>
     <string name="mods_actions">Actions</string>
     <string name="mods_no_description">No description available</string>
+    <string name="mods_update_available_version">Update: v%1$s → v%2$s</string>
+    <string name="mods_view_update">View Update</string>
+    <string name="mods_view_on_nexus">View on Nexus</string>
+    <string name="mods_check_for_update">Check for Update</string>
+    <string name="mods_checking_update">Checking\u2026</string>
+    <string name="mods_up_to_date_single">Mod is up to date</string>
+    <string name="mods_search_installed_hint">Search installed mods\u2026</string>
+    <string name="mods_filter_all">All</string>
+    <string name="mods_filter_enabled">Enabled</string>
+    <string name="mods_filter_disabled">Disabled</string>
+    <string name="mods_filter_has_update">Has Update</string>
+    <string name="mods_sort_name">Name</string>
+    <string name="mods_sort_author">Author</string>
+    <string name="mods_sort_status">Status</string>
+    <string name="mods_no_matching">No matching mods</string>
 
     <!-- Mod Browse -->
     <string name="mods_browse_title">Browse Mods</string>
@@ -317,6 +332,13 @@
     <string name="mods_api_key_valid">API key validated</string>
     <string name="mods_api_key_invalid">Invalid API key</string>
     <string name="mods_api_key_remove">Remove API Key</string>
+
+    <!-- Settings - Mods -->
+    <string name="settings_mods_title">Mods</string>
+    <string name="settings_nexus_key_configured">Nexus Mods API key configured</string>
+    <string name="settings_nexus_key_change">Change</string>
+    <string name="settings_nexus_key_remove">Remove</string>
+    <string name="settings_nexus_key_change_title">Change API Key</string>
 
     <!-- Mod Detail -->
     <string name="mods_detail_files">Files</string>

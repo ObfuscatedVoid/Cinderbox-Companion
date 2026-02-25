@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
+enum class ModSortOrder { NAME, AUTHOR, STATUS }
+enum class ModFilter { ALL, ENABLED, DISABLED, HAS_UPDATE }
+
 data class ModManagerState(
     val installedMods: List<InstalledMod> = emptyList(),
     val updates: Map<String, ModUpdateInfo> = emptyMap(),
@@ -25,6 +28,10 @@ data class ModManagerState(
     val isCheckingUpdates: Boolean = false,
     val error: String? = null,
     val importMessage: String? = null,
+    val sortOrder: ModSortOrder = ModSortOrder.NAME,
+    val filter: ModFilter = ModFilter.ALL,
+    val searchQuery: String = "",
+    val displayedMods: List<InstalledMod> = emptyList(),
 )
 
 class ModManagerViewModel(
@@ -57,6 +64,7 @@ class ModManagerViewModel(
                     updates = updates,
                     isLoading = false,
                 )
+                updateDisplayedMods()
 
                 // Auto-check for updates if stale
                 val lastCheck = dataStore.getLastUpdateCheck()
@@ -91,6 +99,7 @@ class ModManagerViewModel(
                     updates = updates,
                     isCheckingUpdates = false,
                 )
+                updateDisplayedMods()
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Update check failed", e)
                 _state.value = _state.value.copy(isCheckingUpdates = false)
@@ -154,5 +163,53 @@ class ModManagerViewModel(
 
     fun clearImportMessage() {
         _state.value = _state.value.copy(importMessage = null)
+    }
+
+    fun setFilter(filter: ModFilter) {
+        _state.value = _state.value.copy(filter = filter)
+        updateDisplayedMods()
+    }
+
+    fun setSortOrder(order: ModSortOrder) {
+        _state.value = _state.value.copy(sortOrder = order)
+        updateDisplayedMods()
+    }
+
+    fun setSearchQuery(query: String) {
+        _state.value = _state.value.copy(searchQuery = query)
+        updateDisplayedMods()
+    }
+
+    private fun updateDisplayedMods() {
+        val state = _state.value
+        var mods = state.installedMods
+
+        // Filter
+        mods = when (state.filter) {
+            ModFilter.ALL -> mods
+            ModFilter.ENABLED -> mods.filter { it.enabled }
+            ModFilter.DISABLED -> mods.filter { !it.enabled }
+            ModFilter.HAS_UPDATE -> mods.filter { state.updates.containsKey(it.manifest.uniqueID) }
+        }
+
+        // Search
+        if (state.searchQuery.isNotBlank()) {
+            val query = state.searchQuery.lowercase()
+            mods = mods.filter {
+                it.manifest.name.lowercase().contains(query) ||
+                    it.manifest.author.lowercase().contains(query) ||
+                    it.manifest.uniqueID.lowercase().contains(query)
+            }
+        }
+
+        // Sort
+        mods = when (state.sortOrder) {
+            ModSortOrder.NAME -> mods.sortedBy { it.manifest.name.lowercase() }
+            ModSortOrder.AUTHOR -> mods.sortedBy { it.manifest.author.lowercase() }
+            ModSortOrder.STATUS -> mods.sortedWith(compareByDescending<InstalledMod> { it.enabled }
+                .thenBy { it.manifest.name.lowercase() })
+        }
+
+        _state.value = _state.value.copy(displayedMods = mods)
     }
 }

@@ -87,11 +87,11 @@ val appModule = module {
     viewModel { LoginViewModel(get()) }
     viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get()) }
     viewModel { SyncDetailViewModel(androidContext(), get(), get(), get()) }
-    viewModel { SettingsViewModel(androidContext(), get(), get(), get()) }
+    viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
     viewModel { GameDownloadViewModel(androidContext(), get(), get()) }
     viewModel { ModManagerViewModel(androidContext(), get(), get(), get()) }
     viewModel { ModBrowseViewModel(get(), get(), get()) }
     viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), modId, source) }
-    viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), uniqueId) }
+    viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), get(), uniqueId) }
 }

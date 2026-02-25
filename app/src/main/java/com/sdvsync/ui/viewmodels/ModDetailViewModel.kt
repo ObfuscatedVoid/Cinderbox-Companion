@@ -93,11 +93,28 @@ class ModDetailViewModel(
                 downloadManager.startDownload(url, modName, modId, source)
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to get download URL", e)
+                val friendlyMessage = mapDownloadError(e.message)
                 _state.value = _state.value.copy(
                     isDownloading = false,
-                    error = e.message ?: "Failed to start download",
+                    error = friendlyMessage,
                 )
             }
+        }
+    }
+
+    private fun mapDownloadError(message: String?): String {
+        if (message == null) return "Failed to start download"
+        return when {
+            message.contains("No File found", ignoreCase = true) ->
+                "This file is no longer available for download"
+            message.contains("Not Premium", ignoreCase = true) ||
+            message.contains("premium", ignoreCase = true) ->
+                "Nexus Premium required for direct downloads"
+            message.contains("403") ->
+                "Access denied. Check your API key permissions."
+            message.contains("429") ->
+                "Rate limit reached. Please try again later."
+            else -> message
         }
     }
 }

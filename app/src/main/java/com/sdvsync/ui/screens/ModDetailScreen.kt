@@ -1,5 +1,12 @@
 package com.sdvsync.ui.screens
 
+import android.text.method.LinkMovementMethod
+import android.widget.TextView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -8,21 +15,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.text.HtmlCompat
 import coil3.compose.AsyncImage
 import com.sdvsync.R
 import com.sdvsync.mods.models.ModDownloadState
 import com.sdvsync.ui.components.ArrowLeftData
 import com.sdvsync.ui.components.PixelDivider
+import com.sdvsync.ui.components.PixelIcon
 import com.sdvsync.ui.components.PixelIconButton
 import com.sdvsync.ui.components.PixelLoadingSpinner
 import com.sdvsync.ui.components.PuzzleData
-import com.sdvsync.ui.components.PixelIcon
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
@@ -194,11 +205,21 @@ fun ModDetailScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text(
-                            mod.description ?: mod.summary,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        val descriptionText = mod.description ?: mod.summary
+                        if (descriptionText.contains('<')) {
+                            HtmlText(
+                                html = descriptionText,
+                                textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb(),
+                                linkColor = MaterialTheme.colorScheme.primary.toArgb(),
+                                textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value,
+                            )
+                        } else {
+                            Text(
+                                descriptionText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -278,50 +299,117 @@ fun ModDetailScreen(
                                 Spacer(Modifier.height(8.dp))
                             }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
+                            var expanded by remember { mutableStateOf(false) }
+                            val hasDetails = file.description.isNotBlank() || file.changelogHtml != null || file.modVersion != null
+                            val chevronRotation by animateFloatAsState(
+                                targetValue = if (expanded) -90f else -180f,
+                                label = "chevron",
+                            )
+
+                            Column(
+                                modifier = if (hasDetails) Modifier
+                                    .fillMaxWidth()
+                                    .clickable { expanded = !expanded }
+                                else Modifier.fillMaxWidth(),
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        file.fileName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        if (file.fileVersion.isNotBlank()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            file.fileName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            if (file.fileVersion.isNotBlank()) {
+                                                Text(
+                                                    "v${file.fileVersion}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                            if (file.fileSize > 0) {
+                                                Text(
+                                                    formatBytes(file.fileSize),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.outline,
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            file.categoryName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = when (file.categoryName) {
+                                                "MAIN" -> MaterialTheme.colorScheme.primary
+                                                "OPTIONAL" -> MaterialTheme.colorScheme.tertiary
+                                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
+                                        )
+                                    }
+                                    if (hasDetails) {
+                                        PixelIcon(
+                                            pixelData = ArrowLeftData,
+                                            palette = listOf(Color.Transparent, MaterialTheme.colorScheme.onSurfaceVariant),
+                                            size = 16.dp,
+                                            modifier = Modifier.rotate(chevronRotation),
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                    }
+                                    StardewButton(
+                                        onClick = { viewModel.installFile(file.fileId) },
+                                        variant = StardewButtonVariant.Action,
+                                        enabled = progress.state == ModDownloadState.IDLE || progress.state == ModDownloadState.COMPLETED || progress.state == ModDownloadState.ERROR,
+                                    ) {
+                                        Text(stringResource(R.string.mods_install))
+                                    }
+                                }
+
+                                AnimatedVisibility(
+                                    visible = expanded,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically(),
+                                ) {
+                                    Column(modifier = Modifier.padding(top = 8.dp)) {
+                                        file.modVersion?.let { ver ->
                                             Text(
-                                                "v${file.fileVersion}",
+                                                "Mod version: $ver",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
-                                        if (file.fileSize > 0) {
+                                        if (file.uploadedAt > 0) {
                                             Text(
-                                                formatBytes(file.fileSize),
+                                                "Uploaded: ${dateFormat.format(Date(file.uploadedAt))}",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.outline,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        if (file.description.isNotBlank()) {
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                file.description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        file.changelogHtml?.let { changelog ->
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Changelog:",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                            HtmlText(
+                                                html = changelog,
+                                                textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb(),
+                                                linkColor = MaterialTheme.colorScheme.primary.toArgb(),
+                                                textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value,
                                             )
                                         }
                                     }
-                                    Text(
-                                        file.categoryName,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = when (file.categoryName) {
-                                            "MAIN" -> MaterialTheme.colorScheme.primary
-                                            "OPTIONAL" -> MaterialTheme.colorScheme.tertiary
-                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                    )
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                StardewButton(
-                                    onClick = { viewModel.installFile(file.fileId) },
-                                    variant = StardewButtonVariant.Action,
-                                    enabled = progress.state == ModDownloadState.IDLE || progress.state == ModDownloadState.COMPLETED || progress.state == ModDownloadState.ERROR,
-                                ) {
-                                    Text(stringResource(R.string.mods_install))
                                 }
                             }
                         }
@@ -330,4 +418,28 @@ fun ModDetailScreen(
             }
         }
     }
+}
+
+@Composable
+private fun HtmlText(
+    html: String,
+    textColor: Int,
+    linkColor: Int,
+    textSizeSp: Float,
+    modifier: Modifier = Modifier,
+) {
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            TextView(ctx).apply {
+                movementMethod = LinkMovementMethod.getInstance()
+                setTextColor(textColor)
+                setLinkTextColor(linkColor)
+                textSize = textSizeSp
+            }
+        },
+        update = { tv ->
+            tv.text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        },
+    )
 }

@@ -164,7 +164,13 @@ class NexusModSource(
             .build()
 
         val response = httpClient.newCall(request).execute()
-        val json = response.use { JSONObject(it.body!!.string()) }
+        val bodyString = response.use { it.body?.string() } ?: ""
+        if (!response.isSuccessful) {
+            val msg = try { JSONObject(bodyString).optString("message", "HTTP ${response.code}") }
+                      catch (_: Exception) { "HTTP ${response.code}" }
+            throw IllegalStateException(msg)
+        }
+        val json = JSONObject(bodyString)
 
         parseModFromV1(json)
     }
@@ -179,7 +185,13 @@ class NexusModSource(
             .build()
 
         val response = httpClient.newCall(request).execute()
-        val json = response.use { JSONObject(it.body!!.string()) }
+        val bodyString = response.use { it.body?.string() } ?: ""
+        if (!response.isSuccessful) {
+            val msg = try { JSONObject(bodyString).optString("message", "HTTP ${response.code}") }
+                      catch (_: Exception) { "HTTP ${response.code}" }
+            throw IllegalStateException(msg)
+        }
+        val json = JSONObject(bodyString)
         val files = json.getJSONArray("files")
 
         (0 until files.length()).map { i ->
@@ -187,11 +199,14 @@ class NexusModSource(
             RemoteModFile(
                 fileId = file.getInt("file_id").toString(),
                 fileName = file.getString("file_name"),
-                fileVersion = file.optString("version", ""),
+                fileVersion = file.optString("version", "").takeIf { it != "null" }?.trim() ?: "",
                 fileSize = file.optLong("size_in_bytes", 0),
                 isPrimary = file.optBoolean("is_primary", false),
-                categoryName = file.optString("category_name", "MAIN"),
+                categoryName = file.optString("category_name", "").let { if (it == "null" || it.isBlank()) "MAIN" else it },
                 uploadedAt = file.optLong("uploaded_timestamp", 0) * 1000,
+                description = file.optString("description", "").takeIf { it != "null" } ?: "",
+                changelogHtml = file.optString("changelog_html", "").takeIf { it != "null" && it.isNotBlank() },
+                modVersion = file.optString("mod_version", "").takeIf { it != "null" && it.isNotBlank() },
             )
         }
     }
@@ -206,7 +221,13 @@ class NexusModSource(
             .build()
 
         val response = httpClient.newCall(request).execute()
-        val json = response.use { JSONArray(it.body!!.string()) }
+        val bodyString = response.use { it.body?.string() } ?: ""
+        if (!response.isSuccessful) {
+            val msg = try { JSONObject(bodyString).optString("message", "HTTP ${response.code}") }
+                      catch (_: Exception) { "HTTP ${response.code}" }
+            throw IllegalStateException(msg)
+        }
+        val json = JSONArray(bodyString)
 
         if (json.length() == 0) throw IllegalStateException("No download links available")
 
