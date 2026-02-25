@@ -19,6 +19,7 @@ import `in`.dragonbra.javasteam.depotdownloader.IDownloadListener
 import `in`.dragonbra.javasteam.depotdownloader.data.AppItem
 import `in`.dragonbra.javasteam.depotdownloader.data.DownloadItem
 import android.app.ActivityManager
+import java.io.File
 import kotlinx.coroutines.*
 import org.koin.android.ext.android.inject
 
@@ -33,6 +34,7 @@ class GameDownloadService : Service() {
         private const val EXTRA_PASSWORD = "password"
         private const val EXTRA_INSTALL_DIR = "install_dir"
         private const val EXTRA_OS = "os"
+        private const val EXTRA_VERIFY = "verify"
 
         fun start(
             context: Context,
@@ -40,12 +42,14 @@ class GameDownloadService : Service() {
             password: String?,
             installDir: String,
             os: String,
+            verify: Boolean = true,
         ) {
             val intent = Intent(context, GameDownloadService::class.java).apply {
                 putExtra(EXTRA_BRANCH, branch)
                 putExtra(EXTRA_PASSWORD, password)
                 putExtra(EXTRA_INSTALL_DIR, installDir)
                 putExtra(EXTRA_OS, os)
+                putExtra(EXTRA_VERIFY, verify)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -81,10 +85,11 @@ class GameDownloadService : Service() {
         val password = intent?.getStringExtra(EXTRA_PASSWORD)
         val installDir = intent?.getStringExtra(EXTRA_INSTALL_DIR) ?: return START_NOT_STICKY
         val os = intent.getStringExtra(EXTRA_OS) ?: "windows"
+        val verify = intent.getBooleanExtra(EXTRA_VERIFY, true)
 
         downloadJob?.cancel()
         downloadJob = serviceScope.launch {
-            runDownload(branch, password, installDir, os)
+            runDownload(branch, password, installDir, os, verify)
         }
 
         return START_NOT_STICKY
@@ -100,7 +105,7 @@ class GameDownloadService : Service() {
         serviceScope.cancel()
 
         val currentState = GameDownloadManager._progress.value.state
-        if (currentState == DownloadState.DOWNLOADING || currentState == DownloadState.PREPARING) {
+        if (currentState == DownloadState.DOWNLOADING || currentState == DownloadState.PREPARING || currentState == DownloadState.VERIFYING) {
             GameDownloadManager._progress.value = DownloadProgress(
                 state = DownloadState.CANCELLED,
                 errorMessage = getString(R.string.download_cancelled),
@@ -115,6 +120,7 @@ class GameDownloadService : Service() {
         password: String?,
         installDir: String,
         os: String,
+        verify: Boolean,
     ) {
         try {
             GameDownloadManager._progress.value = DownloadProgress(state = DownloadState.PREPARING)
@@ -153,6 +159,9 @@ class GameDownloadService : Service() {
             lastSpeedUpdateMs = System.currentTimeMillis()
             lastSpeedBytes = 0L
             depotBytes.clear()
+
+            // Track completed files for verification
+            val completedFiles = mutableSetOf<String>()
 
             downloader.addListener(object : IDownloadListener {
                 override fun onDownloadStarted(item: DownloadItem) {
@@ -197,6 +206,7 @@ class GameDownloadService : Service() {
                     fileName: String,
                     depotPercentComplete: Float,
                 ) {
+                    completedFiles.add(fileName)
                     val current = GameDownloadManager._progress.value
                     GameDownloadManager._progress.value = current.copy(
                         currentFile = fileName,
@@ -220,12 +230,8 @@ class GameDownloadService : Service() {
                 }
 
                 override fun onDownloadCompleted(item: DownloadItem) {
-                    AppLogger.d(TAG, "Download completed!")
-                    GameDownloadManager._progress.value = DownloadProgress(
-                        state = DownloadState.COMPLETED,
-                        overallPercent = 1f,
-                    )
-                    updateNotification(getString(R.string.download_complete))
+                    AppLogger.d(TAG, "Download completed! (${completedFiles.size} files)")
+                    // Don't set COMPLETED here — verification may follow after awaitCompletion()
                 }
 
                 override fun onDownloadFailed(item: DownloadItem, error: Throwable) {
@@ -265,6 +271,16 @@ class GameDownloadService : Service() {
 
             AppLogger.d(TAG, "Download pipeline finished")
 
+            if (verify) {
+                verifyFiles(installDir, completedFiles)
+            } else {
+                GameDownloadManager._progress.value = DownloadProgress(
+                    state = DownloadState.COMPLETED,
+                    overallPercent = 1f,
+                )
+                updateNotification(getString(R.string.download_complete))
+            }
+
         } catch (e: CancellationException) {
             AppLogger.d(TAG, "Download cancelled")
             GameDownloadManager._progress.value = DownloadProgress(
@@ -285,6 +301,80 @@ class GameDownloadService : Service() {
             depotDownloader = null
             stopSelf()
         }
+    }
+
+    private suspend fun verifyFiles(installDir: String, completedFiles: Set<String>) {
+        AppLogger.d(TAG, "Starting file verification for ${completedFiles.size} tracked files")
+
+        val installRoot = File(installDir)
+        // Walk the install directory, excluding .DepotDownloader metadata
+        val allFiles = installRoot.walk()
+            .filter { it.isFile && !it.relativeTo(installRoot).path.startsWith(".DepotDownloader") }
+            .toList()
+
+        val totalFiles = allFiles.size
+        AppLogger.d(TAG, "Found $totalFiles files on disk (tracked ${completedFiles.size} during download)")
+
+        GameDownloadManager._progress.value = DownloadProgress(
+            state = DownloadState.VERIFYING,
+            overallPercent = 0f,
+            totalFilesToVerify = totalFiles,
+        )
+        updateNotification(getString(R.string.download_notification_verifying, 0))
+
+        val errors = mutableListOf<String>()
+        val buffer = ByteArray(64 * 1024) // 64KB read buffer
+
+        for ((index, file) in allFiles.withIndex()) {
+            // Yield to allow cancellation
+            yield()
+
+            val relativePath = file.relativeTo(installRoot).path
+            try {
+                if (file.length() == 0L) {
+                    // Zero-byte files are valid in some depots, just log
+                    AppLogger.d(TAG, "Verify: $relativePath is 0 bytes (ok)")
+                } else {
+                    // Read every byte to confirm disk integrity
+                    file.inputStream().use { input ->
+                        while (input.read(buffer) != -1) {
+                            // Just reading to verify readability
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Verify failed: $relativePath", e)
+                errors.add(relativePath)
+            }
+
+            val verified = index + 1
+            val percent = verified.toFloat() / totalFiles
+            GameDownloadManager._progress.value = DownloadProgress(
+                state = DownloadState.VERIFYING,
+                overallPercent = percent,
+                verifiedFiles = verified,
+                totalFilesToVerify = totalFiles,
+                currentFile = relativePath,
+            )
+
+            // Throttle notification updates to every ~5%
+            if (verified % maxOf(1, totalFiles / 20) == 0 || verified == totalFiles) {
+                updateNotification(getString(R.string.download_notification_verifying, (percent * 100).toInt()))
+            }
+        }
+
+        val passed = errors.isEmpty()
+        AppLogger.d(TAG, "Verification ${if (passed) "PASSED" else "FAILED"}: $totalFiles files, ${errors.size} errors")
+
+        GameDownloadManager._progress.value = DownloadProgress(
+            state = DownloadState.COMPLETED,
+            overallPercent = 1f,
+            verifiedFiles = totalFiles,
+            totalFilesToVerify = totalFiles,
+            verificationPassed = passed,
+            verificationErrors = errors,
+        )
+        updateNotification(getString(R.string.download_complete))
     }
 
     private fun createNotificationChannel() {
@@ -316,10 +406,14 @@ class GameDownloadService : Service() {
             .setContentIntent(pendingIntent)
             .setOngoing(true)
 
-        if (progress.state == DownloadState.DOWNLOADING) {
-            builder.setProgress(100, (progress.overallPercent * 100).toInt(), false)
-        } else if (progress.state == DownloadState.PREPARING) {
-            builder.setProgress(0, 0, true)
+        when (progress.state) {
+            DownloadState.DOWNLOADING, DownloadState.VERIFYING -> {
+                builder.setProgress(100, (progress.overallPercent * 100).toInt(), false)
+            }
+            DownloadState.PREPARING -> {
+                builder.setProgress(0, 0, true)
+            }
+            else -> {}
         }
 
         return builder.build()

@@ -230,6 +230,21 @@
     <string name="download_platform_windows">Windows</string>
     <string name="download_platform_macos">macOS</string>
     <string name="download_platform_linux">Linux</string>
+    <string name="download_verify_toggle">Verify files after download</string>
+    <string name="download_verify_desc">Reads back all files to confirm disk integrity</string>
+    <string name="download_verifying">Verifying files\u2026</string>
+    <string name="download_verify_progress">%1$d / %2$d files verified</string>
+    <string name="download_verify_passed">All %1$d files verified successfully</string>
+    <string name="download_verify_failed">Verification failed for %1$d file(s)</string>
+    <string name="download_notification_verifying">Verifying files\u2026 %1$d%%</string>
+
+    <!-- Cinderbox copy -->
+    <string name="cinderbox_copy_button">Copy to Cinderbox</string>
+    <string name="cinderbox_copying">Copying to Cinderbox\u2026</string>
+    <string name="cinderbox_copy_progress">%1$d / %2$d files copied</string>
+    <string name="cinderbox_copy_success">Cinderbox ready! %1$d files copied to GameFiles.</string>
+    <string name="cinderbox_copy_failed">Copy failed for %1$d file(s):</string>
+    <string name="cinderbox_error_unknown">Unknown copy error</string>
 
     <!-- Auto-sync notification -->
     <string name="notification_channel_sync">Save Sync</string>

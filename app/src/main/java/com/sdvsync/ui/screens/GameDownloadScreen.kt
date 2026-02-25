@@ -246,6 +246,33 @@ fun GameDownloadScreen(
                 }
             }
 
+            // Verification toggle
+            StardewCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.download_verify_toggle),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            stringResource(R.string.download_verify_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Switch(
+                        checked = state.verifyAfterDownload,
+                        onCheckedChange = { viewModel.toggleVerification() },
+                    )
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
 
             // Error
@@ -306,6 +333,69 @@ fun GameDownloadScreen(
                     )
                 }
 
+                DownloadState.VERIFYING -> {
+                    StardewCard {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    stringResource(R.string.download_verifying),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                            }
+                            Spacer(Modifier.height(12.dp))
+
+                            if (state.downloadProgress.currentFile.isNotEmpty()) {
+                                Text(
+                                    state.downloadProgress.currentFile,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+
+                            Text(
+                                stringResource(
+                                    R.string.download_verify_progress,
+                                    state.downloadProgress.verifiedFiles,
+                                    state.downloadProgress.totalFilesToVerify,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            PixelProgressBar(progress = state.downloadProgress.overallPercent)
+
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "${(state.downloadProgress.overallPercent * 100).toInt()}%",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
+                DownloadState.COPYING -> {
+                    CopyProgressSection(
+                        currentFile = state.downloadProgress.currentFile,
+                        copiedFiles = state.downloadProgress.copiedFiles,
+                        totalFiles = state.downloadProgress.totalFilesToCopy,
+                        overallPercent = state.downloadProgress.overallPercent,
+                    )
+                }
+
                 DownloadState.COMPLETED -> {
                     StardewCard {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -320,9 +410,84 @@ fun GameDownloadScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+
+                            // Show verification result if verification was performed
+                            if (state.downloadProgress.totalFilesToVerify > 0) {
+                                Spacer(Modifier.height(8.dp))
+                                if (state.downloadProgress.verificationPassed) {
+                                    Text(
+                                        stringResource(
+                                            R.string.download_verify_passed,
+                                            state.downloadProgress.verifiedFiles,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                } else {
+                                    Text(
+                                        stringResource(
+                                            R.string.download_verify_failed,
+                                            state.downloadProgress.verificationErrors.size,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                    state.downloadProgress.verificationErrors.forEach { errorFile ->
+                                        Text(
+                                            errorFile,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Cinderbox copy results
+                            if (state.downloadProgress.copyCompleted) {
+                                Spacer(Modifier.height(8.dp))
+                                if (state.downloadProgress.copyErrors.isEmpty()) {
+                                    Text(
+                                        stringResource(
+                                            R.string.cinderbox_copy_success,
+                                            state.downloadProgress.copiedFiles,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                } else {
+                                    Text(
+                                        stringResource(
+                                            R.string.cinderbox_copy_failed,
+                                            state.downloadProgress.copyErrors.size,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                    state.downloadProgress.copyErrors.forEach { errorFile ->
+                                        Text(
+                                            errorFile,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
+
+                    // Cinderbox copy button (only before copy has been done)
+                    if (!state.downloadProgress.copyCompleted) {
+                        StardewButton(
+                            onClick = { viewModel.copyCinderbox() },
+                            variant = StardewButtonVariant.Action,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.cinderbox_copy_button))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+
                     StardewOutlinedButton(
                         onClick = { viewModel.resetDownload() },
                         modifier = Modifier.fillMaxWidth(),
@@ -462,6 +627,60 @@ private fun DownloadProgressSection(
             ) {
                 Text(stringResource(R.string.action_cancel))
             }
+        }
+    }
+}
+
+@Composable
+private fun CopyProgressSection(
+    currentFile: String,
+    copiedFiles: Int,
+    totalFiles: Int,
+    overallPercent: Float,
+) {
+    StardewCard {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    stringResource(R.string.cinderbox_copying),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            if (currentFile.isNotEmpty()) {
+                Text(
+                    currentFile,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+
+            Text(
+                stringResource(R.string.cinderbox_copy_progress, copiedFiles, totalFiles),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            PixelProgressBar(progress = overallPercent)
+
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "${(overallPercent * 100).toInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

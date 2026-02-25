@@ -10,6 +10,7 @@ import com.sdvsync.download.DownloadState
 import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.steam.SteamContentService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,7 @@ data class GameDownloadState(
     val branchPassword: String = "",
     val selectedOs: String = "windows",
     val installDirectory: String = "",
+    val verifyAfterDownload: Boolean = true,
     val downloadProgress: DownloadProgress = DownloadProgress(),
     val error: String? = null,
 )
@@ -87,6 +89,10 @@ class GameDownloadViewModel(
         _state.value = _state.value.copy(branchPassword = password)
     }
 
+    fun toggleVerification() {
+        _state.value = _state.value.copy(verifyAfterDownload = !_state.value.verifyAfterDownload)
+    }
+
     fun startDownload() {
         val current = _state.value
         if (current.installDirectory.isBlank()) {
@@ -107,6 +113,7 @@ class GameDownloadViewModel(
             branchPassword = current.branchPassword.ifBlank { null },
             installDirectory = current.installDirectory,
             os = current.selectedOs,
+            verifyAfterDownload = current.verifyAfterDownload,
         )
     }
 
@@ -116,6 +123,18 @@ class GameDownloadViewModel(
 
     fun dismissError() {
         _state.value = _state.value.copy(error = null)
+    }
+
+    fun copyCinderbox() {
+        viewModelScope.launch {
+            try {
+                downloadManager.copyToCinderbox(_state.value.installDirectory)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Cinderbox copy failed", e)
+            }
+        }
     }
 
     fun resetDownload() {
