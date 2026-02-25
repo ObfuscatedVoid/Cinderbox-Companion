@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SettingsState(
@@ -101,7 +102,7 @@ class SettingsViewModel(
     }
 
     fun toggleAutoSync(enabled: Boolean) {
-        _state.value = _state.value.copy(autoSyncEnabled = enabled)
+        _state.update { it.copy(autoSyncEnabled = enabled) }
         if (enabled) {
             AutoSyncService.start(context)
         } else {
@@ -119,7 +120,7 @@ class SettingsViewModel(
 
     fun setMaxBackups(count: Int) {
         backupManager.setMaxBackupsAndPrune(count)
-        _state.value = _state.value.copy(maxBackups = backupManager.maxBackups)
+        _state.update { it.copy(maxBackups = backupManager.maxBackups) }
     }
 
     fun setFileAccessMode(name: String?) {
@@ -133,26 +134,33 @@ class SettingsViewModel(
 
     fun validateAndSaveApiKey(key: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(isValidatingApiKey = true, apiKeyError = null)
-            val valid = nexusSource.validateApiKey(key.trim())
-            if (valid) {
-                modDataStore.setNexusApiKey(key.trim())
-                load()
-            } else {
-                _state.value = _state.value.copy(
-                    isValidatingApiKey = false,
-                    apiKeyError = "Invalid API key",
-                )
+            _state.update { it.copy(isValidatingApiKey = true, apiKeyError = null) }
+            try {
+                val valid = nexusSource.validateApiKey(key.trim())
+                if (valid) {
+                    modDataStore.setNexusApiKey(key.trim())
+                    load()
+                } else {
+                    _state.update {
+                        it.copy(isValidatingApiKey = false, apiKeyError = "Invalid API key")
+                    }
+                }
+            } catch (_: Exception) {
+                _state.update {
+                    it.copy(isValidatingApiKey = false, apiKeyError = "Validation failed. Check your connection.")
+                }
             }
         }
     }
 
     fun removeNexusApiKey() {
-        modDataStore.setNexusApiKey(null)
-        load()
+        viewModelScope.launch(Dispatchers.IO) {
+            modDataStore.setNexusApiKey(null)
+            load()
+        }
     }
 
     fun clearApiKeyError() {
-        _state.value = _state.value.copy(apiKeyError = null)
+        _state.update { it.copy(apiKeyError = null) }
     }
 }

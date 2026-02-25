@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -55,15 +56,13 @@ class ModManagerViewModel(
 
     fun loadInstalledMods() {
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val mods = fileManager.listInstalledMods()
                 val updates = dataStore.getUpdateCache()
-                _state.value = _state.value.copy(
-                    installedMods = mods,
-                    updates = updates,
-                    isLoading = false,
-                )
+                _state.update {
+                    it.copy(installedMods = mods, updates = updates, isLoading = false)
+                }
                 updateDisplayedMods()
 
                 // Auto-check for updates if stale
@@ -73,10 +72,9 @@ class ModManagerViewModel(
                 }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load mods", e)
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Failed to load mods",
-                )
+                _state.update {
+                    it.copy(isLoading = false, error = e.message ?: "Failed to load mods")
+                }
             }
         }
     }
@@ -86,7 +84,7 @@ class ModManagerViewModel(
         if (mods.isEmpty()) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(isCheckingUpdates = true)
+            _state.update { it.copy(isCheckingUpdates = true) }
             try {
                 // Only check enabled mods
                 val enabledMods = mods.filter { it.enabled }
@@ -95,14 +93,11 @@ class ModManagerViewModel(
                 // Cache the results
                 dataStore.setUpdateCache(updates)
 
-                _state.value = _state.value.copy(
-                    updates = updates,
-                    isCheckingUpdates = false,
-                )
+                _state.update { it.copy(updates = updates, isCheckingUpdates = false) }
                 updateDisplayedMods()
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Update check failed", e)
-                _state.value = _state.value.copy(isCheckingUpdates = false)
+                _state.update { it.copy(isCheckingUpdates = false) }
             }
         }
     }
@@ -132,7 +127,7 @@ class ModManagerViewModel(
 
     fun importFromUri(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(importMessage = null)
+            _state.update { it.copy(importMessage = null) }
             try {
                 val tempFile = File(context.cacheDir, "import_${System.currentTimeMillis()}.zip")
                 context.contentResolver.openInputStream(uri)?.use { input ->
@@ -147,69 +142,70 @@ class ModManagerViewModel(
                 when (result) {
                     is InstallResult.Success -> {
                         val names = result.mods.joinToString { it.manifest.name }
-                        _state.value = _state.value.copy(importMessage = "Installed: $names")
+                        _state.update { it.copy(importMessage = "Installed: $names") }
                         loadInstalledMods()
                     }
                     is InstallResult.Error -> {
-                        _state.value = _state.value.copy(importMessage = "Import failed: ${result.message}")
+                        _state.update { it.copy(importMessage = "Import failed: ${result.message}") }
                     }
                 }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Import failed", e)
-                _state.value = _state.value.copy(importMessage = "Import failed: ${e.message}")
+                _state.update { it.copy(importMessage = "Import failed: ${e.message}") }
             }
         }
     }
 
     fun clearImportMessage() {
-        _state.value = _state.value.copy(importMessage = null)
+        _state.update { it.copy(importMessage = null) }
     }
 
     fun setFilter(filter: ModFilter) {
-        _state.value = _state.value.copy(filter = filter)
+        _state.update { it.copy(filter = filter) }
         updateDisplayedMods()
     }
 
     fun setSortOrder(order: ModSortOrder) {
-        _state.value = _state.value.copy(sortOrder = order)
+        _state.update { it.copy(sortOrder = order) }
         updateDisplayedMods()
     }
 
     fun setSearchQuery(query: String) {
-        _state.value = _state.value.copy(searchQuery = query)
+        _state.update { it.copy(searchQuery = query) }
         updateDisplayedMods()
     }
 
     private fun updateDisplayedMods() {
-        val state = _state.value
-        var mods = state.installedMods
+        _state.update { state ->
+            var mods = state.installedMods
 
-        // Filter
-        mods = when (state.filter) {
-            ModFilter.ALL -> mods
-            ModFilter.ENABLED -> mods.filter { it.enabled }
-            ModFilter.DISABLED -> mods.filter { !it.enabled }
-            ModFilter.HAS_UPDATE -> mods.filter { state.updates.containsKey(it.manifest.uniqueID) }
-        }
-
-        // Search
-        if (state.searchQuery.isNotBlank()) {
-            val query = state.searchQuery.lowercase()
-            mods = mods.filter {
-                it.manifest.name.lowercase().contains(query) ||
-                    it.manifest.author.lowercase().contains(query) ||
-                    it.manifest.uniqueID.lowercase().contains(query)
+            // Filter
+            mods = when (state.filter) {
+                ModFilter.ALL -> mods
+                ModFilter.ENABLED -> mods.filter { it.enabled }
+                ModFilter.DISABLED -> mods.filter { !it.enabled }
+                ModFilter.HAS_UPDATE -> mods.filter { state.updates.containsKey(it.manifest.uniqueID) }
             }
-        }
 
-        // Sort
-        mods = when (state.sortOrder) {
-            ModSortOrder.NAME -> mods.sortedBy { it.manifest.name.lowercase() }
-            ModSortOrder.AUTHOR -> mods.sortedBy { it.manifest.author.lowercase() }
-            ModSortOrder.STATUS -> mods.sortedWith(compareByDescending<InstalledMod> { it.enabled }
-                .thenBy { it.manifest.name.lowercase() })
-        }
+            // Search
+            if (state.searchQuery.isNotBlank()) {
+                val query = state.searchQuery.lowercase()
+                mods = mods.filter {
+                    it.manifest.name.lowercase().contains(query) ||
+                        it.manifest.author.lowercase().contains(query) ||
+                        it.manifest.uniqueID.lowercase().contains(query)
+                }
+            }
 
-        _state.value = _state.value.copy(displayedMods = mods)
+            // Sort
+            mods = when (state.sortOrder) {
+                ModSortOrder.NAME -> mods.sortedBy { it.manifest.name.lowercase() }
+                ModSortOrder.AUTHOR -> mods.sortedBy { it.manifest.author.lowercase() }
+                ModSortOrder.STATUS -> mods.sortedWith(compareByDescending<InstalledMod> { it.enabled }
+                    .thenBy { it.manifest.name.lowercase() })
+            }
+
+            state.copy(displayedMods = mods)
+        }
     }
 }

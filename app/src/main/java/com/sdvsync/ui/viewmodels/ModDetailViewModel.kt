@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ModDetailState(
@@ -23,6 +24,7 @@ data class ModDetailState(
     val error: String? = null,
     val downloadProgress: ModDownloadProgress = ModDownloadProgress(),
     val installedUniqueIds: Set<String> = emptySet(),
+    val downloadErrorUrl: String? = null,
 )
 
 class ModDetailViewModel(
@@ -48,21 +50,16 @@ class ModDetailViewModel(
 
     private fun loadModDetails() {
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val mod = nexusSource.getModDetails(modId)
                 val files = nexusSource.getModFiles(modId)
-                _state.value = _state.value.copy(
-                    mod = mod,
-                    files = files,
-                    isLoading = false,
-                )
+                _state.update { it.copy(mod = mod, files = files, isLoading = false) }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load mod details", e)
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Failed to load mod details",
-                )
+                _state.update {
+                    it.copy(isLoading = false, error = e.message ?: "Failed to load mod details")
+                }
             }
         }
     }
@@ -70,16 +67,16 @@ class ModDetailViewModel(
     private fun loadInstalledIds() {
         viewModelScope.launch(Dispatchers.IO) {
             val mods = fileManager.listInstalledMods()
-            _state.value = _state.value.copy(
-                installedUniqueIds = mods.map { it.manifest.uniqueID.lowercase() }.toSet(),
-            )
+            _state.update {
+                it.copy(installedUniqueIds = mods.map { m -> m.manifest.uniqueID.lowercase() }.toSet())
+            }
         }
     }
 
     private fun observeDownloadProgress() {
         viewModelScope.launch {
             downloadManager.progress.collect { progress ->
-                _state.value = _state.value.copy(downloadProgress = progress)
+                _state.update { it.copy(downloadProgress = progress) }
             }
         }
     }
@@ -87,34 +84,42 @@ class ModDetailViewModel(
     fun installFile(fileId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                _state.value = _state.value.copy(isDownloading = true)
+                _state.update { it.copy(isDownloading = true, error = null, downloadErrorUrl = null) }
                 val url = nexusSource.getDownloadUrl(modId, fileId)
                 val modName = _state.value.mod?.name ?: "Unknown"
                 downloadManager.startDownload(url, modName, modId, source)
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to get download URL", e)
-                val friendlyMessage = mapDownloadError(e.message)
-                _state.value = _state.value.copy(
-                    isDownloading = false,
-                    error = friendlyMessage,
-                )
+                val (friendlyMessage, browserUrl) = mapDownloadError(e.message)
+                _state.update {
+                    it.copy(
+                        isDownloading = false,
+                        error = friendlyMessage,
+                        downloadErrorUrl = browserUrl,
+                    )
+                }
             }
         }
     }
 
-    private fun mapDownloadError(message: String?): String {
-        if (message == null) return "Failed to start download"
+    fun clearError() {
+        _state.update { it.copy(error = null, downloadErrorUrl = null) }
+    }
+
+    private fun mapDownloadError(message: String?): Pair<String, String?> {
+        val nexusUrl = "https://www.nexusmods.com/stardewvalley/mods/$modId?tab=files"
+        if (message == null) return "Failed to start download" to null
         return when {
             message.contains("No File found", ignoreCase = true) ->
-                "This file is no longer available for download"
+                "This file is no longer available for download" to nexusUrl
             message.contains("Not Premium", ignoreCase = true) ||
             message.contains("premium", ignoreCase = true) ->
-                "Nexus Premium required for direct downloads"
+                "Nexus Premium required for API downloads. Use the browser to download manually." to nexusUrl
             message.contains("403") ->
-                "Access denied. Check your API key permissions."
+                "Access denied. Free Nexus accounts must download via browser." to nexusUrl
             message.contains("429") ->
-                "Rate limit reached. Please try again later."
-            else -> message
+                "Rate limit reached. Please try again later." to null
+            else -> message to nexusUrl
         }
     }
 }

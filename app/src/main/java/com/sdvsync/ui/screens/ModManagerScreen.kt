@@ -261,7 +261,7 @@ fun ModManagerScreen(
                             }
                         }
 
-                        itemsIndexed(state.displayedMods) { index, mod ->
+                        itemsIndexed(state.displayedMods, key = { _, mod -> mod.manifest.uniqueID }) { index, mod ->
                             StaggeredAnimatedItem(index = index) {
                                 ModCard(
                                     mod = mod,

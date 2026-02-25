@@ -358,6 +358,7 @@
     <string name="mods_download_installing">Installing\u2026</string>
     <string name="mods_download_complete">%1$s installed successfully</string>
     <string name="mods_download_failed">Failed to install mod: %1$s</string>
+    <string name="mods_download_in_browser">Download in Browser</string>
 
     <!-- Mod install errors -->
     <string name="mods_error_no_manifest">No manifest.json found in archive</string>

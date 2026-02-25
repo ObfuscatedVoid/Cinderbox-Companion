@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,11 +38,14 @@ import com.sdvsync.ui.components.PuzzleData
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
+import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private val HTML_TAG_REGEX = Regex("<[a-zA-Z/]")
 
 private fun formatBytes(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"
@@ -206,7 +210,7 @@ fun ModDetailScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         val descriptionText = mod.description ?: mod.summary
-                        if (descriptionText.contains('<')) {
+                        if (HTML_TAG_REGEX.containsMatchIn(descriptionText)) {
                             HtmlText(
                                 html = descriptionText,
                                 textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb(),
@@ -280,6 +284,32 @@ fun ModDetailScreen(
                 }
             }
 
+            // Download error with browser fallback
+            if (state.error != null && state.mod != null) {
+                Spacer(Modifier.height(16.dp))
+                StardewCard {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            state.error!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        if (state.downloadErrorUrl != null) {
+                            Spacer(Modifier.height(8.dp))
+                            val uriHandler = LocalUriHandler.current
+                            StardewOutlinedButton(
+                                onClick = {
+                                    uriHandler.openUri(state.downloadErrorUrl!!)
+                                    viewModel.clearError()
+                                },
+                            ) {
+                                Text(stringResource(R.string.mods_download_in_browser))
+                            }
+                        }
+                    }
+                }
+            }
+
             // Files card
             if (state.files.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
@@ -299,6 +329,7 @@ fun ModDetailScreen(
                                 Spacer(Modifier.height(8.dp))
                             }
 
+                            key(file.fileId) {
                             var expanded by remember { mutableStateOf(false) }
                             val hasDetails = file.description.isNotBlank() || file.changelogHtml != null || file.modVersion != null
                             val chevronRotation by animateFloatAsState(
@@ -412,6 +443,7 @@ fun ModDetailScreen(
                                     }
                                 }
                             }
+                            } // key(file.fileId)
                         }
                     }
                 }

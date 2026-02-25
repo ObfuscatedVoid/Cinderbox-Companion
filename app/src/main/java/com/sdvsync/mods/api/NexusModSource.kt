@@ -103,8 +103,15 @@ class NexusModSource(
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        val json = response.use { JSONObject(it.body!!.string()) }
+        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
+            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
+        }
+        if (!isSuccessful) {
+            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
+                      catch (_: Exception) { "HTTP $code" }
+            throw IllegalStateException(msg)
+        }
+        val json = JSONObject(bodyString)
 
         val data = json.getJSONObject("data").getJSONObject("mods")
         val nodes = data.getJSONArray("nodes")
@@ -163,11 +170,12 @@ class NexusModSource(
             .get()
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        val bodyString = response.use { it.body?.string() } ?: ""
-        if (!response.isSuccessful) {
-            val msg = try { JSONObject(bodyString).optString("message", "HTTP ${response.code}") }
-                      catch (_: Exception) { "HTTP ${response.code}" }
+        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
+            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
+        }
+        if (!isSuccessful) {
+            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
+                      catch (_: Exception) { "HTTP $code" }
             throw IllegalStateException(msg)
         }
         val json = JSONObject(bodyString)
@@ -184,11 +192,12 @@ class NexusModSource(
             .get()
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        val bodyString = response.use { it.body?.string() } ?: ""
-        if (!response.isSuccessful) {
-            val msg = try { JSONObject(bodyString).optString("message", "HTTP ${response.code}") }
-                      catch (_: Exception) { "HTTP ${response.code}" }
+        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
+            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
+        }
+        if (!isSuccessful) {
+            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
+                      catch (_: Exception) { "HTTP $code" }
             throw IllegalStateException(msg)
         }
         val json = JSONObject(bodyString)
@@ -220,11 +229,12 @@ class NexusModSource(
             .get()
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        val bodyString = response.use { it.body?.string() } ?: ""
-        if (!response.isSuccessful) {
-            val msg = try { JSONObject(bodyString).optString("message", "HTTP ${response.code}") }
-                      catch (_: Exception) { "HTTP ${response.code}" }
+        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
+            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
+        }
+        if (!isSuccessful) {
+            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
+                      catch (_: Exception) { "HTTP $code" }
             throw IllegalStateException(msg)
         }
         val json = JSONArray(bodyString)
@@ -246,8 +256,15 @@ class NexusModSource(
             .get()
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        val json = response.use { JSONArray(it.body!!.string()) }
+        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
+            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
+        }
+        if (!isSuccessful) {
+            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
+                      catch (_: Exception) { "HTTP $code" }
+            throw IllegalStateException(msg)
+        }
+        val json = JSONArray(bodyString)
 
         (0 until json.length()).map { i ->
             parseModFromV1(json.getJSONObject(i))

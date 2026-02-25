@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class InstalledModDetailState(
@@ -50,12 +51,9 @@ class InstalledModDetailViewModel(
             val metadata = dataStore.getModMetadata(uniqueId)
             val updateCache = dataStore.getUpdateCache()
             val updateInfo = updateCache[uniqueId]
-            _state.value = _state.value.copy(
-                mod = mod,
-                isLoading = false,
-                metadata = metadata,
-                updateInfo = updateInfo,
-            )
+            _state.update {
+                it.copy(mod = mod, isLoading = false, metadata = metadata, updateInfo = updateInfo)
+            }
         }
     }
 
@@ -72,11 +70,11 @@ class InstalledModDetailViewModel(
     }
 
     fun showRemoveDialog() {
-        _state.value = _state.value.copy(showRemoveDialog = true)
+        _state.update { it.copy(showRemoveDialog = true) }
     }
 
     fun dismissRemoveDialog() {
-        _state.value = _state.value.copy(showRemoveDialog = false)
+        _state.update { it.copy(showRemoveDialog = false) }
     }
 
     fun confirmRemove() {
@@ -84,7 +82,7 @@ class InstalledModDetailViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             if (fileManager.removeMod(mod.folderName)) {
                 dataStore.removeModMetadata(mod.manifest.uniqueID)
-                _state.value = _state.value.copy(removed = true, showRemoveDialog = false)
+                _state.update { it.copy(removed = true, showRemoveDialog = false) }
             }
         }
     }
@@ -92,17 +90,14 @@ class InstalledModDetailViewModel(
     fun checkForUpdate() {
         val mod = _state.value.mod ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(isCheckingUpdate = true)
+            _state.update { it.copy(isCheckingUpdate = true) }
             try {
                 val updates = updateChecker.checkForUpdates(listOf(mod))
                 val info = updates[mod.manifest.uniqueID]
-                _state.value = _state.value.copy(
-                    updateInfo = info,
-                    isCheckingUpdate = false,
-                )
+                _state.update { it.copy(updateInfo = info, isCheckingUpdate = false) }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Update check failed", e)
-                _state.value = _state.value.copy(isCheckingUpdate = false)
+                _state.update { it.copy(isCheckingUpdate = false) }
             }
         }
     }
