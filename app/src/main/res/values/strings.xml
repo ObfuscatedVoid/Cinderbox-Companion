@@ -257,6 +257,32 @@
     <string name="cinderbox_install_permission_desc">Android requires you to allow installing apps from this source. Tap the button below to open settings, then enable the toggle.</string>
     <string name="cinderbox_grant_permission">Grant Permission</string>
 
+    <!-- Cinderbox Wizard -->
+    <string name="wizard_setup_title">What\'s your setup?</string>
+    <string name="wizard_cinderbox_option">I\'m using Cinderbox</string>
+    <string name="wizard_cinderbox_desc">Modded Stardew Valley for Android. Recommended for most users.</string>
+    <string name="wizard_other_option">Other (Winlator, etc.)</string>
+    <string name="wizard_other_desc">Skip Cinderbox setup and download game files directly.</string>
+    <string name="wizard_permissions_title">Permissions Needed</string>
+    <string name="wizard_storage_permission">Storage Access</string>
+    <string name="wizard_storage_permission_desc">Needed to manage game files on your device.</string>
+    <string name="wizard_install_permission">Install Apps</string>
+    <string name="wizard_install_permission_desc">Needed to install the Cinderbox APK.</string>
+    <string name="wizard_grant_button">Grant</string>
+    <string name="wizard_granted">Granted</string>
+    <string name="wizard_download_title">Downloading Cinderbox</string>
+    <string name="wizard_install_title">Install Cinderbox</string>
+    <string name="wizard_install_desc">Tap the button below to launch the installer. Once it\'s done, come back here.</string>
+    <string name="wizard_install_button">Install APK</string>
+    <string name="wizard_installed_button">I\'ve installed it</string>
+    <string name="wizard_verify_title">Launch Cinderbox Once</string>
+    <string name="wizard_verify_desc">Open Cinderbox once to let it create its folders, then come back here.</string>
+    <string name="wizard_check_again">Check Again</string>
+    <string name="wizard_skip">Skip</string>
+    <string name="wizard_ready_title">You\'re all set!</string>
+    <string name="wizard_ready_desc">Cinderbox is ready. Tap below to start downloading Stardew Valley.</string>
+    <string name="wizard_start_download">Start Download</string>
+
     <!-- SMAPI Setup -->
     <string name="smapi_setup_title">SMAPI Setup</string>
     <string name="smapi_setup_desc">Extract SMAPI internals to your device. Required for running mods with Cinderbox. This works independently of the game download.</string>

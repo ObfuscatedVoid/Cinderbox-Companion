@@ -39,6 +39,7 @@ import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -121,16 +122,6 @@ private fun toHtmlIfFormatted(text: String): String? = when {
     BBCODE_TAG_REGEX.containsMatchIn(text) -> bbCodeToHtml(text)
     HTML_TAG_REGEX.containsMatchIn(text) -> text
     else -> null
-}
-
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "%.1f KB".format(kb)
-    val mb = kb / 1024.0
-    if (mb < 1024) return "%.1f MB".format(mb)
-    val gb = mb / 1024.0
-    return "%.2f GB".format(gb)
 }
 
 private fun formatCount(count: Int): String {

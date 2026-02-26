@@ -9,14 +9,33 @@ import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadProgress
 import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.download.SmapiSetupProgress
+import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.steam.SteamContentService
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+enum class CinderboxWizardStep {
+    SETUP_CHOICE,
+    PERMISSIONS,
+    DOWNLOAD_APK,
+    INSTALL_APK,
+    VERIFY_LAUNCHED,
+    READY
+}
+
+data class CinderboxWizardState(
+    val isVisible: Boolean = false,
+    val currentStep: CinderboxWizardStep = CinderboxWizardStep.SETUP_CHOICE,
+    val hasStoragePermission: Boolean = false,
+    val hasInstallPermission: Boolean = false,
+    val cinderboxDirExists: Boolean = false
+)
 
 data class GameDownloadState(
     val isLoadingBranches: Boolean = false,
@@ -35,17 +54,23 @@ data class GameDownloadState(
 class GameDownloadViewModel(
     private val context: Context,
     private val contentService: SteamContentService,
-    private val downloadManager: GameDownloadManager
+    private val downloadManager: GameDownloadManager,
+    private val fileAccessDetector: FileAccessDetector
 ) : ViewModel() {
 
     companion object {
         private const val TAG = "GameDownloadVM"
+        const val SETUP_TYPE_CINDERBOX = "cinderbox"
+        const val SETUP_TYPE_OTHER = "other"
     }
 
     private val _state = MutableStateFlow(GameDownloadState())
     val state: StateFlow<GameDownloadState> = _state.asStateFlow()
+    private val _wizardState = MutableStateFlow(CinderboxWizardState())
+    val wizardState: StateFlow<CinderboxWizardState> = _wizardState.asStateFlow()
     private var smapiJob: Job? = null
     private var cinderboxJob: Job? = null
+    private var pendingSetupType: String? = null
 
     init {
         val defaultDir = Environment.getExternalStoragePublicDirectory(
@@ -122,6 +147,12 @@ class GameDownloadViewModel(
             return
         }
 
+        // Persist any pending setup choice now that validation passed
+        pendingSetupType?.let { type ->
+            fileAccessDetector.setSetupCompleted(type)
+            pendingSetupType = null
+        }
+
         _state.value = current.copy(error = null)
 
         downloadManager.startDownload(
@@ -191,5 +222,115 @@ class GameDownloadViewModel(
 
     fun resetCinderboxDownload() {
         GameDownloadManager._cinderboxProgress.value = CinderboxDownloadProgress()
+    }
+
+    // ── Cinderbox Wizard ──────────────────────────────────────────────────
+
+    fun onDownloadButtonClicked() {
+        // Already completed setup before — skip wizard
+        if (fileAccessDetector.isSetupCompleted()) {
+            startDownload()
+            return
+        }
+
+        // Cinderbox dir already exists — user clearly has it installed
+        if (File(GameDownloadManager.CINDERBOX_BASE_DIR).isDirectory) {
+            fileAccessDetector.setSetupCompleted(SETUP_TYPE_CINDERBOX)
+            fileAccessDetector.setCinderboxMode(true)
+            startDownload()
+            return
+        }
+
+        // Show wizard
+        _wizardState.value = CinderboxWizardState(isVisible = true)
+    }
+
+    fun onWizardChooseCinderbox() {
+        val dirExists = File(GameDownloadManager.CINDERBOX_BASE_DIR).isDirectory
+        if (dirExists) {
+            // Already installed — jump to ready
+            _wizardState.value = _wizardState.value.copy(
+                currentStep = CinderboxWizardStep.READY,
+                cinderboxDirExists = true
+            )
+        } else {
+            // Need to check permissions first
+            _wizardState.value = _wizardState.value.copy(
+                currentStep = CinderboxWizardStep.PERMISSIONS
+            )
+        }
+    }
+
+    fun onWizardChooseOther() {
+        pendingSetupType = SETUP_TYPE_OTHER
+        _wizardState.value = CinderboxWizardState()
+        startDownload()
+    }
+
+    fun refreshPermissions(hasStorage: Boolean, hasInstall: Boolean) {
+        val current = _wizardState.value
+        val updated = current.copy(
+            hasStoragePermission = hasStorage,
+            hasInstallPermission = hasInstall
+        )
+        _wizardState.value = updated
+
+        // Auto-advance when both permissions granted
+        if (updated.hasStoragePermission &&
+            updated.hasInstallPermission &&
+            current.currentStep == CinderboxWizardStep.PERMISSIONS
+        ) {
+            _wizardState.value = updated.copy(
+                currentStep = CinderboxWizardStep.DOWNLOAD_APK
+            )
+            // Auto-trigger download
+            downloadCinderbox()
+        }
+    }
+
+    fun onApkDownloadComplete() {
+        val current = _wizardState.value
+        if (current.currentStep == CinderboxWizardStep.DOWNLOAD_APK) {
+            _wizardState.value = current.copy(
+                currentStep = CinderboxWizardStep.INSTALL_APK
+            )
+        }
+    }
+
+    fun onApkInstalled() {
+        _wizardState.value = _wizardState.value.copy(
+            currentStep = CinderboxWizardStep.VERIFY_LAUNCHED
+        )
+    }
+
+    fun checkCinderboxDirectory(): Boolean {
+        val exists = File(GameDownloadManager.CINDERBOX_BASE_DIR).isDirectory
+        if (exists) {
+            _wizardState.value = _wizardState.value.copy(
+                currentStep = CinderboxWizardStep.READY,
+                cinderboxDirExists = true
+            )
+        }
+        return exists
+    }
+
+    fun skipVerification() {
+        _wizardState.value = _wizardState.value.copy(
+            currentStep = CinderboxWizardStep.READY
+        )
+    }
+
+    fun onWizardStartDownload() {
+        fileAccessDetector.setSetupCompleted(SETUP_TYPE_CINDERBOX)
+        fileAccessDetector.setCinderboxMode(true)
+        _wizardState.value = CinderboxWizardState()
+        startDownload()
+    }
+
+    fun dismissWizard() {
+        cinderboxJob?.cancel()
+        cinderboxJob = null
+        resetCinderboxDownload()
+        _wizardState.value = CinderboxWizardState()
     }
 }

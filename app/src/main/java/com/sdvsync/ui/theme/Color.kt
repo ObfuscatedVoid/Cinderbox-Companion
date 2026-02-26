@@ -62,6 +62,9 @@ val SeasonSummer = Color(0xFF5BB8E8)
 val SeasonFall = Color(0xFFE89040)
 val SeasonWinter = Color(0xFFA8D8EA)
 
+// ── Success ──────────────────────────────────────────────────────────
+val SuccessGreen = Color(0xFF4CAF50)
+
 // ── Error ───────────────────────────────────────────────────────────────
 val ErrorLight = Color(0xFFC75050)
 val ErrorDark = Color(0xFFFFB4AB)

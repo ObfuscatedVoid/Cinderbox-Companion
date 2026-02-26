@@ -89,7 +89,8 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                 "Lidgren.Network.dll"
             )
         const val CINDERBOX_CONTENT_DIR = "Content"
-        const val CINDERBOX_DEST = "/storage/emulated/0/StardewValley/GameFiles"
+        const val CINDERBOX_BASE_DIR = "/storage/emulated/0/StardewValley"
+        const val CINDERBOX_DEST = "$CINDERBOX_BASE_DIR/GameFiles"
 
         // TODO: not sure if distributing SMAPI files as an asset is the best approach or
         // even legal

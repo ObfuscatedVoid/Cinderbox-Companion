@@ -10,6 +10,8 @@ class FileAccessDetector(private val context: Context) {
         private const val PREF_NAME = "file_access"
         private const val KEY_PREFERRED = "preferred_strategy"
         private const val KEY_CINDERBOX_MODE = "cinderbox_mode"
+        private const val KEY_SETUP_COMPLETED = "setup_completed"
+        private const val KEY_SETUP_TYPE = "setup_type"
     }
 
     /**
@@ -96,5 +98,27 @@ class FileAccessDetector(private val context: Context) {
     fun setCinderboxMode(enabled: Boolean) {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_CINDERBOX_MODE, enabled).apply()
+    }
+
+    fun isSetupCompleted(): Boolean = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        .getBoolean(KEY_SETUP_COMPLETED, false)
+
+    fun setSetupCompleted(type: String) {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_SETUP_COMPLETED, true)
+            .putString(KEY_SETUP_TYPE, type)
+            .apply()
+    }
+
+    fun getSetupType(): String? = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        .getString(KEY_SETUP_TYPE, null)
+
+    fun clearSetupChoice() {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_SETUP_COMPLETED)
+            .remove(KEY_SETUP_TYPE)
+            .apply()
     }
 }

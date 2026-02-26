@@ -94,7 +94,7 @@ val appModule = module {
     viewModel { SyncDetailViewModel(androidContext(), get(), get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
-    viewModel { GameDownloadViewModel(androidContext(), get(), get()) }
+    viewModel { GameDownloadViewModel(androidContext(), get(), get(), get()) }
     viewModel { ModManagerViewModel(androidContext(), get(), get(), get()) }
     viewModel { ModBrowseViewModel(get(), get(), get()) }
     viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), modId, source) }

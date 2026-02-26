@@ -20,18 +20,11 @@ import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewDialog
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "%.1f KB".format(kb)
-    val mb = kb / 1024.0
-    return "%.1f MB".format(mb)
-}
 
 @Composable
 fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () -> Unit) {
