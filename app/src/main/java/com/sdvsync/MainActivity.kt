@@ -1,6 +1,9 @@
 package com.sdvsync
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -25,6 +28,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.sdvsync.logging.AppLogger
+import com.sdvsync.mods.ModDownloadManager
+import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.ui.components.BottomTab
 import com.sdvsync.ui.components.StardewBottomBar
 import com.sdvsync.ui.screens.DashboardScreen
@@ -41,10 +47,18 @@ import com.sdvsync.ui.theme.SdvSyncTheme
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import com.sdvsync.ui.viewmodels.ModBrowseViewModel
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 class MainActivity : ComponentActivity() {
+
+    private val nexusSource: NexusModSource by inject()
+    private val downloadManager: ModDownloadManager by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,7 +68,76 @@ class MainActivity : ComponentActivity() {
                 SdvSyncNavGraph(navController)
             }
         }
+        handleNxmIntent(intent)
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNxmIntent(intent)
+    }
+
+    private fun handleNxmIntent(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme != "nxm") return
+
+        val parsed = parseNxmUrl(uri)
+        if (parsed == null) {
+            Toast.makeText(this, getString(R.string.nxm_invalid_link), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Toast.makeText(this, getString(R.string.nxm_starting_download), Toast.LENGTH_SHORT).show()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val url = nexusSource.getDownloadUrl(
+                    parsed.modId, parsed.fileId, parsed.key, parsed.expires,
+                )
+                val modName = try {
+                    nexusSource.getModDetails(parsed.modId).name
+                } catch (_: Exception) {
+                    "Mod #${parsed.modId}"
+                }
+                downloadManager.startDownload(url, modName, parsed.modId, "nexus")
+            } catch (e: Exception) {
+                AppLogger.e("MainActivity", "NXM download failed", e)
+                launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        getString(R.string.nxm_download_failed, e.message ?: "Unknown error"),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        }
+
+        // Clear the intent data so it doesn't re-trigger
+        intent?.data = null
+    }
+
+    /**
+     * Parse an nxm:// URL into its components.
+     * Format: nxm://stardewvalley/mods/{modId}/files/{fileId}?key={key}&expires={expires}
+     */
+    private fun parseNxmUrl(uri: Uri): NxmDownloadParams? {
+        val segments = uri.pathSegments ?: return null
+        // Expected: [mods, {modId}, files, {fileId}]
+        if (segments.size < 4 || segments[0] != "mods" || segments[2] != "files") return null
+
+        val modId = segments[1]
+        val fileId = segments[3]
+        val key = uri.getQueryParameter("key") ?: return null
+        val expires = uri.getQueryParameter("expires") ?: return null
+
+        return NxmDownloadParams(modId, fileId, key, expires)
+    }
+
+    private data class NxmDownloadParams(
+        val modId: String,
+        val fileId: String,
+        val key: String,
+        val expires: String,
+    )
 }
 
 private const val NAV_ANIM_DURATION = 300

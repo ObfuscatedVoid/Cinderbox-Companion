@@ -113,10 +113,9 @@ class ModDetailViewModel(
             message.contains("No File found", ignoreCase = true) ->
                 "This file is no longer available for download" to nexusUrl
             message.contains("Not Premium", ignoreCase = true) ||
-            message.contains("premium", ignoreCase = true) ->
-                "Nexus Premium required for API downloads. Use the browser to download manually." to nexusUrl
+            message.contains("premium", ignoreCase = true) ||
             message.contains("403") ->
-                "Access denied. Free Nexus accounts must download via browser." to nexusUrl
+                "Free account: tap below to open Nexus, then tap \"Mod Manager Download\" on the file you want. The download will start automatically." to nexusUrl
             message.contains("429") ->
                 "Rate limit reached. Please try again later." to null
             else -> message to nexusUrl
