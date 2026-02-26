@@ -11,19 +11,12 @@ data class ModManifest(
     val entryDll: String? = null,
     val contentPackFor: ContentPackFor? = null,
     val dependencies: List<ModDependency> = emptyList(),
-    val updateKeys: List<String> = emptyList(),
+    val updateKeys: List<String> = emptyList()
 )
 
-data class ContentPackFor(
-    val uniqueID: String,
-    val minimumVersion: String? = null,
-)
+data class ContentPackFor(val uniqueID: String, val minimumVersion: String? = null)
 
-data class ModDependency(
-    val uniqueID: String,
-    val minimumVersion: String? = null,
-    val isRequired: Boolean = true,
-)
+data class ModDependency(val uniqueID: String, val minimumVersion: String? = null, val isRequired: Boolean = true)
 
 /** Installed mod with metadata beyond manifest. */
 data class InstalledMod(
@@ -33,7 +26,7 @@ data class InstalledMod(
     val enabled: Boolean,
     val installedAt: Long = 0,
     val installedFrom: String? = null,
-    val fileSize: Long = 0,
+    val fileSize: Long = 0
 )
 
 /** Remote mod from Nexus or other source. */
@@ -49,7 +42,7 @@ data class RemoteMod(
     val pictureUrl: String? = null,
     val endorsements: Int = 0,
     val downloads: Int = 0,
-    val lastUpdated: Long = 0,
+    val lastUpdated: Long = 0
 )
 
 data class RemoteModFile(
@@ -62,7 +55,7 @@ data class RemoteModFile(
     val uploadedAt: Long,
     val description: String = "",
     val changelogHtml: String? = null,
-    val modVersion: String? = null,
+    val modVersion: String? = null
 )
 
 data class ModUpdateInfo(
@@ -70,7 +63,7 @@ data class ModUpdateInfo(
     val installedVersion: String,
     val latestVersion: String,
     val updateUrl: String?,
-    val source: String,
+    val source: String
 )
 
 data class ModDownloadProgress(
@@ -79,18 +72,19 @@ data class ModDownloadProgress(
     val downloadedBytes: Long = 0,
     val totalBytes: Long = 0,
     val currentFile: String = "",
-    val errorMessage: String? = null,
+    val errorMessage: String? = null
 )
 
 enum class ModDownloadState {
-    IDLE, DOWNLOADING, EXTRACTING, INSTALLING, COMPLETED, ERROR,
+    IDLE,
+    DOWNLOADING,
+    EXTRACTING,
+    INSTALLING,
+    COMPLETED,
+    ERROR
 }
 
-data class ModSearchResult(
-    val mods: List<RemoteMod>,
-    val totalResults: Int,
-    val hasMore: Boolean,
-)
+data class ModSearchResult(val mods: List<RemoteMod>, val totalResults: Int, val hasMore: Boolean)
 
 /** Result of installing a mod from a zip. */
 sealed class InstallResult {

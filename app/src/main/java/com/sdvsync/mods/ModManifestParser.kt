@@ -30,7 +30,7 @@ class ModManifestParser {
                 contentPackFor = obj.getObjectCI("ContentPackFor")?.let { cpf ->
                     ContentPackFor(
                         uniqueID = cpf.getStringCI("UniqueID") ?: return@let null,
-                        minimumVersion = cpf.getStringCI("MinimumVersion"),
+                        minimumVersion = cpf.getStringCI("MinimumVersion")
                     )
                 },
                 dependencies = obj.getArrayCI("Dependencies")?.let { arr ->
@@ -39,13 +39,13 @@ class ModManifestParser {
                         ModDependency(
                             uniqueID = dep.getStringCI("UniqueID") ?: return@mapNotNull null,
                             minimumVersion = dep.getStringCI("MinimumVersion"),
-                            isRequired = dep.getBooleanCI("IsRequired") ?: true,
+                            isRequired = dep.getBooleanCI("IsRequired") ?: true
                         )
                     }
                 } ?: emptyList(),
                 updateKeys = obj.getArrayCI("UpdateKeys")?.let { arr ->
                     (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }
-                } ?: emptyList(),
+                } ?: emptyList()
             )
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to parse manifest: ${e.message}", e)
@@ -78,7 +78,11 @@ class ModManifestParser {
     private fun JSONObject.getBooleanCI(key: String): Boolean? {
         keys().forEach { k ->
             if (k.equals(key, ignoreCase = true)) {
-                return try { getBoolean(k) } catch (_: Exception) { null }
+                return try {
+                    getBoolean(k)
+                } catch (_: Exception) {
+                    null
+                }
             }
         }
         return null

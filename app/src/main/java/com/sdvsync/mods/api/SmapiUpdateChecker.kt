@@ -16,9 +16,7 @@ import org.json.JSONObject
  * Checks for mod updates via the SMAPI web API.
  * No authentication required.
  */
-class SmapiUpdateChecker(
-    private val httpClient: OkHttpClient,
-) {
+class SmapiUpdateChecker(private val httpClient: OkHttpClient) {
     companion object {
         private const val TAG = "SmapiUpdateChecker"
         private const val API_URL = "https://smapi.io/api/v4.0.0/mods"
@@ -81,7 +79,7 @@ class SmapiUpdateChecker(
                         installedVersion = installed.manifest.version,
                         latestVersion = latestVersion,
                         updateUrl = updateUrl,
-                        source = buildSourceString(installed),
+                        source = buildSourceString(installed)
                     )
                 }
             }

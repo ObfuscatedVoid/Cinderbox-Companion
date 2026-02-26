@@ -46,9 +46,7 @@ class SteamSessionStore(private val context: Context) {
     val sentryDir: File
         get() = File(context.filesDir, "sentry").also { it.mkdirs() }
 
-    fun getSentryFile(username: String): File {
-        return File(sentryDir, "${username}.sentry")
-    }
+    fun getSentryFile(username: String): File = File(sentryDir, "$username.sentry")
 
     fun saveSentryData(username: String, data: ByteArray) {
         getSentryFile(username).writeBytes(data)
@@ -59,9 +57,7 @@ class SteamSessionStore(private val context: Context) {
         return if (file.exists()) file.readBytes() else null
     }
 
-    fun hasSession(): Boolean {
-        return !username.isNullOrEmpty() && !refreshToken.isNullOrEmpty()
-    }
+    fun hasSession(): Boolean = !username.isNullOrEmpty() && !refreshToken.isNullOrEmpty()
 
     fun clear() {
         prefs.edit().clear().apply()

@@ -14,8 +14,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
-import com.sdvsync.sync.SyncResult
 import com.sdvsync.sync.SyncDirection
+import com.sdvsync.sync.SyncResult
 import com.sdvsync.ui.components.ArrowLeftData
 import com.sdvsync.ui.components.PixelIconButton
 import com.sdvsync.ui.components.PixelLoadingSpinner
@@ -35,7 +35,7 @@ fun SyncDetailScreen(
     hasCloud: Boolean,
     hasLocal: Boolean,
     onBack: () -> Unit,
-    viewModel: SyncDetailViewModel = koinViewModel(),
+    viewModel: SyncDetailViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     var showPullConfirm by remember { mutableStateOf(false) }
@@ -50,22 +50,22 @@ fun SyncDetailScreen(
                         pixelData = ArrowLeftData,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 saveFolderName,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineMedium
             )
 
             Spacer(Modifier.height(32.dp))
@@ -76,7 +76,7 @@ fun SyncDetailScreen(
                         stringResource(R.string.staging_push_reminder),
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
                 Spacer(Modifier.height(16.dp))
@@ -85,16 +85,19 @@ fun SyncDetailScreen(
             // Action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 StardewButton(
                     onClick = {
-                        if (hasLocal) showPullConfirm = true
-                        else viewModel.pullSave(saveFolderName)
+                        if (hasLocal) {
+                            showPullConfirm = true
+                        } else {
+                            viewModel.pullSave(saveFolderName)
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     variant = StardewButtonVariant.Primary,
-                    enabled = !state.isSyncing,
+                    enabled = !state.isSyncing
                 ) {
                     PixelSyncIcon(direction = SyncDirection.PULL, size = 18.dp)
                     Spacer(Modifier.width(8.dp))
@@ -103,12 +106,15 @@ fun SyncDetailScreen(
 
                 StardewButton(
                     onClick = {
-                        if (hasCloud) showPushConfirm = true
-                        else viewModel.pushSave(saveFolderName)
+                        if (hasCloud) {
+                            showPushConfirm = true
+                        } else {
+                            viewModel.pushSave(saveFolderName)
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     variant = StardewButtonVariant.Action,
-                    enabled = !state.isSyncing,
+                    enabled = !state.isSyncing
                 ) {
                     PixelSyncIcon(direction = SyncDirection.PUSH, size = 18.dp)
                     Spacer(Modifier.width(8.dp))
@@ -126,12 +132,12 @@ fun SyncDetailScreen(
                     targetValue = 1f,
                     animationSpec = infiniteRepeatable(
                         animation = tween(800),
-                        repeatMode = RepeatMode.Reverse,
+                        repeatMode = RepeatMode.Reverse
                     ),
-                    label = "pulseAlpha",
+                    label = "pulseAlpha"
                 )
                 PixelLoadingSpinner(
-                    modifier = Modifier.alpha(pulseAlpha),
+                    modifier = Modifier.alpha(pulseAlpha)
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(state.progressMessage, style = MaterialTheme.typography.bodyMedium)
@@ -143,7 +149,7 @@ fun SyncDetailScreen(
                         Text(
                             result.message,
                             color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge
                         )
                         if (result.warning != null) {
                             Spacer(Modifier.height(12.dp))
@@ -152,7 +158,7 @@ fun SyncDetailScreen(
                                     result.warning,
                                     modifier = Modifier.padding(12.dp),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
+                                    color = MaterialTheme.colorScheme.error
                                 )
                             }
                         }
@@ -163,7 +169,7 @@ fun SyncDetailScreen(
                                     stringResource(R.string.staging_pull_reminder),
                                     modifier = Modifier.padding(12.dp),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.tertiary,
+                                    color = MaterialTheme.colorScheme.tertiary
                                 )
                             }
                         }
@@ -172,7 +178,7 @@ fun SyncDetailScreen(
                         Text(
                             result.message,
                             color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge
                         )
                     }
                     is SyncResult.NeedsConflictResolution -> {
@@ -181,22 +187,22 @@ fun SyncDetailScreen(
                                 Text(
                                     stringResource(R.string.sync_conflict_title),
                                     style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.error,
+                                    color = MaterialTheme.colorScheme.error
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 Text(
                                     result.comparison.message,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                                 Spacer(Modifier.height(16.dp))
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     StardewOutlinedButton(
                                         onClick = {
                                             viewModel.clearResult()
                                             viewModel.pullSave(saveFolderName, force = true)
-                                        },
+                                        }
                                     ) {
                                         Text(stringResource(R.string.sync_keep_cloud))
                                     }
@@ -205,7 +211,7 @@ fun SyncDetailScreen(
                                             viewModel.clearResult()
                                             viewModel.pushSave(saveFolderName, force = true)
                                         },
-                                        variant = StardewButtonVariant.Action,
+                                        variant = StardewButtonVariant.Action
                                     ) {
                                         Text(stringResource(R.string.sync_keep_local))
                                     }
@@ -235,7 +241,7 @@ fun SyncDetailScreen(
                 StardewOutlinedButton(onClick = { showPullConfirm = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
-            },
+            }
         )
     }
 
@@ -256,7 +262,7 @@ fun SyncDetailScreen(
                 StardewOutlinedButton(onClick = { showPushConfirm = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
-            },
+            }
         )
     }
 }

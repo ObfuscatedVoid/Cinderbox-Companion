@@ -38,7 +38,6 @@ import com.sdvsync.ui.components.PuzzleData
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
 import java.text.SimpleDateFormat
@@ -48,7 +47,7 @@ import java.util.Locale
 private val HTML_TAG_REGEX = Regex("<[a-zA-Z/]")
 private val BBCODE_TAG_REGEX = Regex(
     "\\[(?:b|i|u|s|url|img|size|color|font|list|quote|code|center|spoiler|line|heading)[=\\]/]",
-    RegexOption.IGNORE_CASE,
+    RegexOption.IGNORE_CASE
 )
 
 private fun bbCodeToHtml(bbcode: String): String {
@@ -62,12 +61,12 @@ private fun bbCodeToHtml(bbcode: String): String {
 
     // [url=X]Y[/url] → <a href="X">Y</a>
     html = html.replace(
-        Regex("\\[url=([^\\]]+)](.*?)\\[/url]", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
+        Regex("\\[url=([^\\]]+)](.*?)\\[/url]", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     ) { "<a href=\"${it.groupValues[1]}\">${it.groupValues[2]}</a>" }
 
     // [url]X[/url] → <a href="X">X</a>
     html = html.replace(
-        Regex("\\[url](.*?)\\[/url]", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
+        Regex("\\[url](.*?)\\[/url]", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     ) { "<a href=\"${it.groupValues[1]}\">${it.groupValues[1]}</a>" }
 
     // [img]X[/img] → strip (can't render in TextView)
@@ -141,10 +140,7 @@ private fun formatCount(count: Int): String {
 }
 
 @Composable
-fun ModDetailScreen(
-    viewModel: ModDetailViewModel,
-    onBack: () -> Unit,
-) {
+fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsState()
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
 
@@ -157,18 +153,18 @@ fun ModDetailScreen(
                         pixelData = ArrowLeftData,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         if (state.isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 PixelLoadingSpinner()
             }
@@ -180,13 +176,13 @@ fun ModDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         state.error!!,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge
                     )
                     Spacer(Modifier.height(16.dp))
                     StardewButton(onClick = onBack) {
@@ -204,7 +200,7 @@ fun ModDetailScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(16.dp)
         ) {
             // Header card
             StardewCard {
@@ -217,13 +213,13 @@ fun ModDetailScreen(
                                 modifier = Modifier
                                     .size(80.dp)
                                     .clip(RectangleShape),
-                                contentScale = ContentScale.Crop,
+                                contentScale = ContentScale.Crop
                             )
                         } else {
                             PixelIcon(
                                 pixelData = PuzzleData,
                                 palette = listOf(Color.Transparent, MaterialTheme.colorScheme.onSurfaceVariant),
-                                size = 80.dp,
+                                size = 80.dp
                             )
                         }
                         Spacer(Modifier.width(12.dp))
@@ -231,23 +227,23 @@ fun ModDetailScreen(
                             Text(
                                 mod.name,
                                 style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 stringResource(R.string.mods_author, mod.author),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 "v${mod.version}",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall
                             )
                             if (mod.categoryName != null) {
                                 Text(
                                     mod.categoryName,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -257,19 +253,19 @@ fun ModDetailScreen(
                         Text(
                             stringResource(R.string.mods_downloads, formatCount(mod.downloads)),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = MaterialTheme.colorScheme.outline
                         )
                         Text(
                             stringResource(R.string.mods_endorsements, formatCount(mod.endorsements)),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = MaterialTheme.colorScheme.outline
                         )
                     }
                     if (mod.lastUpdated > 0) {
                         Text(
                             stringResource(R.string.mods_detail_last_updated, dateFormat.format(Date(mod.lastUpdated))),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -283,7 +279,7 @@ fun ModDetailScreen(
                         Text(
                             stringResource(R.string.mods_detail_description),
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.height(8.dp))
                         val descriptionText = mod.description ?: mod.summary
@@ -293,13 +289,13 @@ fun ModDetailScreen(
                                 html = processedHtml,
                                 textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb(),
                                 linkColor = MaterialTheme.colorScheme.primary.toArgb(),
-                                textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value,
+                                textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value
                             )
                         } else {
                             Text(
                                 descriptionText,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -316,18 +312,20 @@ fun ModDetailScreen(
                             ModDownloadState.DOWNLOADING -> {
                                 Text(
                                     stringResource(R.string.mods_download_downloading, progress.modName),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                                 if (progress.totalBytes > 0) {
                                     Spacer(Modifier.height(8.dp))
                                     LinearProgressIndicator(
                                         progress = { progress.downloadedBytes.toFloat() / progress.totalBytes },
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        "${formatBytes(progress.downloadedBytes)} / ${formatBytes(progress.totalBytes)}",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        "${formatBytes(
+                                            progress.downloadedBytes
+                                        )} / ${formatBytes(progress.totalBytes)}",
+                                        style = MaterialTheme.typography.bodySmall
                                     )
                                 } else {
                                     Spacer(Modifier.height(8.dp))
@@ -337,7 +335,7 @@ fun ModDetailScreen(
                             ModDownloadState.EXTRACTING, ModDownloadState.INSTALLING -> {
                                 Text(
                                     stringResource(R.string.mods_download_installing),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -346,14 +344,14 @@ fun ModDetailScreen(
                                 Text(
                                     stringResource(R.string.mods_download_complete, progress.modName),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.secondary,
+                                    color = MaterialTheme.colorScheme.secondary
                                 )
                             }
                             ModDownloadState.ERROR -> {
                                 Text(
                                     stringResource(R.string.mods_download_failed, progress.errorMessage ?: ""),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error,
+                                    color = MaterialTheme.colorScheme.error
                                 )
                             }
                             else -> {}
@@ -370,7 +368,7 @@ fun ModDetailScreen(
                         Text(
                             state.error!!,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (state.downloadErrorUrl != null) {
                             Spacer(Modifier.height(8.dp))
@@ -380,7 +378,7 @@ fun ModDetailScreen(
                                     uriHandler.openUri(state.downloadErrorUrl!!)
                                     viewModel.clearError()
                                 },
-                                variant = StardewButtonVariant.Gold,
+                                variant = StardewButtonVariant.Gold
                             ) {
                                 Text(stringResource(R.string.mods_open_nexus))
                             }
@@ -397,7 +395,7 @@ fun ModDetailScreen(
                         Text(
                             stringResource(R.string.mods_detail_files),
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.height(8.dp))
 
@@ -409,130 +407,142 @@ fun ModDetailScreen(
                             }
 
                             key(file.fileId) {
-                            var expanded by remember { mutableStateOf(false) }
-                            val hasDetails = file.description.isNotBlank() || file.changelogHtml != null || file.modVersion != null
-                            val chevronRotation by animateFloatAsState(
-                                targetValue = if (expanded) -90f else -180f,
-                                label = "chevron",
-                            )
+                                var expanded by remember { mutableStateOf(false) }
+                                val hasDetails =
+                                    file.description.isNotBlank() ||
+                                        file.changelogHtml != null ||
+                                        file.modVersion != null
+                                val chevronRotation by animateFloatAsState(
+                                    targetValue = if (expanded) -90f else -180f,
+                                    label = "chevron"
+                                )
 
-                            Column(
-                                modifier = if (hasDetails) Modifier
-                                    .fillMaxWidth()
-                                    .clickable { expanded = !expanded }
-                                else Modifier.fillMaxWidth(),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
+                                Column(
+                                    modifier = if (hasDetails) {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable { expanded = !expanded }
+                                    } else {
+                                        Modifier.fillMaxWidth()
+                                    }
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            file.fileName,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            if (file.fileVersion.isNotBlank()) {
-                                                Text(
-                                                    "v${file.fileVersion}",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                            if (file.fileSize > 0) {
-                                                Text(
-                                                    formatBytes(file.fileSize),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.outline,
-                                                )
-                                            }
-                                        }
-                                        Text(
-                                            file.categoryName,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = when (file.categoryName) {
-                                                "MAIN" -> MaterialTheme.colorScheme.primary
-                                                "OPTIONAL" -> MaterialTheme.colorScheme.tertiary
-                                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            },
-                                        )
-                                    }
-                                    if (hasDetails) {
-                                        PixelIcon(
-                                            pixelData = ArrowLeftData,
-                                            palette = listOf(Color.Transparent, MaterialTheme.colorScheme.onSurfaceVariant),
-                                            size = 16.dp,
-                                            modifier = Modifier.rotate(chevronRotation),
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                    }
-                                    StardewButton(
-                                        onClick = { viewModel.installFile(file.fileId) },
-                                        variant = StardewButtonVariant.Action,
-                                        enabled = progress.state == ModDownloadState.IDLE || progress.state == ModDownloadState.COMPLETED || progress.state == ModDownloadState.ERROR,
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(stringResource(R.string.mods_install))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                file.fileName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                if (file.fileVersion.isNotBlank()) {
+                                                    Text(
+                                                        "v${file.fileVersion}",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                if (file.fileSize > 0) {
+                                                    Text(
+                                                        formatBytes(file.fileSize),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.outline
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                file.categoryName,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = when (file.categoryName) {
+                                                    "MAIN" -> MaterialTheme.colorScheme.primary
+                                                    "OPTIONAL" -> MaterialTheme.colorScheme.tertiary
+                                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                }
+                                            )
+                                        }
+                                        if (hasDetails) {
+                                            PixelIcon(
+                                                pixelData = ArrowLeftData,
+                                                palette = listOf(
+                                                    Color.Transparent,
+                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                ),
+                                                size = 16.dp,
+                                                modifier = Modifier.rotate(chevronRotation)
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                        }
+                                        StardewButton(
+                                            onClick = { viewModel.installFile(file.fileId) },
+                                            variant = StardewButtonVariant.Action,
+                                            enabled =
+                                            progress.state == ModDownloadState.IDLE ||
+                                                progress.state == ModDownloadState.COMPLETED ||
+                                                progress.state == ModDownloadState.ERROR
+                                        ) {
+                                            Text(stringResource(R.string.mods_install))
+                                        }
                                     }
-                                }
 
-                                AnimatedVisibility(
-                                    visible = expanded,
-                                    enter = expandVertically(),
-                                    exit = shrinkVertically(),
-                                ) {
-                                    Column(modifier = Modifier.padding(top = 8.dp)) {
-                                        file.modVersion?.let { ver ->
-                                            Text(
-                                                "Mod version: $ver",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        if (file.uploadedAt > 0) {
-                                            Text(
-                                                "Uploaded: ${dateFormat.format(Date(file.uploadedAt))}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        if (file.description.isNotBlank()) {
-                                            Spacer(Modifier.height(4.dp))
-                                            val descHtml = toHtmlIfFormatted(file.description)
-                                            if (descHtml != null) {
+                                    AnimatedVisibility(
+                                        visible = expanded,
+                                        enter = expandVertically(),
+                                        exit = shrinkVertically()
+                                    ) {
+                                        Column(modifier = Modifier.padding(top = 8.dp)) {
+                                            file.modVersion?.let { ver ->
+                                                Text(
+                                                    "Mod version: $ver",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            if (file.uploadedAt > 0) {
+                                                Text(
+                                                    "Uploaded: ${dateFormat.format(Date(file.uploadedAt))}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            if (file.description.isNotBlank()) {
+                                                Spacer(Modifier.height(4.dp))
+                                                val descHtml = toHtmlIfFormatted(file.description)
+                                                if (descHtml != null) {
+                                                    HtmlText(
+                                                        html = descHtml,
+                                                        textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb(),
+                                                        linkColor = MaterialTheme.colorScheme.primary.toArgb(),
+                                                        textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        file.description,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                            file.changelogHtml?.let { changelog ->
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(
+                                                    "Changelog:",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                val changelogProcessed = toHtmlIfFormatted(changelog) ?: changelog
                                                 HtmlText(
-                                                    html = descHtml,
+                                                    html = changelogProcessed,
                                                     textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb(),
                                                     linkColor = MaterialTheme.colorScheme.primary.toArgb(),
-                                                    textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value,
-                                                )
-                                            } else {
-                                                Text(
-                                                    file.description,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value
                                                 )
                                             }
                                         }
-                                        file.changelogHtml?.let { changelog ->
-                                            Spacer(Modifier.height(4.dp))
-                                            Text(
-                                                "Changelog:",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                            )
-                                            val changelogProcessed = toHtmlIfFormatted(changelog) ?: changelog
-                                            HtmlText(
-                                                html = changelogProcessed,
-                                                textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb(),
-                                                linkColor = MaterialTheme.colorScheme.primary.toArgb(),
-                                                textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value,
-                                            )
-                                        }
                                     }
                                 }
-                            }
                             } // key(file.fileId)
                         }
                     }
@@ -543,13 +553,7 @@ fun ModDetailScreen(
 }
 
 @Composable
-private fun HtmlText(
-    html: String,
-    textColor: Int,
-    linkColor: Int,
-    textSizeSp: Float,
-    modifier: Modifier = Modifier,
-) {
+private fun HtmlText(html: String, textColor: Int, linkColor: Int, textSizeSp: Float, modifier: Modifier = Modifier) {
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
@@ -562,6 +566,6 @@ private fun HtmlText(
         },
         update = { tv ->
             tv.text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT)
-        },
+        }
     )
 }

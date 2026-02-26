@@ -5,10 +5,10 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
 import com.sdvsync.logging.AppLogger
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
-import java.io.File
 
 /**
  * File access using the Shizuku framework.
@@ -44,46 +44,38 @@ class ShizukuFileAccess : FileAccessStrategy {
             Shizuku.UserServiceArgs(
                 ComponentName(
                     "com.sdvsync",
-                    FileService::class.java.name,
+                    FileService::class.java.name
                 )
             )
                 .processNameSuffix("file_service")
                 .version(1)
         }
 
-        fun isAvailable(): Boolean {
-            return try {
-                Shizuku.pingBinder() &&
-                    Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-            } catch (e: Exception) {
-                false
-            }
-        }
-
-        fun isInstalled(packageManager: PackageManager): Boolean {
-            return try {
-                @Suppress("DEPRECATION")
-                packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
-                true
-            } catch (e: PackageManager.NameNotFoundException) {
-                false
-            }
-        }
-
-        fun isRunning(): Boolean {
-            return try {
-                Shizuku.pingBinder()
-            } catch (e: Exception) {
-                false
-            }
-        }
-
-        fun isPermissionGranted(): Boolean {
-            return try {
+        fun isAvailable(): Boolean = try {
+            Shizuku.pingBinder() &&
                 Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-            } catch (e: Exception) {
-                false
-            }
+        } catch (e: Exception) {
+            false
+        }
+
+        fun isInstalled(packageManager: PackageManager): Boolean = try {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        }
+
+        fun isRunning(): Boolean = try {
+            Shizuku.pingBinder()
+        } catch (e: Exception) {
+            false
+        }
+
+        fun isPermissionGranted(): Boolean = try {
+            Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        } catch (e: Exception) {
+            false
         }
 
         fun requestPermission(requestCode: Int = 1001) {
@@ -111,16 +103,12 @@ class ShizukuFileAccess : FileAccessStrategy {
             fileService = null
         }
 
-        fun isServiceBound(): Boolean {
-            return fileService != null
-        }
+        fun isServiceBound(): Boolean = fileService != null
     }
 
-    private fun requireService(): IFileService {
-        return fileService ?: throw IllegalStateException(
-            "Shizuku FileService not bound. Call ShizukuFileAccess.bindService() first."
-        )
-    }
+    private fun requireService(): IFileService = fileService ?: throw IllegalStateException(
+        "Shizuku FileService not bound. Call ShizukuFileAccess.bindService() first."
+    )
 
     override suspend fun exists(file: File): Boolean = withContext(Dispatchers.IO) {
         requireService().fileExists(file.absolutePath)
@@ -171,29 +159,28 @@ class ShizukuFileAccess : FileAccessStrategy {
         }
     }
 
-    override suspend fun writeFile(file: File, data: ByteArray): Boolean =
-        withContext(Dispatchers.IO) {
-            try {
-                val service = requireService()
-                val path = file.absolutePath
+    override suspend fun writeFile(file: File, data: ByteArray): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val service = requireService()
+            val path = file.absolutePath
 
-                if (data.size <= CHUNK_SIZE) {
-                    service.writeFileChunk(path, data, 0L)
-                } else {
-                    var offset = 0L
-                    while (offset < data.size) {
-                        val end = minOf(offset + CHUNK_SIZE, data.size.toLong())
-                        val chunk = data.copyOfRange(offset.toInt(), end.toInt())
-                        service.writeFileChunk(path, chunk, offset)
-                        offset += chunk.size
-                    }
+            if (data.size <= CHUNK_SIZE) {
+                service.writeFileChunk(path, data, 0L)
+            } else {
+                var offset = 0L
+                while (offset < data.size) {
+                    val end = minOf(offset + CHUNK_SIZE, data.size.toLong())
+                    val chunk = data.copyOfRange(offset.toInt(), end.toInt())
+                    service.writeFileChunk(path, chunk, offset)
+                    offset += chunk.size
                 }
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
-                false
             }
+            true
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
+            false
         }
+    }
 
     override suspend fun deleteFile(file: File): Boolean = withContext(Dispatchers.IO) {
         try {

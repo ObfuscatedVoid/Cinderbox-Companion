@@ -12,20 +12,16 @@ object GzipUtil {
     private const val TAG = "GzipUtil"
 
     /** Gzip magic bytes: 0x1f 0x8b */
-    fun isGzip(data: ByteArray): Boolean {
-        return data.size >= 2 &&
-            data[0] == 0x1f.toByte() &&
-            data[1] == 0x8b.toByte()
-    }
+    fun isGzip(data: ByteArray): Boolean = data.size >= 2 &&
+        data[0] == 0x1f.toByte() &&
+        data[1] == 0x8b.toByte()
 
     /** ZIP magic bytes: 0x50 0x4b 0x03 0x04 ("PK\x03\x04") */
-    fun isZip(data: ByteArray): Boolean {
-        return data.size >= 4 &&
-            data[0] == 0x50.toByte() &&
-            data[1] == 0x4b.toByte() &&
-            data[2] == 0x03.toByte() &&
-            data[3] == 0x04.toByte()
-    }
+    fun isZip(data: ByteArray): Boolean = data.size >= 4 &&
+        data[0] == 0x50.toByte() &&
+        data[1] == 0x4b.toByte() &&
+        data[2] == 0x03.toByte() &&
+        data[3] == 0x04.toByte()
 
     /**
      * Decompress data if it's gzip or ZIP compressed, return as-is otherwise.
@@ -52,7 +48,12 @@ object GzipUtil {
                 data
             }
         }
-        AppLogger.d(TAG, "Data is not compressed (size=${data.size}, first4=${data.take(4).joinToString(" ") { "%02x".format(it) }})")
+        AppLogger.d(
+            TAG,
+            "Data is not compressed (size=${data.size}, first4=${data.take(4).joinToString(" ") {
+                "%02x".format(it)
+            }})"
+        )
         return data
     }
 
@@ -64,7 +65,10 @@ object GzipUtil {
         ZipInputStream(ByteArrayInputStream(data)).use { zis ->
             val entry = zis.nextEntry
                 ?: throw RuntimeException("ZIP archive is empty")
-            AppLogger.d(TAG, "ZIP entry: name='${entry.name}', compressedSize=${entry.compressedSize}, size=${entry.size}")
+            AppLogger.d(
+                TAG,
+                "ZIP entry: name='${entry.name}', compressedSize=${entry.compressedSize}, size=${entry.size}"
+            )
             val content = zis.readBytes()
             zis.closeEntry()
             return content

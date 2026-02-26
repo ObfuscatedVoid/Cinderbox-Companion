@@ -1,5 +1,6 @@
 package com.sdvsync.di
 
+import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.FileAccessStrategy
 import com.sdvsync.fileaccess.SAFFileAccess
@@ -13,7 +14,6 @@ import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadataParser
 import com.sdvsync.saves.SaveValidator
-import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.steam.SteamAuthenticator
 import com.sdvsync.steam.SteamClientManager
 import com.sdvsync.steam.SteamCloudService
@@ -23,6 +23,7 @@ import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
 import com.sdvsync.ui.viewmodels.DashboardViewModel
+import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import com.sdvsync.ui.viewmodels.LoginViewModel
 import com.sdvsync.ui.viewmodels.ModBrowseViewModel
@@ -30,13 +31,12 @@ import com.sdvsync.ui.viewmodels.ModDetailViewModel
 import com.sdvsync.ui.viewmodels.ModManagerViewModel
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
-import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import com.sdvsync.ui.viewmodels.SyncLogViewModel
+import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
-import java.util.concurrent.TimeUnit
 
 val appModule = module {
     // Networking

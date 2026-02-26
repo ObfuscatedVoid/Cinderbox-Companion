@@ -46,7 +46,7 @@ private val LightColorScheme = lightColorScheme(
     inverseSurface = Color(0xFF352D24),
     inverseOnSurface = Color(0xFFFFF0E0),
     inversePrimary = BrownDark,
-    scrim = Color.Black,
+    scrim = Color.Black
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -82,7 +82,7 @@ private val DarkColorScheme = darkColorScheme(
     inverseSurface = Color(0xFFEDE0D0),
     inverseOnSurface = Color(0xFF352D24),
     inversePrimary = BrownLight,
-    scrim = Color.Black,
+    scrim = Color.Black
 )
 
 @Immutable
@@ -99,7 +99,7 @@ data class StardewColors(
     val pixelBorderDark: Color,
     val pixelBorderPlank: Color,
     val pixelBorderHighlight: Color,
-    val pixelBorderShadow: Color,
+    val pixelBorderShadow: Color
 )
 
 val LocalStardewColors = staticCompositionLocalOf {
@@ -116,7 +116,7 @@ val LocalStardewColors = staticCompositionLocalOf {
         pixelBorderDark = PixelBorderDark,
         pixelBorderPlank = PixelBorderPlank,
         pixelBorderHighlight = PixelBorderHighlight,
-        pixelBorderShadow = PixelBorderShadow,
+        pixelBorderShadow = PixelBorderShadow
     )
 }
 
@@ -133,7 +133,7 @@ private val LightStardewColors = StardewColors(
     pixelBorderDark = PixelBorderDark,
     pixelBorderPlank = PixelBorderPlank,
     pixelBorderHighlight = PixelBorderHighlight,
-    pixelBorderShadow = PixelBorderShadow,
+    pixelBorderShadow = PixelBorderShadow
 )
 
 private val DarkStardewColors = StardewColors(
@@ -149,7 +149,7 @@ private val DarkStardewColors = StardewColors(
     pixelBorderDark = PixelBorderDarkDk,
     pixelBorderPlank = PixelBorderPlankDk,
     pixelBorderHighlight = PixelBorderHighlightDk,
-    pixelBorderShadow = PixelBorderShadowDk,
+    pixelBorderShadow = PixelBorderShadowDk
 )
 
 val StardewShapes = Shapes(
@@ -157,7 +157,7 @@ val StardewShapes = Shapes(
     small = RoundedCornerShape(8.dp),
     medium = RoundedCornerShape(12.dp),
     large = RoundedCornerShape(16.dp),
-    extraLarge = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(20.dp)
 )
 
 object SdvSyncThemeExtras {
@@ -167,21 +167,18 @@ object SdvSyncThemeExtras {
 }
 
 @Composable
-fun SdvSyncTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit,
-) {
+fun SdvSyncTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val stardewColors = if (darkTheme) DarkStardewColors else LightStardewColors
 
     CompositionLocalProvider(
-        LocalStardewColors provides stardewColors,
+        LocalStardewColors provides stardewColors
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
             shapes = StardewShapes,
-            content = content,
+            content = content
         )
     }
 }

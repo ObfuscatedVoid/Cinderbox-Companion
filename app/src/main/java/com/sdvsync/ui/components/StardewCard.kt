@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 fun StardewCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit
 ) {
     val cardModifier = modifier
         .fillMaxWidth()
@@ -30,7 +30,7 @@ fun StardewCard(
             cardModifier
         },
         shape = RectangleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Column { content() }
     }

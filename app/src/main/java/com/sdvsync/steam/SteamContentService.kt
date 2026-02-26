@@ -3,31 +3,21 @@ package com.sdvsync.steam
 import com.sdvsync.logging.AppLogger
 import `in`.dragonbra.javasteam.steam.handlers.steamapps.PICSRequest
 import `in`.dragonbra.javasteam.steam.handlers.steamapps.callback.PICSProductInfoCallback
-import `in`.dragonbra.javasteam.types.KeyValue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
-class SteamContentService(
-    private val clientManager: SteamClientManager,
-) {
+class SteamContentService(private val clientManager: SteamClientManager) {
     companion object {
         private const val TAG = "SteamContent"
         const val STARDEW_APP_ID = 413150
     }
 
-    data class BranchInfo(
-        val name: String,
-        val buildId: Long,
-        val passwordRequired: Boolean,
-        val timeUpdated: Long,
-    )
+    data class BranchInfo(val name: String, val buildId: Long, val passwordRequired: Boolean, val timeUpdated: Long)
 
-    data class AppContentInfo(
-        val branches: List<BranchInfo>,
-    )
+    data class AppContentInfo(val branches: List<BranchInfo>)
 
     suspend fun getAppBranches(): AppContentInfo = withContext(Dispatchers.IO) {
         val steamApps = clientManager.apps
@@ -52,7 +42,7 @@ class SteamContentService(
         }
 
         steamApps.picsGetProductInfo(
-            app = PICSRequest(STARDEW_APP_ID, accessToken),
+            app = PICSRequest(STARDEW_APP_ID, accessToken)
         )
 
         val productInfo = try {
@@ -84,7 +74,7 @@ class SteamContentService(
                 name = name,
                 buildId = buildId,
                 passwordRequired = pwdRequired,
-                timeUpdated = timeUpdated,
+                timeUpdated = timeUpdated
             )
         }.sortedWith(compareByDescending<BranchInfo> { it.name == "public" }.thenByDescending { it.timeUpdated })
 

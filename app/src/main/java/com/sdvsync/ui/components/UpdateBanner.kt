@@ -17,26 +17,22 @@ import com.sdvsync.R
 import com.sdvsync.ui.animation.PulseOnChange
 
 @Composable
-fun UpdateBanner(
-    updateCount: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun UpdateBanner(updateCount: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     PulseOnChange(key = updateCount) {
         StardewCard(
             onClick = onClick,
-            modifier = modifier,
+            modifier = modifier
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 PixelIcon(
                     pixelData = UpdateArrowData,
                     palette = listOf(Color.Transparent, MaterialTheme.colorScheme.tertiary),
-                    size = 20.dp,
+                    size = 20.dp
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
@@ -46,7 +42,7 @@ fun UpdateBanner(
                         stringResource(R.string.mods_update_banner, updateCount)
                     },
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
         }

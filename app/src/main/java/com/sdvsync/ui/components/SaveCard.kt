@@ -15,10 +15,7 @@ import com.sdvsync.ui.theme.SdvSyncThemeExtras
 import com.sdvsync.ui.viewmodels.SaveEntry
 
 @Composable
-fun SaveCard(
-    save: SaveEntry,
-    onClick: () -> Unit,
-) {
+fun SaveCard(save: SaveEntry, onClick: () -> Unit) {
     val meta = save.cloudMeta ?: save.localMeta
 
     StardewCard(onClick = onClick) {
@@ -27,24 +24,24 @@ fun SaveCard(
         }
 
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         meta?.farmerName ?: save.folderName,
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     if (meta?.farmName?.isNotEmpty() == true) {
                         Text(
                             stringResource(R.string.save_farm_name, meta.farmName),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -58,15 +55,15 @@ fun SaveCard(
             if (meta != null) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         formatDisplayDate(meta),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     SeasonBadge(
                         season = meta.season,
-                        seasonName = seasonName(meta.season),
+                        seasonName = seasonName(meta.season)
                     )
                     if (meta.millisecondsPlayed > 0) {
                         val hours = meta.millisecondsPlayed / 3_600_000
@@ -74,14 +71,14 @@ fun SaveCard(
                         Text(
                             stringResource(R.string.save_play_time, hours, mins),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     if (meta.gameVersion.isNotEmpty()) {
                         Text(
                             stringResource(R.string.save_version, meta.gameVersion),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -91,7 +88,7 @@ fun SaveCard(
             Text(
                 save.statusMessage,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -104,44 +101,50 @@ fun SyncStatusBadge(save: SaveEntry) {
         SyncDirection.PULL -> Triple(
             save.syncDirection,
             extras.pullBlue,
-            if (!save.hasLocal) stringResource(R.string.save_status_cloud)
-            else stringResource(R.string.save_status_cloud_newer),
+            if (!save.hasLocal) {
+                stringResource(R.string.save_status_cloud)
+            } else {
+                stringResource(R.string.save_status_cloud_newer)
+            }
         )
         SyncDirection.PUSH -> Triple(
             save.syncDirection,
             extras.pushGreen,
-            if (!save.hasCloud) stringResource(R.string.save_status_local)
-            else stringResource(R.string.save_status_local_newer),
+            if (!save.hasCloud) {
+                stringResource(R.string.save_status_local)
+            } else {
+                stringResource(R.string.save_status_local_newer)
+            }
         )
         SyncDirection.SKIP -> Triple(
             save.syncDirection,
             extras.synced,
-            stringResource(R.string.save_status_synced),
+            stringResource(R.string.save_status_synced)
         )
         SyncDirection.CONFLICT -> Triple(
             save.syncDirection,
             extras.conflict,
-            stringResource(R.string.save_status_conflict),
+            stringResource(R.string.save_status_conflict)
         )
     }
 
     Surface(
         shape = MaterialTheme.shapes.small,
-        color = color.copy(alpha = 0.12f),
+        color = color.copy(alpha = 0.12f)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             PixelSyncIcon(
                 direction = direction,
-                size = 14.dp,
+                size = 14.dp
             )
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
-                color = color,
+                color = color
             )
         }
     }

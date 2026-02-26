@@ -29,7 +29,7 @@ import org.koin.androidx.compose.koinViewModel
 fun DashboardScreen(
     onSaveClick: (String, Boolean, Boolean) -> Unit,
     onSyncLogClick: () -> Unit = {},
-    viewModel: DashboardViewModel = koinViewModel(),
+    viewModel: DashboardViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -45,29 +45,29 @@ fun DashboardScreen(
                     PixelIconButton(
                         pixelData = RefreshData,
                         onClick = { viewModel.refresh(isUserRefresh = true) },
-                        contentDescription = stringResource(R.string.action_refresh),
+                        contentDescription = stringResource(R.string.action_refresh)
                     )
                     PixelIconButton(
                         pixelData = ClockData,
                         onClick = onSyncLogClick,
-                        contentDescription = stringResource(R.string.sync_log_title),
+                        contentDescription = stringResource(R.string.sync_log_title)
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
             onRefresh = { viewModel.refresh(isUserRefresh = true) },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
         ) {
             when {
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize()) {
                         PixelLoadingSpinner(
-                            modifier = Modifier.align(Alignment.Center),
+                            modifier = Modifier.align(Alignment.Center)
                         )
                     }
                 }
@@ -77,12 +77,12 @@ fun DashboardScreen(
                             modifier = Modifier
                                 .align(Alignment.Center)
                                 .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
                                 state.error!!,
                                 color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyLarge
                             )
                             Spacer(Modifier.height(16.dp))
                             StardewButton(onClick = { viewModel.refresh() }) {
@@ -98,7 +98,7 @@ fun DashboardScreen(
                             subtitle = "Pull to refresh or check your save files",
                             modifier = Modifier
                                 .align(Alignment.Center)
-                                .padding(24.dp),
+                                .padding(24.dp)
                         )
                     }
                 }
@@ -106,7 +106,7 @@ fun DashboardScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         if (state.isStagingMode) {
                             item {
@@ -115,13 +115,13 @@ fun DashboardScreen(
                                         Text(
                                             stringResource(R.string.staging_mode_title),
                                             style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.tertiary,
+                                            color = MaterialTheme.colorScheme.tertiary
                                         )
                                         Spacer(Modifier.height(4.dp))
                                         Text(
                                             stringResource(R.string.staging_mode_description),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -131,7 +131,7 @@ fun DashboardScreen(
                             StaggeredAnimatedItem(index = index) {
                                 SaveCard(
                                     save = save,
-                                    onClick = { onSaveClick(save.folderName, save.hasCloud, save.hasLocal) },
+                                    onClick = { onSaveClick(save.folderName, save.hasCloud, save.hasLocal) }
                                 )
                             }
                         }

@@ -7,7 +7,7 @@ import java.io.File
 class SaveFileManager(
     private val fileAccess: FileAccessStrategy,
     private val metadataParser: SaveMetadataParser,
-    private val basePath: String = SDV_SAVE_PATH,
+    private val basePath: String = SDV_SAVE_PATH
 ) {
     companion object {
         private const val TAG = "SaveFileManager"
@@ -38,7 +38,7 @@ class SaveFileManager(
             LocalSave(
                 folderName = folderName,
                 metadata = metadata,
-                directory = saveDir,
+                directory = saveDir
             )
         }
     }
@@ -73,12 +73,15 @@ class SaveFileManager(
 
         // Ensure directory exists
         val mkdirsResult = fileAccess.mkdirs(saveDir)
-        AppLogger.d(TAG, "writeLocalSave($saveFolderName): mkdirs=${if (mkdirsResult) "created" else "already exists or failed"}")
+        AppLogger.d(
+            TAG,
+            "writeLocalSave($saveFolderName): mkdirs=${if (mkdirsResult) "created" else "already exists or failed"}"
+        )
 
         // Write each file atomically (temp file then rename)
         for ((filename, data) in files) {
             val targetFile = File(saveDir, filename)
-            val tempFile = File(saveDir, "${filename}.sdvsync_tmp")
+            val tempFile = File(saveDir, "$filename.sdvsync_tmp")
 
             // Write to temp file
             if (!fileAccess.writeFile(tempFile, data)) {
@@ -104,13 +107,7 @@ class SaveFileManager(
     /**
      * Check if save directory exists and is accessible.
      */
-    suspend fun isSaveDirectoryAccessible(): Boolean {
-        return fileAccess.exists(File(basePath))
-    }
+    suspend fun isSaveDirectoryAccessible(): Boolean = fileAccess.exists(File(basePath))
 }
 
-data class LocalSave(
-    val folderName: String,
-    val metadata: SaveMetadata,
-    val directory: File,
-)
+data class LocalSave(val folderName: String, val metadata: SaveMetadata, val directory: File)

@@ -92,7 +92,7 @@ object AppLogger {
         // Token values: accessToken=..., refreshToken=..., access_token=..., password=...
         result = result.replace(
             Regex("""(access_?[Tt]oken|refresh_?[Tt]oken|password)\s*[=:]\s*["']?[^\s"',}\]]+"""),
-            "$1=[REDACTED]",
+            "$1=[REDACTED]"
         )
         // Steam IDs (76561... 17-digit numbers)
         result = result.replace(Regex("""\b76561\d{12}\b"""), "[STEAM_ID]")

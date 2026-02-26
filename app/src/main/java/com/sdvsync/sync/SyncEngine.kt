@@ -23,7 +23,7 @@ class SyncEngine(
     private val saveValidator: SaveValidator,
     private val backupManager: SaveBackupManager,
     private val metadataParser: SaveMetadataParser,
-    private val conflictResolver: ConflictResolver,
+    private val conflictResolver: ConflictResolver
 ) {
     companion object {
         private const val TAG = "SyncEngine"
@@ -35,7 +35,7 @@ class SyncEngine(
     suspend fun pullSave(
         saveFolderName: String,
         force: Boolean = false,
-        onProgress: ((String) -> Unit)? = null,
+        onProgress: ((String) -> Unit)? = null
     ): SyncResult {
         try {
             onProgress?.invoke(context.getString(R.string.sync_progress_downloading))
@@ -94,9 +94,11 @@ class SyncEngine(
             val versionWarning = if (cloudMeta != null) {
                 conflictResolver.checkVersionCompatibility(
                     cloudMeta.gameVersion,
-                    existingLocal?.metadata?.gameVersion,
+                    existingLocal?.metadata?.gameVersion
                 )
-            } else null
+            } else {
+                null
+            }
 
             // Backup existing local save
             onProgress?.invoke(context.getString(R.string.sync_progress_backing_up))
@@ -121,7 +123,6 @@ class SyncEngine(
                 context.getString(R.string.sync_pull_success)
             }
             return SyncResult.Success(successMsg, warning = versionWarning)
-
         } catch (e: Exception) {
             AppLogger.e(TAG, "Pull failed for $saveFolderName", e)
             return SyncResult.Error(context.getString(R.string.sync_error_pull_failed, e.message ?: "Unknown error"))
@@ -135,7 +136,7 @@ class SyncEngine(
     suspend fun pushSave(
         saveFolderName: String,
         force: Boolean = false,
-        onProgress: ((String) -> Unit)? = null,
+        onProgress: ((String) -> Unit)? = null
     ): SyncResult {
         try {
             onProgress?.invoke(context.getString(R.string.sync_progress_reading))
@@ -201,7 +202,7 @@ class SyncEngine(
                             context.getString(
                                 R.string.sync_progress_backing_up_cloud_file,
                                 index + 1,
-                                cloudFileList.size,
+                                cloudFileList.size
                             )
                         )
                         val data = cloudService.downloadFile(file.fullPath)
@@ -236,7 +237,6 @@ class SyncEngine(
             } else {
                 SyncResult.Success(context.getString(R.string.sync_push_success))
             }
-
         } catch (e: Exception) {
             AppLogger.e(TAG, "Push failed for $saveFolderName", e)
             return SyncResult.Error(context.getString(R.string.sync_error_push_failed, e.message ?: "Unknown error"))

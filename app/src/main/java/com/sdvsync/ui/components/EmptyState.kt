@@ -21,26 +21,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun EmptyState(
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-) {
+fun EmptyState(title: String, subtitle: String, modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "chickenBob")
     val bobOffset by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = with(LocalDensity.current) { -3.dp.toPx() },
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 800, easing = androidx.compose.animation.core.EaseInOutSine),
-            repeatMode = RepeatMode.Reverse,
+            repeatMode = RepeatMode.Reverse
         ),
-        label = "chickenBobOffset",
+        label = "chickenBobOffset"
     )
 
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         PixelIcon(
             pixelData = ChickenIconData,
@@ -49,24 +45,24 @@ fun EmptyState(
                 androidx.compose.ui.graphics.Color.White,
                 androidx.compose.ui.graphics.Color(0xFFE03030),
                 androidx.compose.ui.graphics.Color(0xFFE8A030),
-                androidx.compose.ui.graphics.Color(0xFF2A1A00),
+                androidx.compose.ui.graphics.Color(0xFF2A1A00)
             ),
             modifier = Modifier.graphicsLayer { translationY = bobOffset },
-            size = 48.dp,
+            size = 48.dp
         )
         Spacer(Modifier.height(12.dp))
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
+            textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(8.dp))
         Text(
             subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.outline,
-            textAlign = TextAlign.Center,
+            textAlign = TextAlign.Center
         )
     }
 }

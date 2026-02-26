@@ -23,7 +23,7 @@ fun PixelDivider(modifier: Modifier = Modifier) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(2.dp),
+            .height(2.dp)
     ) {
         val px = 2.dp.toPx()
         var x = 0f
@@ -33,7 +33,7 @@ fun PixelDivider(modifier: Modifier = Modifier) {
             drawRect(
                 color = color,
                 topLeft = Offset(x, 0f),
-                size = Size(px, size.height),
+                size = Size(px, size.height)
             )
             x += px
             useHighlight = !useHighlight

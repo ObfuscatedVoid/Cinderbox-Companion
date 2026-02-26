@@ -1,0 +1,20 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+ktlint_code_style = android_studio
+max_line_length = 120
+
+# Compose @Composable functions use PascalCase by convention
+ktlint_standard_function-naming = disabled
+# Android/Compose projects commonly use wildcard imports
+ktlint_standard_no-wildcard-imports = disabled
+# Internal backing properties in companion objects are intentional
+ktlint_standard_backing-property-naming = disabled

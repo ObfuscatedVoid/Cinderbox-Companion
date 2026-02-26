@@ -49,29 +49,25 @@ private fun SectionHeader(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen(
-    onBack: () -> Unit,
-    onLogout: () -> Unit,
-    viewModel: SettingsViewModel = koinViewModel(),
-) {
+fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
 
     val context = LocalContext.current
 
     val allFilesLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
+        contract = ActivityResultContracts.StartActivityForResult()
     ) {
         viewModel.load()
     }
 
     val safLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree(),
+        contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         if (uri != null) {
             viewModel.onSafDirectorySelected(uri)
@@ -84,15 +80,15 @@ fun SettingsScreen(
 
     val sliderColors = SliderDefaults.colors(
         thumbColor = MaterialTheme.colorScheme.primary,
-        activeTrackColor = MaterialTheme.colorScheme.primary,
+        activeTrackColor = MaterialTheme.colorScheme.primary
     )
     val switchColors = SwitchDefaults.colors(
         checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-        checkedTrackColor = MaterialTheme.colorScheme.primary,
+        checkedTrackColor = MaterialTheme.colorScheme.primary
     )
     val filterChipColors = FilterChipDefaults.filterChipColors(
         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
     )
 
     Scaffold(
@@ -104,18 +100,18 @@ fun SettingsScreen(
                         pixelData = ArrowLeftData,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(16.dp)
         ) {
             // Game mode
             SectionHeader(stringResource(R.string.settings_game_mode_title))
@@ -125,12 +121,12 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             stringResource(R.string.settings_cinderbox_mode),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
                             if (state.cinderboxMode) {
@@ -139,14 +135,14 @@ fun SettingsScreen(
                                 stringResource(R.string.settings_cinderbox_mode_off_desc)
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(Modifier.width(12.dp))
                     Switch(
                         checked = state.cinderboxMode,
                         onCheckedChange = { viewModel.toggleCinderboxMode(it) },
-                        colors = switchColors,
+                        colors = switchColors
                     )
                 }
             }
@@ -164,39 +160,39 @@ fun SettingsScreen(
                     val availableModesDisplay = state.availableModes.map { strategyDisplayName(it) }
                     Text(
                         stringResource(R.string.settings_file_access_current, currentModeDisplay),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
                         stringResource(
                             R.string.settings_file_access_available,
-                            availableModesDisplay.joinToString(", "),
+                            availableModesDisplay.joinToString(", ")
                         ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(Modifier.height(12.dp))
                     Text(
                         stringResource(R.string.settings_file_access_choose),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(Modifier.height(8.dp))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         FilterChip(
                             selected = state.preferredStrategy == null,
                             onClick = { viewModel.setFileAccessMode(null) },
                             label = { Text(stringResource(R.string.settings_file_access_auto)) },
-                            colors = filterChipColors,
+                            colors = filterChipColors
                         )
                         state.availableModes.forEach { mode ->
                             FilterChip(
                                 selected = state.preferredStrategy.equals(mode, ignoreCase = true),
                                 onClick = { viewModel.setFileAccessMode(mode) },
                                 label = { Text(strategyDisplayName(mode)) },
-                                colors = filterChipColors,
+                                colors = filterChipColors
                             )
                         }
                     }
@@ -211,7 +207,7 @@ fun SettingsScreen(
                     running = state.shizukuRunning,
                     permissionGranted = state.shizukuPermissionGranted,
                     onRequestPermission = { viewModel.requestShizukuPermission() },
-                    onBindService = { viewModel.bindShizukuService() },
+                    onBindService = { viewModel.bindShizukuService() }
                 )
             }
 
@@ -224,10 +220,10 @@ fun SettingsScreen(
                     onGrantPermission = {
                         val intent = Intent(
                             Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                            Uri.parse("package:${context.packageName}"),
+                            Uri.parse("package:${context.packageName}")
                         )
                         allFilesLauncher.launch(intent)
-                    },
+                    }
                 )
             }
 
@@ -238,7 +234,7 @@ fun SettingsScreen(
                     configured = state.safConfigured,
                     isStaging = state.safIsStaging,
                     onSelectDirectory = { safLauncher.launch(null) },
-                    onRevoke = { viewModel.clearSafAccess() },
+                    onRevoke = { viewModel.clearSafAccess() }
                 )
             }
 
@@ -254,7 +250,7 @@ fun SettingsScreen(
                     Text(
                         stringResource(R.string.settings_backups_description),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(12.dp))
 
@@ -263,7 +259,7 @@ fun SettingsScreen(
                     }
                     Text(
                         stringResource(R.string.settings_backups_count, sliderValue.roundToInt()),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Slider(
                         value = sliderValue,
@@ -271,9 +267,10 @@ fun SettingsScreen(
                         onValueChangeFinished = {
                             viewModel.setMaxBackups(sliderValue.roundToInt())
                         },
-                        valueRange = SaveBackupManager.MIN_MAX_BACKUPS.toFloat()..SaveBackupManager.MAX_MAX_BACKUPS.toFloat(),
+                        valueRange =
+                        SaveBackupManager.MIN_MAX_BACKUPS.toFloat()..SaveBackupManager.MAX_MAX_BACKUPS.toFloat(),
                         steps = SaveBackupManager.MAX_MAX_BACKUPS - SaveBackupManager.MIN_MAX_BACKUPS - 1,
-                        colors = sliderColors,
+                        colors = sliderColors
                     )
                 }
             }
@@ -291,30 +288,30 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     stringResource(R.string.settings_auto_sync),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
                                     stringResource(R.string.settings_auto_sync_desc),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Switch(
                                 checked = state.autoSyncEnabled,
                                 onCheckedChange = { viewModel.toggleAutoSync(it) },
-                                colors = switchColors,
+                                colors = switchColors
                             )
                         }
                     } else {
                         Text(
                             stringResource(R.string.settings_auto_sync_root_only),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -332,7 +329,7 @@ fun SettingsScreen(
                 error = state.apiKeyError,
                 onSaveKey = { viewModel.validateAndSaveApiKey(it) },
                 onRemoveKey = { viewModel.removeNexusApiKey() },
-                onClearError = { viewModel.clearApiKeyError() },
+                onClearError = { viewModel.clearApiKeyError() }
             )
 
             Spacer(Modifier.height(24.dp))
@@ -347,7 +344,7 @@ fun SettingsScreen(
                     viewModel.logout()
                     onLogout()
                 },
-                variant = StardewButtonVariant.Danger,
+                variant = StardewButtonVariant.Danger
             ) {
                 Text(stringResource(R.string.settings_logout))
             }
@@ -363,12 +360,12 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.settings_about),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
                         stringResource(R.string.settings_about_desc),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -385,7 +382,7 @@ fun SettingsScreen(
                     Text(
                         stringResource(R.string.settings_share_logs_desc),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(12.dp))
                     StardewOutlinedButton(onClick = { AppLogger.shareLogs(context) }) {
@@ -402,13 +399,13 @@ private fun SAFAccessSection(
     configured: Boolean,
     isStaging: Boolean,
     onSelectDirectory: () -> Unit,
-    onRevoke: () -> Unit,
+    onRevoke: () -> Unit
 ) {
     StardewCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_saf_title),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall
             )
             Spacer(Modifier.height(8.dp))
 
@@ -420,7 +417,7 @@ private fun SAFAccessSection(
                         stringResource(R.string.settings_saf_configured)
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(8.dp))
                 StardewOutlinedButton(onClick = onRevoke) {
@@ -430,13 +427,13 @@ private fun SAFAccessSection(
                 Text(
                     stringResource(R.string.settings_saf_instructions),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.settings_saf_staging_instructions),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
                 StardewOutlinedButton(onClick = onSelectDirectory) {
@@ -453,13 +450,13 @@ private fun ShizukuStatusSection(
     running: Boolean,
     permissionGranted: Boolean,
     onRequestPermission: () -> Unit,
-    onBindService: () -> Unit,
+    onBindService: () -> Unit
 ) {
     StardewCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_shizuku_title),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall
             )
             Spacer(Modifier.height(8.dp))
 
@@ -468,20 +465,20 @@ private fun ShizukuStatusSection(
                     Text(
                         stringResource(R.string.settings_shizuku_not_installed),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 !running -> {
                     Text(
                         stringResource(R.string.settings_shizuku_not_running),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 !permissionGranted -> {
                     Text(
                         stringResource(R.string.settings_shizuku_grant_prompt),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(Modifier.height(8.dp))
                     StardewOutlinedButton(onClick = onRequestPermission) {
@@ -492,7 +489,7 @@ private fun ShizukuStatusSection(
                     Text(
                         stringResource(R.string.settings_shizuku_ready),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.height(8.dp))
                     StardewOutlinedButton(onClick = onBindService) {
@@ -512,7 +509,7 @@ private fun NexusApiKeySection(
     error: String?,
     onSaveKey: (String) -> Unit,
     onRemoveKey: () -> Unit,
-    onClearError: () -> Unit,
+    onClearError: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
     var showChangeDialog by remember { mutableStateOf(false) }
@@ -525,13 +522,13 @@ private fun NexusApiKeySection(
             if (hasKey) {
                 Text(
                     stringResource(R.string.settings_nexus_key_configured),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 if (maskedKey != null) {
                     Text(
                         maskedKey,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(Modifier.height(12.dp))
@@ -545,7 +542,7 @@ private fun NexusApiKeySection(
                     }
                     StardewButton(
                         onClick = onRemoveKey,
-                        variant = StardewButtonVariant.Danger,
+                        variant = StardewButtonVariant.Danger
                     ) {
                         Text(stringResource(R.string.settings_nexus_key_remove))
                     }
@@ -554,7 +551,7 @@ private fun NexusApiKeySection(
                 Text(
                     stringResource(R.string.mods_api_key_description),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
@@ -570,19 +567,21 @@ private fun NexusApiKeySection(
                     isError = error != null,
                     supportingText = if (error != null) {
                         { Text(error) }
-                    } else null,
+                    } else {
+                        null
+                    }
                 )
                 Spacer(Modifier.height(8.dp))
                 StardewButton(
                     onClick = { onSaveKey(keyInput) },
                     variant = StardewButtonVariant.Action,
-                    enabled = keyInput.isNotBlank() && !isValidating,
+                    enabled = keyInput.isNotBlank() && !isValidating
                 ) {
                     if (isValidating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
                         Text(stringResource(R.string.mods_api_key_save))
@@ -595,7 +594,7 @@ private fun NexusApiKeySection(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable {
                         uriHandler.openUri("https://www.nexusmods.com/users/myaccount?tab=api+access")
-                    },
+                    }
                 )
             }
         }
@@ -621,7 +620,9 @@ private fun NexusApiKeySection(
                         isError = error != null,
                         supportingText = if (error != null) {
                             { Text(error) }
-                        } else null,
+                        } else {
+                            null
+                        }
                     )
                 }
             },
@@ -632,12 +633,12 @@ private fun NexusApiKeySection(
                         showChangeDialog = false
                     },
                     variant = StardewButtonVariant.Action,
-                    enabled = keyInput.isNotBlank() && !isValidating,
+                    enabled = keyInput.isNotBlank() && !isValidating
                 ) {
                     if (isValidating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
+                            strokeWidth = 2.dp
                         )
                     } else {
                         Text(stringResource(R.string.mods_api_key_save))
@@ -648,22 +649,18 @@ private fun NexusApiKeySection(
                 StardewButton(onClick = { showChangeDialog = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
-            },
+            }
         )
     }
 }
 
 @Composable
-private fun AllFilesAccessSection(
-    permissionGranted: Boolean,
-    accessWorking: Boolean,
-    onGrantPermission: () -> Unit,
-) {
+private fun AllFilesAccessSection(permissionGranted: Boolean, accessWorking: Boolean, onGrantPermission: () -> Unit) {
     StardewCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_all_files_title),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall
             )
             Spacer(Modifier.height(8.dp))
 
@@ -672,21 +669,21 @@ private fun AllFilesAccessSection(
                     Text(
                         stringResource(R.string.settings_all_files_granted),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 permissionGranted -> {
                     Text(
                         stringResource(R.string.settings_all_files_no_access),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
                 else -> {
                     Text(
                         stringResource(R.string.settings_all_files_description),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     StardewOutlinedButton(onClick = onGrantPermission) {

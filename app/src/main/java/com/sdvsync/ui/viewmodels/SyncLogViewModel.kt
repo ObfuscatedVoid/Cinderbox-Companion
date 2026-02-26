@@ -9,14 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class SyncLogState(
-    val entries: List<SyncHistoryEntry> = emptyList(),
-    val isLoading: Boolean = false,
-)
+data class SyncLogState(val entries: List<SyncHistoryEntry> = emptyList(), val isLoading: Boolean = false)
 
-class SyncLogViewModel(
-    private val historyStore: SyncHistoryStore,
-) : ViewModel() {
+class SyncLogViewModel(private val historyStore: SyncHistoryStore) : ViewModel() {
 
     private val _state = MutableStateFlow(SyncLogState())
     val state: StateFlow<SyncLogState> = _state.asStateFlow()

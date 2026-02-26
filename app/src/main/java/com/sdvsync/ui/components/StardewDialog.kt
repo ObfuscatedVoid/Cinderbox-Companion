@@ -26,7 +26,7 @@ fun StardewDialog(
     title: String,
     text: String,
     confirmButton: @Composable () -> Unit,
-    dismissButton: @Composable () -> Unit = {},
+    dismissButton: @Composable () -> Unit = {}
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
@@ -34,30 +34,30 @@ fun StardewDialog(
                 .fillMaxWidth()
                 .pixelBorder(),
             shape = RectangleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(
                 modifier = Modifier.padding(
                     start = 12.dp,
                     end = 12.dp,
                     top = 12.dp,
-                    bottom = 8.dp,
-                ),
+                    bottom = 8.dp
+                )
             ) {
                 Text(
                     title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(20.dp))
                 Row(
-                    modifier = Modifier.align(Alignment.End),
+                    modifier = Modifier.align(Alignment.End)
                 ) {
                     dismissButton()
                     Spacer(Modifier.width(8.dp))

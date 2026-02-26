@@ -11,10 +11,7 @@ import java.util.zip.ZipInputStream
  * Manages local mod files in the Mods/ directory.
  * Uses direct java.io.File access (Mods/ is on shared storage, not inside /Android/data/).
  */
-class ModFileManager(
-    private val context: Context,
-    private val parser: ModManifestParser,
-) {
+class ModFileManager(private val context: Context, private val parser: ModManifestParser) {
     companion object {
         private const val TAG = "ModFileManager"
         const val MODS_DIR = "/storage/emulated/0/StardewValley/Mods"
@@ -23,9 +20,7 @@ class ModFileManager(
 
     private val modsDir = File(MODS_DIR)
 
-    fun isModsDirAccessible(): Boolean {
-        return modsDir.exists() && modsDir.isDirectory && modsDir.canRead()
-    }
+    fun isModsDirAccessible(): Boolean = modsDir.exists() && modsDir.isDirectory && modsDir.canRead()
 
     /**
      * Scan the Mods/ directory and parse all installed mods.
@@ -60,7 +55,7 @@ class ModFileManager(
             folderPath = folder.absolutePath,
             enabled = enabled,
             installedAt = manifestFile.lastModified(),
-            fileSize = folderSize,
+            fileSize = folderSize
         )
     }
 
@@ -138,7 +133,9 @@ class ModFileManager(
                     val existingConfig = File(targetDir, "config.json")
                     val savedConfig = if (existingConfig.exists()) {
                         existingConfig.readText()
-                    } else null
+                    } else {
+                        null
+                    }
 
                     targetDir.deleteRecursively()
 

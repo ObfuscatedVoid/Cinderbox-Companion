@@ -30,20 +30,15 @@ private fun formatCount(count: Int): String {
 }
 
 @Composable
-fun BrowseModCard(
-    mod: RemoteMod,
-    isInstalled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun BrowseModCard(mod: RemoteMod, isInstalled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     StardewCard(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(12.dp)
         ) {
             // Thumbnail
             if (mod.pictureUrl != null) {
@@ -53,7 +48,7 @@ fun BrowseModCard(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RectangleShape),
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 // Pixel art placeholder
@@ -61,7 +56,7 @@ fun BrowseModCard(
                     pixelData = PuzzleData,
                     palette = listOf(Color.Transparent, MaterialTheme.colorScheme.onSurfaceVariant),
                     modifier = Modifier.size(56.dp),
-                    size = 56.dp,
+                    size = 56.dp
                 )
             }
 
@@ -74,13 +69,13 @@ fun BrowseModCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = mod.author,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 1
                 )
                 if (mod.summary.isNotBlank()) {
                     Text(
@@ -88,7 +83,7 @@ fun BrowseModCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -96,20 +91,20 @@ fun BrowseModCard(
                     Text(
                         text = stringResource(R.string.mods_downloads, formatCount(mod.downloads)),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = MaterialTheme.colorScheme.outline
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = stringResource(R.string.mods_endorsements, formatCount(mod.endorsements)),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = MaterialTheme.colorScheme.outline
                     )
                     if (isInstalled) {
                         Spacer(Modifier.width(12.dp))
                         Text(
                             text = stringResource(R.string.mods_installed),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }

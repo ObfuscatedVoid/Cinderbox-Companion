@@ -11,13 +11,13 @@ import com.sdvsync.mods.api.SmapiUpdateChecker
 import com.sdvsync.mods.models.InstallResult
 import com.sdvsync.mods.models.InstalledMod
 import com.sdvsync.mods.models.ModUpdateInfo
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 
 enum class ModSortOrder { NAME, AUTHOR, STATUS }
 enum class ModFilter { ALL, ENABLED, DISABLED, HAS_UPDATE }
@@ -32,14 +32,14 @@ data class ModManagerState(
     val sortOrder: ModSortOrder = ModSortOrder.NAME,
     val filter: ModFilter = ModFilter.ALL,
     val searchQuery: String = "",
-    val displayedMods: List<InstalledMod> = emptyList(),
+    val displayedMods: List<InstalledMod> = emptyList()
 )
 
 class ModManagerViewModel(
     private val context: Context,
     private val fileManager: ModFileManager,
     private val dataStore: ModDataStore,
-    private val updateChecker: SmapiUpdateChecker,
+    private val updateChecker: SmapiUpdateChecker
 ) : ViewModel() {
 
     companion object {
@@ -201,8 +201,10 @@ class ModManagerViewModel(
             mods = when (state.sortOrder) {
                 ModSortOrder.NAME -> mods.sortedBy { it.manifest.name.lowercase() }
                 ModSortOrder.AUTHOR -> mods.sortedBy { it.manifest.author.lowercase() }
-                ModSortOrder.STATUS -> mods.sortedWith(compareByDescending<InstalledMod> { it.enabled }
-                    .thenBy { it.manifest.name.lowercase() })
+                ModSortOrder.STATUS -> mods.sortedWith(
+                    compareByDescending<InstalledMod> { it.enabled }
+                        .thenBy { it.manifest.name.lowercase() }
+                )
             }
 
             state.copy(displayedMods = mods)

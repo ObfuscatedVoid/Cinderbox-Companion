@@ -10,9 +10,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.sdvsync.logging.AppLogger
 import com.sdvsync.MainActivity
 import com.sdvsync.R
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
 import com.sdvsync.sync.SyncResult
@@ -67,7 +67,7 @@ class AutoSyncService : Service() {
                 updateNotification("Game closed, syncing...")
                 AppLogger.d(TAG, "Game stopped, triggering auto-push")
                 serviceScope.launch { autoSync() }
-            },
+            }
         )
         return START_STICKY
     }
@@ -83,7 +83,7 @@ class AutoSyncService : Service() {
             // Find which save was most recently modified and push it
             val localSaves = com.sdvsync.saves.SaveFileManager(
                 com.sdvsync.fileaccess.RootFileAccess(),
-                com.sdvsync.saves.SaveMetadataParser(),
+                com.sdvsync.saves.SaveMetadataParser()
             ).listLocalSaves()
 
             if (localSaves.isEmpty()) {
@@ -111,11 +111,10 @@ class AutoSyncService : Service() {
                 saveName = latestSave.folderName,
                 direction = "push",
                 success = result is SyncResult.Success,
-                message = message,
+                message = message
             )
 
             updateNotification("Monitoring... Last: $message")
-
         } catch (e: Exception) {
             AppLogger.e(TAG, "Auto-sync failed", e)
             updateNotification("Auto-sync failed: ${e.message}")
@@ -127,7 +126,7 @@ class AutoSyncService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Auto Sync",
-                NotificationManager.IMPORTANCE_LOW,
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Background save sync monitoring"
             }
@@ -138,9 +137,10 @@ class AutoSyncService : Service() {
 
     private fun buildNotification(text: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
-            this, 0,
+            this,
+            0,
             Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE,
+            PendingIntent.FLAG_IMMUTABLE
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)

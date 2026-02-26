@@ -14,7 +14,6 @@ import `in`.dragonbra.javasteam.steam.steamclient.callbacks.ConnectedCallback
 import `in`.dragonbra.javasteam.steam.steamclient.callbacks.DisconnectedCallback
 import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.*
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.future.await
 
 sealed class AuthState {
     data object Idle : AuthState()
@@ -44,7 +44,7 @@ sealed class AuthEvent {
 class SteamAuthenticator(
     private val context: Context,
     private val clientManager: SteamClientManager,
-    private val sessionStore: SteamSessionStore,
+    private val sessionStore: SteamSessionStore
 ) {
     companion object {
         private const val TAG = "SteamAuth"
@@ -103,7 +103,7 @@ class SteamAuthenticator(
             withTimeout(15_000) {
                 clientManager.connectionState.first { state ->
                     state == ConnectionState.CONNECTED ||
-                    state == ConnectionState.LOGGED_IN
+                        state == ConnectionState.LOGGED_IN
                 }
             }
             AppLogger.d(TAG, "Connected to CM server")
@@ -114,7 +114,7 @@ class SteamAuthenticator(
             withTimeout(15_000) {
                 clientManager.connectionState.first { state ->
                     state == ConnectionState.CONNECTED ||
-                    state == ConnectionState.LOGGED_IN
+                        state == ConnectionState.LOGGED_IN
                 }
             }
             AppLogger.d(TAG, "Connected to CM server on retry")
@@ -213,9 +213,8 @@ class SteamAuthenticator(
                 this.password = password
                 this.persistentSession = true
                 this.authenticator = object : IAuthenticator {
-                    override fun acceptDeviceConfirmation(): CompletableFuture<Boolean> {
-                        return CompletableFuture.completedFuture(false)
-                    }
+                    override fun acceptDeviceConfirmation(): CompletableFuture<Boolean> =
+                        CompletableFuture.completedFuture(false)
 
                     override fun getDeviceCode(previousCodeWasIncorrect: Boolean): CompletableFuture<String> {
                         val future = CompletableFuture<String>()
@@ -228,7 +227,7 @@ class SteamAuthenticator(
 
                     override fun getEmailCode(
                         email: String?,
-                        previousCodeWasIncorrect: Boolean,
+                        previousCodeWasIncorrect: Boolean
                     ): CompletableFuture<String> {
                         val future = CompletableFuture<String>()
                         scope.launch {
@@ -253,7 +252,6 @@ class SteamAuthenticator(
             sessionStore.refreshToken = pollResponse.refreshToken
 
             logOnWithToken(username, pollResponse.refreshToken)
-
         } catch (e: AuthenticationException) {
             _authState.value = AuthState.Error("Authentication failed: ${e.message}")
             scope.launch { _events.emit(AuthEvent.LoginFailed(e.message ?: "Unknown error")) }
@@ -314,7 +312,6 @@ class SteamAuthenticator(
                     logOnWithToken(pollResult.accountName, pollResult.refreshToken)
                 }
             }
-
         } catch (e: Exception) {
             _authState.value = AuthState.Error("QR login failed: ${e.message}")
             scope.launch { _events.emit(AuthEvent.LoginFailed(e.message ?: "Unknown error")) }
@@ -378,7 +375,10 @@ class SteamAuthenticator(
     private fun onDisconnected(callback: DisconnectedCallback) {
         val userInitiated = isUserDisconnect
         val currentAuthState = _authState.value
-        AppLogger.d(TAG, "Disconnected (userInitiated=$userInitiated, wasLoggedIn=$wasLoggedIn, authState=${currentAuthState::class.simpleName})")
+        AppLogger.d(
+            TAG,
+            "Disconnected (userInitiated=$userInitiated, wasLoggedIn=$wasLoggedIn, authState=${currentAuthState::class.simpleName})"
+        )
         clientManager.onDisconnected(userInitiated = userInitiated)
 
         if (!userInitiated && wasLoggedIn && sessionStore.hasSession()) {

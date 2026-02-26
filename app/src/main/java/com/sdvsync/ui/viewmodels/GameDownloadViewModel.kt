@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadProgress
-import com.sdvsync.download.DownloadState
 import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.download.SmapiSetupProgress
 import com.sdvsync.logging.AppLogger
@@ -30,13 +29,13 @@ data class GameDownloadState(
     val downloadProgress: DownloadProgress = DownloadProgress(),
     val smapiSetupProgress: SmapiSetupProgress = SmapiSetupProgress(),
     val cinderboxDownloadProgress: CinderboxDownloadProgress = CinderboxDownloadProgress(),
-    val error: String? = null,
+    val error: String? = null
 )
 
 class GameDownloadViewModel(
     private val context: Context,
     private val contentService: SteamContentService,
-    private val downloadManager: GameDownloadManager,
+    private val downloadManager: GameDownloadManager
 ) : ViewModel() {
 
     companion object {
@@ -78,13 +77,13 @@ class GameDownloadViewModel(
                 val info = contentService.getAppBranches()
                 _state.value = _state.value.copy(
                     branches = info.branches,
-                    isLoadingBranches = false,
+                    isLoadingBranches = false
                 )
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load branches", e)
                 _state.value = _state.value.copy(
                     isLoadingBranches = false,
-                    error = context.getString(R.string.download_error_load_branches, e.message ?: ""),
+                    error = context.getString(R.string.download_error_load_branches, e.message ?: "")
                 )
             }
         }
@@ -130,7 +129,7 @@ class GameDownloadViewModel(
             branchPassword = current.branchPassword.ifBlank { null },
             installDirectory = current.installDirectory,
             os = current.selectedOs,
-            verifyAfterDownload = current.verifyAfterDownload,
+            verifyAfterDownload = current.verifyAfterDownload
         )
     }
 
@@ -156,7 +155,7 @@ class GameDownloadViewModel(
 
     fun resetDownload() {
         _state.value = _state.value.copy(
-            downloadProgress = DownloadProgress(),
+            downloadProgress = DownloadProgress()
         )
     }
 

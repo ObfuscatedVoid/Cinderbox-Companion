@@ -7,9 +7,9 @@ import android.os.Build
 import androidx.documentfile.provider.DocumentFile
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileManager
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
  * File access using SAF (Storage Access Framework).
@@ -20,7 +20,7 @@ import java.io.File
 class SAFFileAccess(
     private val context: Context,
     private val treeUri: Uri,
-    val basePath: String = SaveFileManager.SDV_SAVE_PATH,
+    val basePath: String = SaveFileManager.SDV_SAVE_PATH
 ) : FileAccessStrategy {
 
     override val name: String
@@ -35,9 +35,7 @@ class SAFFileAccess(
         const val STAGING_BASE_PATH = "/staging"
 
         /** SAF for Android/data/ works on API 30+. May be restricted on API 34+ on some devices. */
-        fun isDeviceEligible(): Boolean {
-            return Build.VERSION.SDK_INT >= 30
-        }
+        fun isDeviceEligible(): Boolean = Build.VERSION.SDK_INT >= 30
 
         /** Check if a persisted URI grant exists and the device is eligible. */
         fun isAvailable(context: Context): Boolean {
@@ -58,7 +56,7 @@ class SAFFileAccess(
         fun persistUri(context: Context, uri: Uri) {
             context.contentResolver.takePersistableUriPermission(
                 uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
             context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
                 .edit()
@@ -74,7 +72,7 @@ class SAFFileAccess(
                 try {
                     context.contentResolver.releasePersistableUriPermission(
                         Uri.parse(uriStr),
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     )
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "Failed to release URI permission", e)
@@ -186,24 +184,23 @@ class SAFFileAccess(
         }
     }
 
-    override suspend fun writeFile(file: File, data: ByteArray): Boolean =
-        withContext(Dispatchers.IO) {
-            try {
-                val parent = resolveParentCreating(file) ?: return@withContext false
-                val fileName = file.name
+    override suspend fun writeFile(file: File, data: ByteArray): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val parent = resolveParentCreating(file) ?: return@withContext false
+            val fileName = file.name
 
-                // If existing, delete first (SAF doesn't overwrite)
-                parent.findFile(fileName)?.delete()
+            // If existing, delete first (SAF doesn't overwrite)
+            parent.findFile(fileName)?.delete()
 
-                val newDoc = parent.createFile("application/octet-stream", fileName)
-                    ?: return@withContext false
-                context.contentResolver.openOutputStream(newDoc.uri)?.use { it.write(data) }
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
-                false
-            }
+            val newDoc = parent.createFile("application/octet-stream", fileName)
+                ?: return@withContext false
+            context.contentResolver.openOutputStream(newDoc.uri)?.use { it.write(data) }
+            true
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
+            false
         }
+    }
 
     override suspend fun deleteFile(file: File): Boolean = withContext(Dispatchers.IO) {
         try {

@@ -7,7 +7,7 @@ import java.io.File
 data class ValidationResult(
     val valid: Boolean,
     val errors: List<String> = emptyList(),
-    val warnings: List<String> = emptyList(),
+    val warnings: List<String> = emptyList()
 )
 
 class SaveValidator {
@@ -72,17 +72,14 @@ class SaveValidator {
         return ValidationResult(
             valid = errors.isEmpty(),
             errors = errors,
-            warnings = warnings,
+            warnings = warnings
         )
     }
 
     /**
      * Validate downloaded save data (in-memory).
      */
-    fun validateSaveData(
-        mainSaveData: ByteArray?,
-        saveGameInfoData: ByteArray?,
-    ): ValidationResult {
+    fun validateSaveData(mainSaveData: ByteArray?, saveGameInfoData: ByteArray?): ValidationResult {
         val errors = mutableListOf<String>()
 
         if (mainSaveData == null || mainSaveData.isEmpty()) {
@@ -105,7 +102,10 @@ class SaveValidator {
         if (saveGameInfoData == null || saveGameInfoData.isEmpty()) {
             errors.add("SaveGameInfo data is empty")
         } else {
-            AppLogger.d(TAG, "Validating SaveGameInfo: size=${saveGameInfoData.size}, isGzip=${GzipUtil.isGzip(saveGameInfoData)}")
+            AppLogger.d(
+                TAG,
+                "Validating SaveGameInfo: size=${saveGameInfoData.size}, isGzip=${GzipUtil.isGzip(saveGameInfoData)}"
+            )
             val xmlData = GzipUtil.decompressIfGzip(saveGameInfoData)
             AppLogger.d(TAG, "SaveGameInfo after decompression: size=${xmlData.size}")
             val tail = String(xmlData.takeLast(100).toByteArray())
@@ -118,20 +118,18 @@ class SaveValidator {
         return ValidationResult(valid = errors.isEmpty(), errors = errors)
     }
 
-    private fun validateXmlEnding(file: File, expectedTag: String): Boolean {
-        return try {
-            val rawBytes = file.readBytes()
-            val xmlBytes = GzipUtil.decompressIfGzip(rawBytes)
-            val tailSize = minOf(xmlBytes.size, 200)
-            val tail = String(xmlBytes, xmlBytes.size - tailSize, tailSize)
-            val found = tail.contains(expectedTag)
-            if (!found) {
-                AppLogger.w(TAG, "validateXmlEnding: '$expectedTag' not found in ${file.name} tail: '$tail'")
-            }
-            found
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "validateXmlEnding failed for ${file.name}", e)
-            false
+    private fun validateXmlEnding(file: File, expectedTag: String): Boolean = try {
+        val rawBytes = file.readBytes()
+        val xmlBytes = GzipUtil.decompressIfGzip(rawBytes)
+        val tailSize = minOf(xmlBytes.size, 200)
+        val tail = String(xmlBytes, xmlBytes.size - tailSize, tailSize)
+        val found = tail.contains(expectedTag)
+        if (!found) {
+            AppLogger.w(TAG, "validateXmlEnding: '$expectedTag' not found in ${file.name} tail: '$tail'")
         }
+        found
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "validateXmlEnding failed for ${file.name}", e)
+        false
     }
 }

@@ -38,14 +38,14 @@ import org.koin.androidx.compose.koinViewModel
 fun ModManagerScreen(
     onBrowseClick: () -> Unit = {},
     onModClick: (String) -> Unit = {},
-    viewModel: ModManagerViewModel = koinViewModel(),
+    viewModel: ModManagerViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 
     // File picker for zip import
     val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
             viewModel.importFromUri(uri)
@@ -68,34 +68,34 @@ fun ModManagerScreen(
                     PixelIconButton(
                         pixelData = RefreshData,
                         onClick = { viewModel.checkForUpdates() },
-                        contentDescription = stringResource(R.string.mods_check_update),
+                        contentDescription = stringResource(R.string.mods_check_update)
                     )
                     PixelIconButton(
                         pixelData = SearchData,
                         onClick = onBrowseClick,
-                        contentDescription = stringResource(R.string.mods_browse_title),
+                        contentDescription = stringResource(R.string.mods_browse_title)
                     )
                     PixelIconButton(
                         pixelData = FolderData,
                         onClick = { importLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed")) },
-                        contentDescription = stringResource(R.string.mods_import),
+                        contentDescription = stringResource(R.string.mods_import)
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = false,
             onRefresh = { viewModel.loadInstalledMods() },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
         ) {
             when {
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize()) {
                         PixelLoadingSpinner(
-                            modifier = Modifier.align(Alignment.Center),
+                            modifier = Modifier.align(Alignment.Center)
                         )
                     }
                 }
@@ -106,12 +106,12 @@ fun ModManagerScreen(
                             modifier = Modifier
                                 .align(Alignment.Center)
                                 .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
                                 state.error!!,
                                 color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyLarge
                             )
                             Spacer(Modifier.height(16.dp))
                             StardewButton(onClick = { viewModel.loadInstalledMods() }) {
@@ -127,22 +127,24 @@ fun ModManagerScreen(
                             modifier = Modifier
                                 .align(Alignment.Center)
                                 .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             EmptyState(
                                 title = stringResource(R.string.mods_empty_title),
-                                subtitle = stringResource(R.string.mods_empty_subtitle),
+                                subtitle = stringResource(R.string.mods_empty_subtitle)
                             )
                             Spacer(Modifier.height(24.dp))
                             StardewButton(
                                 onClick = onBrowseClick,
-                                variant = StardewButtonVariant.Gold,
+                                variant = StardewButtonVariant.Gold
                             ) {
                                 Text(stringResource(R.string.mods_browse_button))
                             }
                             Spacer(Modifier.height(12.dp))
                             StardewButton(
-                                onClick = { importLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed")) },
+                                onClick = {
+                                    importLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed"))
+                                }
                             ) {
                                 Text(stringResource(R.string.mods_import_button))
                             }
@@ -154,7 +156,7 @@ fun ModManagerScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Search bar
                         item {
@@ -164,7 +166,7 @@ fun ModManagerScreen(
                                 placeholder = { Text(stringResource(R.string.mods_search_installed_hint)) },
                                 singleLine = true,
                                 shape = RectangleShape,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
 
@@ -173,36 +175,36 @@ fun ModManagerScreen(
                             @OptIn(ExperimentalLayoutApi::class)
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 val filterChipColors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                                 FilterChip(
                                     selected = state.filter == ModFilter.ALL,
                                     onClick = { viewModel.setFilter(ModFilter.ALL) },
                                     label = { Text(stringResource(R.string.mods_filter_all)) },
-                                    colors = filterChipColors,
+                                    colors = filterChipColors
                                 )
                                 FilterChip(
                                     selected = state.filter == ModFilter.ENABLED,
                                     onClick = { viewModel.setFilter(ModFilter.ENABLED) },
                                     label = { Text(stringResource(R.string.mods_filter_enabled)) },
-                                    colors = filterChipColors,
+                                    colors = filterChipColors
                                 )
                                 FilterChip(
                                     selected = state.filter == ModFilter.DISABLED,
                                     onClick = { viewModel.setFilter(ModFilter.DISABLED) },
                                     label = { Text(stringResource(R.string.mods_filter_disabled)) },
-                                    colors = filterChipColors,
+                                    colors = filterChipColors
                                 )
                                 if (state.updates.isNotEmpty()) {
                                     FilterChip(
                                         selected = state.filter == ModFilter.HAS_UPDATE,
                                         onClick = { viewModel.setFilter(ModFilter.HAS_UPDATE) },
                                         label = { Text(stringResource(R.string.mods_filter_has_update)) },
-                                        colors = filterChipColors,
+                                        colors = filterChipColors
                                     )
                                 }
                             }
@@ -216,17 +218,17 @@ fun ModManagerScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(16.dp),
-                                            strokeWidth = 2.dp,
+                                            strokeWidth = 2.dp
                                         )
                                         Spacer(Modifier.width(12.dp))
                                         Text(
                                             stringResource(R.string.mods_checking_updates),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -239,7 +241,7 @@ fun ModManagerScreen(
                             item {
                                 UpdateBanner(
                                     updateCount = updateCount,
-                                    onClick = { viewModel.setFilter(ModFilter.HAS_UPDATE) },
+                                    onClick = { viewModel.setFilter(ModFilter.HAS_UPDATE) }
                                 )
                             }
                         }
@@ -250,12 +252,12 @@ fun ModManagerScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 32.dp),
-                                    contentAlignment = Alignment.Center,
+                                    contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         stringResource(R.string.mods_no_matching),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -269,10 +271,10 @@ fun ModManagerScreen(
                                     onToggle = { enabled ->
                                         viewModel.toggleMod(
                                             mod.folderName,
-                                            enabled,
+                                            enabled
                                         )
                                     },
-                                    onClick = { onModClick(mod.manifest.uniqueID) },
+                                    onClick = { onModClick(mod.manifest.uniqueID) }
                                 )
                             }
                         }
@@ -283,7 +285,7 @@ fun ModManagerScreen(
                             StardewButton(
                                 onClick = onBrowseClick,
                                 variant = StardewButtonVariant.Gold,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(stringResource(R.string.mods_browse_button))
                             }

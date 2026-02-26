@@ -1,9 +1,9 @@
 package com.sdvsync.fileaccess
 
 import com.sdvsync.logging.AppLogger
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
  * File access using root (su) shell commands.
@@ -55,26 +55,25 @@ class RootFileAccess : FileAccessStrategy {
         }
     }
 
-    override suspend fun writeFile(file: File, data: ByteArray): Boolean =
-        withContext(Dispatchers.IO) {
-            try {
-                // Write to a temp location first, then move with su
-                val tempFile = File.createTempFile("sdvsync_", ".tmp")
-                tempFile.writeBytes(data)
+    override suspend fun writeFile(file: File, data: ByteArray): Boolean = withContext(Dispatchers.IO) {
+        try {
+            // Write to a temp location first, then move with su
+            val tempFile = File.createTempFile("sdvsync_", ".tmp")
+            tempFile.writeBytes(data)
 
-                val result = execRoot(
-                    "cp '${tempFile.absolutePath}' '${file.absolutePath}' && " +
-                        "chmod 660 '${file.absolutePath}'"
-                )
-                tempFile.delete()
+            val result = execRoot(
+                "cp '${tempFile.absolutePath}' '${file.absolutePath}' && " +
+                    "chmod 660 '${file.absolutePath}'"
+            )
+            tempFile.delete()
 
-                // Verify write
-                exists(file)
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
-                false
-            }
+            // Verify write
+            exists(file)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
+            false
         }
+    }
 
     override suspend fun deleteFile(file: File): Boolean = withContext(Dispatchers.IO) {
         execRoot("rm -f '${file.absolutePath}'")
@@ -91,16 +90,14 @@ class RootFileAccess : FileAccessStrategy {
         exists(dir)
     }
 
-    private fun execRoot(command: String): String {
-        return try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor()
-            output
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "execRoot failed: $command", e)
-            ""
-        }
+    private fun execRoot(command: String): String = try {
+        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
+        val output = process.inputStream.bufferedReader().readText()
+        process.waitFor()
+        output
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "execRoot failed: $command", e)
+        ""
     }
 
     companion object {
@@ -109,15 +106,13 @@ class RootFileAccess : FileAccessStrategy {
         /**
          * Check if root access is available.
          */
-        fun isAvailable(): Boolean {
-            return try {
-                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-                val output = process.inputStream.bufferedReader().readText()
-                process.waitFor()
-                output.contains("uid=0")
-            } catch (e: Exception) {
-                false
-            }
+        fun isAvailable(): Boolean = try {
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
+            val output = process.inputStream.bufferedReader().readText()
+            process.waitFor()
+            output.contains("uid=0")
+        } catch (e: Exception) {
+            false
         }
     }
 }

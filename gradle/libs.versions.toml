@@ -1,6 +1,7 @@
 [versions]
 agp = "8.7.3"
 kotlin = "2.1.0"
+ktlint = "14.0.1"
 
 # AndroidX
 coreKtx = "1.15.0"
@@ -92,3 +93,4 @@ shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }

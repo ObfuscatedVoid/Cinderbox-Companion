@@ -47,10 +47,7 @@ import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    viewModel: LoginViewModel = koinViewModel(),
-) {
+fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinViewModel()) {
     val authState by viewModel.authState.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
@@ -70,13 +67,13 @@ fun LoginScreen(
     val warmTextFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.primary,
         cursorColor = MaterialTheme.colorScheme.primary,
-        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.primary
     )
 
     Scaffold(
         topBar = {
             StardewTopAppBar(title = stringResource(R.string.login_title))
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -85,22 +82,22 @@ fun LoginScreen(
                 .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Center
         ) {
             Spacer(Modifier.weight(1f))
 
             // Farm illustration + sparkle overlay
             Box(
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 SparkleOverlay(
                     modifier = Modifier
-                        .size(width = 200.dp, height = 100.dp),
+                        .size(width = 200.dp, height = 100.dp)
                 )
                 PixelIcon(
                     pixelData = BarnData,
                     palette = BarnPalette,
-                    size = 64.dp,
+                    size = 64.dp
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -109,12 +106,12 @@ fun LoginScreen(
             Text(
                 "SDV Sync",
                 style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary
             )
             Text(
                 "Stardew Valley Save Sync",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(32.dp))
 
@@ -129,7 +126,7 @@ fun LoginScreen(
                         onPasswordChange = viewModel::updatePassword,
                         onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
                         onLogin = { viewModel.login() },
-                        onQRLogin = { viewModel.loginWithQR() },
+                        onQRLogin = { viewModel.loginWithQR() }
                     )
                 }
 
@@ -143,22 +140,25 @@ fun LoginScreen(
                             is AuthState.LoggingIn -> stringResource(R.string.login_logging_in)
                             else -> ""
                         },
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
 
                 is AuthState.WaitingForQRScan -> {
                     QRLoginView(
                         challengeUrl = state.challengeUrl,
-                        onCancel = { viewModel.cancelQRLogin() },
+                        onCancel = { viewModel.cancelQRLogin() }
                     )
                 }
 
                 is AuthState.WaitingFor2FA -> {
                     Text(
-                        if (state.is2FACode) stringResource(R.string.login_2fa_steam_guard)
-                        else stringResource(R.string.login_2fa_email_prompt),
-                        style = MaterialTheme.typography.titleLarge,
+                        if (state.is2FACode) {
+                            stringResource(R.string.login_2fa_steam_guard)
+                        } else {
+                            stringResource(R.string.login_2fa_email_prompt)
+                        },
+                        style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(Modifier.height(16.dp))
                     OutlinedTextField(
@@ -170,18 +170,18 @@ fun LoginScreen(
                         shape = RectangleShape,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done,
+                            imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(
-                            onDone = { viewModel.submit2FA() },
+                            onDone = { viewModel.submit2FA() }
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(16.dp))
                     StardewButton(
                         onClick = { viewModel.submit2FA() },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = twoFactorCode.isNotBlank(),
+                        enabled = twoFactorCode.isNotBlank()
                     ) {
                         Text(stringResource(R.string.login_2fa_submit))
                     }
@@ -191,7 +191,7 @@ fun LoginScreen(
                     Text(
                         state.message,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge
                     )
                     Spacer(Modifier.height(24.dp))
                     LoginOptions(
@@ -203,7 +203,7 @@ fun LoginScreen(
                         onPasswordChange = viewModel::updatePassword,
                         onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
                         onLogin = { viewModel.login() },
-                        onQRLogin = { viewModel.loginWithQR() },
+                        onQRLogin = { viewModel.loginWithQR() }
                     )
                 }
 
@@ -227,18 +227,18 @@ private fun LoginOptions(
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
     onLogin: () -> Unit,
-    onQRLogin: () -> Unit,
+    onQRLogin: () -> Unit
 ) {
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
 
     StardewOutlinedButton(
         onClick = onQRLogin,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         PixelIcon(
             pixelData = QrCodeData,
             palette = listOf(androidx.compose.ui.graphics.Color.Transparent, iconTint),
-            size = 20.dp,
+            size = 20.dp
         )
         Spacer(Modifier.width(8.dp))
         Text(stringResource(R.string.login_qr_button))
@@ -248,14 +248,14 @@ private fun LoginOptions(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         PixelDivider(Modifier.weight(1f))
         Text(
             stringResource(R.string.login_or_divider),
             modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         PixelDivider(Modifier.weight(1f))
     }
@@ -270,7 +270,7 @@ private fun LoginOptions(
         colors = textFieldColors,
         shape = RectangleShape,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     )
     Spacer(Modifier.height(12.dp))
     OutlinedTextField(
@@ -280,53 +280,53 @@ private fun LoginOptions(
         singleLine = true,
         colors = textFieldColors,
         shape = RectangleShape,
-        visualTransformation = if (passwordVisible) VisualTransformation.None
-        else PasswordVisualTransformation(),
+        visualTransformation = if (passwordVisible) {
+            VisualTransformation.None
+        } else {
+            PasswordVisualTransformation()
+        },
         trailingIcon = {
             IconButton(onClick = onTogglePasswordVisibility) {
                 PixelIcon(
                     pixelData = if (passwordVisible) EyeOpenData else EyeClosedData,
                     palette = listOf(
                         androidx.compose.ui.graphics.Color.Transparent,
-                        iconTint,
+                        iconTint
                     ),
-                    size = 20.dp,
+                    size = 20.dp
                 )
             }
         },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Password,
-            imeAction = ImeAction.Done,
+            imeAction = ImeAction.Done
         ),
         keyboardActions = KeyboardActions(onDone = { onLogin() }),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     )
     Spacer(Modifier.height(24.dp))
     StardewButton(
         onClick = onLogin,
         modifier = Modifier.fillMaxWidth(),
         variant = StardewButtonVariant.Action,
-        enabled = username.isNotBlank() && password.isNotBlank(),
+        enabled = username.isNotBlank() && password.isNotBlank()
     ) {
         Text(stringResource(R.string.login_button))
     }
 }
 
 @Composable
-private fun QRLoginView(
-    challengeUrl: String,
-    onCancel: () -> Unit,
-) {
+private fun QRLoginView(challengeUrl: String, onCancel: () -> Unit) {
     Text(
         stringResource(R.string.login_qr_title),
-        style = MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.typography.titleLarge
     )
     Spacer(Modifier.height(8.dp))
     Text(
         stringResource(R.string.login_qr_instructions),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
+        textAlign = TextAlign.Center
     )
     Spacer(Modifier.height(24.dp))
 
@@ -335,11 +335,11 @@ private fun QRLoginView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            contentAlignment = Alignment.Center,
+            contentAlignment = Alignment.Center
         ) {
             QrCodeImage(
                 data = challengeUrl,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
@@ -351,10 +351,7 @@ private fun QRLoginView(
 }
 
 @Composable
-private fun QrCodeImage(
-    data: String,
-    modifier: Modifier = Modifier,
-) {
+private fun QrCodeImage(data: String, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val sizePx = with(density) { 200.dp.roundToPx() }
     val qrContentDescription = stringResource(R.string.login_qr_content_description)
@@ -388,7 +385,7 @@ private fun QrCodeImage(
         Image(
             painter = BitmapPainter(it.asImageBitmap()),
             contentDescription = qrContentDescription,
-            modifier = modifier,
+            modifier = modifier
         )
     } ?: Box(modifier, contentAlignment = Alignment.Center) {
         PixelLoadingSpinner(size = 48.dp)

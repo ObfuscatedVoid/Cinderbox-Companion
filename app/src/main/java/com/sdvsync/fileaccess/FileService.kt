@@ -21,13 +21,11 @@ class FileService : IFileService.Stub() {
         exitProcess(0)
     }
 
-    override fun fileExists(path: String): Boolean {
-        return try {
-            File(path).exists()
-        } catch (e: Exception) {
-            Log.e(TAG, "fileExists failed: $path", e)
-            false
-        }
+    override fun fileExists(path: String): Boolean = try {
+        File(path).exists()
+    } catch (e: Exception) {
+        Log.e(TAG, "fileExists failed: $path", e)
+        false
     }
 
     override fun listDirectory(path: String): Array<String> {
@@ -42,18 +40,16 @@ class FileService : IFileService.Stub() {
         }.toTypedArray()
     }
 
-    override fun readFileChunk(path: String, offset: Long, length: Int): ByteArray {
-        return try {
-            val raf = RandomAccessFile(path, "r")
-            val bytes = ByteArray(length)
-            raf.seek(offset)
-            val bytesRead = raf.read(bytes, 0, length)
-            raf.close()
-            if (bytesRead < length) bytes.copyOf(bytesRead) else bytes
-        } catch (e: Exception) {
-            Log.e(TAG, "readFileChunk failed: $path", e)
-            throw RemoteException(e.message)
-        }
+    override fun readFileChunk(path: String, offset: Long, length: Int): ByteArray = try {
+        val raf = RandomAccessFile(path, "r")
+        val bytes = ByteArray(length)
+        raf.seek(offset)
+        val bytesRead = raf.read(bytes, 0, length)
+        raf.close()
+        if (bytesRead < length) bytes.copyOf(bytesRead) else bytes
+    } catch (e: Exception) {
+        Log.e(TAG, "readFileChunk failed: $path", e)
+        throw RemoteException(e.message)
     }
 
     override fun getFileSize(path: String): Long {
@@ -95,12 +91,10 @@ class FileService : IFileService.Stub() {
         }
     }
 
-    override fun renameFile(fromPath: String, toPath: String): Boolean {
-        return try {
-            File(fromPath).renameTo(File(toPath))
-        } catch (e: Exception) {
-            Log.e(TAG, "renameFile failed: $fromPath -> $toPath", e)
-            false
-        }
+    override fun renameFile(fromPath: String, toPath: String): Boolean = try {
+        File(fromPath).renameTo(File(toPath))
+    } catch (e: Exception) {
+        Log.e(TAG, "renameFile failed: $fromPath -> $toPath", e)
+        false
     }
 }

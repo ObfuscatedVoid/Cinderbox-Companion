@@ -1,5 +1,6 @@
 package com.sdvsync.download
 
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -18,7 +19,6 @@ import `in`.dragonbra.javasteam.depotdownloader.DepotDownloader
 import `in`.dragonbra.javasteam.depotdownloader.IDownloadListener
 import `in`.dragonbra.javasteam.depotdownloader.data.AppItem
 import `in`.dragonbra.javasteam.depotdownloader.data.DownloadItem
-import android.app.ActivityManager
 import java.io.File
 import kotlinx.coroutines.*
 import org.koin.android.ext.android.inject
@@ -42,7 +42,7 @@ class GameDownloadService : Service() {
             password: String?,
             installDir: String,
             os: String,
-            verify: Boolean = true,
+            verify: Boolean = true
         ) {
             val intent = Intent(context, GameDownloadService::class.java).apply {
                 putExtra(EXTRA_BRANCH, branch)
@@ -69,6 +69,7 @@ class GameDownloadService : Service() {
     private var downloadJob: Job? = null
     private var lastSpeedUpdateMs = 0L
     private var lastSpeedBytes = 0L
+
     // Track cumulative bytes per depot (callback values are cumulative, not deltas)
     private val depotBytes = mutableMapOf<Int, Long>()
 
@@ -105,10 +106,13 @@ class GameDownloadService : Service() {
         serviceScope.cancel()
 
         val currentState = GameDownloadManager._progress.value.state
-        if (currentState == DownloadState.DOWNLOADING || currentState == DownloadState.PREPARING || currentState == DownloadState.VERIFYING) {
+        if (currentState == DownloadState.DOWNLOADING ||
+            currentState == DownloadState.PREPARING ||
+            currentState == DownloadState.VERIFYING
+        ) {
             GameDownloadManager._progress.value = DownloadProgress(
                 state = DownloadState.CANCELLED,
-                errorMessage = getString(R.string.download_cancelled),
+                errorMessage = getString(R.string.download_cancelled)
             )
         }
 
@@ -120,7 +124,7 @@ class GameDownloadService : Service() {
         password: String?,
         installDir: String,
         os: String,
-        verify: Boolean,
+        verify: Boolean
     ) {
         try {
             GameDownloadManager._progress.value = DownloadProgress(state = DownloadState.PREPARING)
@@ -137,13 +141,16 @@ class GameDownloadService : Service() {
             data class ConcurrencyProfile(val downloads: Int, val decompress: Int, val writes: Int)
             val profile = when {
                 heapMb >= 1024 -> ConcurrencyProfile(16, 8, 8)
-                heapMb >= 768  -> ConcurrencyProfile(12, 6, 6)
-                heapMb >= 512  -> ConcurrencyProfile(8, 4, 4)
-                heapMb >= 384  -> ConcurrencyProfile(6, 3, 2)
-                heapMb >= 256  -> ConcurrencyProfile(4, 2, 1)
-                else           -> ConcurrencyProfile(2, 2, 1)
+                heapMb >= 768 -> ConcurrencyProfile(12, 6, 6)
+                heapMb >= 512 -> ConcurrencyProfile(8, 4, 4)
+                heapMb >= 384 -> ConcurrencyProfile(6, 3, 2)
+                heapMb >= 256 -> ConcurrencyProfile(4, 2, 1)
+                else -> ConcurrencyProfile(2, 2, 1)
             }
-            AppLogger.d(TAG, "Heap: ${heapMb}MB → downloads=${profile.downloads}, decompress=${profile.decompress}, writes=${profile.writes}")
+            AppLogger.d(
+                TAG,
+                "Heap: ${heapMb}MB → downloads=${profile.downloads}, decompress=${profile.decompress}, writes=${profile.writes}"
+            )
 
             val downloader = DepotDownloader(
                 steamClient = clientManager.client,
@@ -152,7 +159,7 @@ class GameDownloadService : Service() {
                 maxDownloads = profile.downloads,
                 maxDecompress = profile.decompress,
                 maxFileWrites = profile.writes,
-                parentJob = currentCoroutineContext()[Job],
+                parentJob = currentCoroutineContext()[Job]
             )
             depotDownloader = downloader
 
@@ -167,7 +174,7 @@ class GameDownloadService : Service() {
                 override fun onDownloadStarted(item: DownloadItem) {
                     AppLogger.d(TAG, "Download started for item")
                     GameDownloadManager._progress.value = DownloadProgress(
-                        state = DownloadState.DOWNLOADING,
+                        state = DownloadState.DOWNLOADING
                     )
                     updateNotification(getString(R.string.download_downloading))
                 }
@@ -176,7 +183,7 @@ class GameDownloadService : Service() {
                     depotId: Int,
                     depotPercentComplete: Float,
                     compressedBytes: Long,
-                    uncompressedBytes: Long,
+                    uncompressedBytes: Long
                 ) {
                     // Values are cumulative per-depot, not per-chunk deltas
                     depotBytes[depotId] = uncompressedBytes
@@ -197,35 +204,33 @@ class GameDownloadService : Service() {
                     GameDownloadManager._progress.value = current.copy(
                         overallPercent = depotPercentComplete,
                         downloadedBytes = totalDownloaded,
-                        bytesPerSecond = speed,
+                        bytesPerSecond = speed
                     )
                 }
 
-                override fun onFileCompleted(
-                    depotId: Int,
-                    fileName: String,
-                    depotPercentComplete: Float,
-                ) {
+                override fun onFileCompleted(depotId: Int, fileName: String, depotPercentComplete: Float) {
                     completedFiles.add(fileName)
                     val current = GameDownloadManager._progress.value
                     GameDownloadManager._progress.value = current.copy(
                         currentFile = fileName,
-                        overallPercent = depotPercentComplete,
+                        overallPercent = depotPercentComplete
                     )
-                    updateNotification(getString(R.string.download_notification_progress, (depotPercentComplete * 100).toInt(), fileName))
+                    updateNotification(
+                        getString(
+                            R.string.download_notification_progress,
+                            (depotPercentComplete * 100).toInt(),
+                            fileName
+                        )
+                    )
                 }
 
-                override fun onDepotCompleted(
-                    depotId: Int,
-                    compressedBytes: Long,
-                    uncompressedBytes: Long,
-                ) {
+                override fun onDepotCompleted(depotId: Int, compressedBytes: Long, uncompressedBytes: Long) {
                     AppLogger.d(TAG, "Depot $depotId completed: ${uncompressedBytes / 1024 / 1024} MB")
                     // uncompressedBytes here is the final cumulative total for this depot
                     depotBytes[depotId] = uncompressedBytes
                     val current = GameDownloadManager._progress.value
                     GameDownloadManager._progress.value = current.copy(
-                        totalBytes = depotBytes.values.sum(),
+                        totalBytes = depotBytes.values.sum()
                     )
                 }
 
@@ -238,9 +243,14 @@ class GameDownloadService : Service() {
                     AppLogger.e(TAG, "Download failed", error)
                     GameDownloadManager._progress.value = DownloadProgress(
                         state = DownloadState.ERROR,
-                        errorMessage = error.message ?: getString(R.string.download_error),
+                        errorMessage = error.message ?: getString(R.string.download_error)
                     )
-                    updateNotification(getString(R.string.download_notification_failed, error.message ?: getString(R.string.download_error_unknown)))
+                    updateNotification(
+                        getString(
+                            R.string.download_notification_failed,
+                            error.message ?: getString(R.string.download_error_unknown)
+                        )
+                    )
                 }
 
                 override fun onStatusUpdate(message: String) {
@@ -262,7 +272,7 @@ class GameDownloadService : Service() {
                 language = "english",
                 lowViolence = false,
                 depot = emptyList(),
-                manifest = emptyList(),
+                manifest = emptyList()
             )
 
             downloader.add(appItem)
@@ -276,24 +286,28 @@ class GameDownloadService : Service() {
             } else {
                 GameDownloadManager._progress.value = DownloadProgress(
                     state = DownloadState.COMPLETED,
-                    overallPercent = 1f,
+                    overallPercent = 1f
                 )
                 updateNotification(getString(R.string.download_complete))
             }
-
         } catch (e: CancellationException) {
             AppLogger.d(TAG, "Download cancelled")
             GameDownloadManager._progress.value = DownloadProgress(
                 state = DownloadState.CANCELLED,
-                errorMessage = getString(R.string.download_cancelled),
+                errorMessage = getString(R.string.download_cancelled)
             )
         } catch (e: Exception) {
             AppLogger.e(TAG, "Download error", e)
             GameDownloadManager._progress.value = DownloadProgress(
                 state = DownloadState.ERROR,
-                errorMessage = e.message ?: getString(R.string.download_error_unknown),
+                errorMessage = e.message ?: getString(R.string.download_error_unknown)
             )
-            updateNotification(getString(R.string.download_notification_error, e.message ?: getString(R.string.download_error_unknown)))
+            updateNotification(
+                getString(
+                    R.string.download_notification_error,
+                    e.message ?: getString(R.string.download_error_unknown)
+                )
+            )
         } finally {
             try {
                 depotDownloader?.close()
@@ -318,7 +332,7 @@ class GameDownloadService : Service() {
         GameDownloadManager._progress.value = DownloadProgress(
             state = DownloadState.VERIFYING,
             overallPercent = 0f,
-            totalFilesToVerify = totalFiles,
+            totalFilesToVerify = totalFiles
         )
         updateNotification(getString(R.string.download_notification_verifying, 0))
 
@@ -354,7 +368,7 @@ class GameDownloadService : Service() {
                 overallPercent = percent,
                 verifiedFiles = verified,
                 totalFilesToVerify = totalFiles,
-                currentFile = relativePath,
+                currentFile = relativePath
             )
 
             // Throttle notification updates to every ~5%
@@ -372,7 +386,7 @@ class GameDownloadService : Service() {
             verifiedFiles = totalFiles,
             totalFilesToVerify = totalFiles,
             verificationPassed = passed,
-            verificationErrors = errors,
+            verificationErrors = errors
         )
         updateNotification(getString(R.string.download_complete))
     }
@@ -382,7 +396,7 @@ class GameDownloadService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.download_notification_channel),
-                NotificationManager.IMPORTANCE_LOW,
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = getString(R.string.download_notification_channel_desc)
             }
@@ -393,9 +407,10 @@ class GameDownloadService : Service() {
 
     private fun buildNotification(text: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
-            this, 0,
+            this,
+            0,
             Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE,
+            PendingIntent.FLAG_IMMUTABLE
         )
 
         val progress = GameDownloadManager._progress.value

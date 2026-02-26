@@ -27,17 +27,17 @@ fun ModCard(
     hasUpdate: Boolean,
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     StardewCard(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // Mod info column
             Column(modifier = Modifier.weight(1f)) {
@@ -46,19 +46,19 @@ fun ModCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "${mod.manifest.author} \u2022 v${mod.manifest.version}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(4.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Type badge
                     val typeLabel = if (mod.manifest.contentPackFor != null) {
@@ -69,7 +69,7 @@ fun ModCard(
                     Text(
                         text = typeLabel,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
 
                     // Status
@@ -86,7 +86,7 @@ fun ModCard(
                     Text(
                         text = statusText,
                         style = MaterialTheme.typography.labelSmall,
-                        color = statusColor,
+                        color = statusColor
                     )
                 }
             }
@@ -99,8 +99,8 @@ fun ModCard(
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                ),
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                )
             )
         }
     }

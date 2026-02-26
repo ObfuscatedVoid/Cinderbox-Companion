@@ -6,17 +6,17 @@ import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveMetadata
 
 enum class SyncDirection {
-    PULL,  // Cloud -> Local
-    PUSH,  // Local -> Cloud
-    SKIP,  // Already in sync
-    CONFLICT,  // Need user decision
+    PULL, // Cloud -> Local
+    PUSH, // Local -> Cloud
+    SKIP, // Already in sync
+    CONFLICT // Need user decision
 }
 
 data class SyncComparison(
     val direction: SyncDirection,
     val cloudMeta: SaveMetadata?,
     val localMeta: SaveMetadata?,
-    val message: String,
+    val message: String
 )
 
 class ConflictResolver(private val context: Context) {
@@ -35,7 +35,7 @@ class ConflictResolver(private val context: Context) {
                 direction = SyncDirection.PULL,
                 cloudMeta = cloudMeta,
                 localMeta = null,
-                message = context.getString(R.string.conflict_cloud_only),
+                message = context.getString(R.string.conflict_cloud_only)
             )
         }
 
@@ -45,7 +45,7 @@ class ConflictResolver(private val context: Context) {
                 direction = SyncDirection.PUSH,
                 cloudMeta = null,
                 localMeta = localMeta,
-                message = context.getString(R.string.conflict_local_only),
+                message = context.getString(R.string.conflict_local_only)
             )
         }
 
@@ -55,7 +55,7 @@ class ConflictResolver(private val context: Context) {
                 direction = SyncDirection.SKIP,
                 cloudMeta = null,
                 localMeta = null,
-                message = context.getString(R.string.conflict_no_data),
+                message = context.getString(R.string.conflict_no_data)
             )
         }
 
@@ -71,13 +71,13 @@ class ConflictResolver(private val context: Context) {
                 direction = SyncDirection.PULL,
                 cloudMeta = cloud,
                 localMeta = local,
-                message = context.getString(R.string.conflict_cloud_ahead, cloudDays, localDays),
+                message = context.getString(R.string.conflict_cloud_ahead, cloudDays, localDays)
             )
             localDays > cloudDays -> SyncComparison(
                 direction = SyncDirection.PUSH,
                 cloudMeta = cloud,
                 localMeta = local,
-                message = context.getString(R.string.conflict_device_ahead, localDays, cloudDays),
+                message = context.getString(R.string.conflict_device_ahead, localDays, cloudDays)
             )
             else -> {
                 // Same day - check if identical
@@ -88,14 +88,14 @@ class ConflictResolver(private val context: Context) {
                         direction = SyncDirection.SKIP,
                         cloudMeta = cloud,
                         localMeta = local,
-                        message = context.getString(R.string.conflict_in_sync, cloudDays),
+                        message = context.getString(R.string.conflict_in_sync, cloudDays)
                     )
                 } else {
                     SyncComparison(
                         direction = SyncDirection.CONFLICT,
                         cloudMeta = cloud,
                         localMeta = local,
-                        message = context.getString(R.string.conflict_same_progress_differ),
+                        message = context.getString(R.string.conflict_same_progress_differ)
                     )
                 }
             }
@@ -108,10 +108,7 @@ class ConflictResolver(private val context: Context) {
      * Check if a save version is compatible with the local game.
      * Returns a warning message if there might be issues, null if OK.
      */
-    fun checkVersionCompatibility(
-        cloudVersion: String,
-        localVersion: String?,
-    ): String? {
+    fun checkVersionCompatibility(cloudVersion: String, localVersion: String?): String? {
         if (localVersion == null) return null
 
         val cloudParts = cloudVersion.split(".").mapNotNull { it.toIntOrNull() }

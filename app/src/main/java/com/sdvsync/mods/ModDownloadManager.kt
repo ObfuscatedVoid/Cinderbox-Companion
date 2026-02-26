@@ -2,7 +2,6 @@ package com.sdvsync.mods
 
 import android.content.Context
 import com.sdvsync.mods.models.ModDownloadProgress
-import com.sdvsync.mods.models.ModDownloadState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,9 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Manages mod download progress state.
  * Acts as a shared state holder between the download service and UI.
  */
-class ModDownloadManager(
-    private val context: Context,
-) {
+class ModDownloadManager(private val context: Context) {
     companion object {
         internal val _progress = MutableStateFlow(ModDownloadProgress())
     }

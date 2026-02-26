@@ -4,6 +4,8 @@ import com.sdvsync.logging.AppLogger
 import com.sdvsync.util.GzipUtil
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.*
+import java.security.MessageDigest
+import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
@@ -11,15 +13,13 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.security.MessageDigest
-import java.util.Date
 
 data class CloudFile(
     val filename: String,
     val size: Int,
     val sha: ByteArray,
     val timestamp: Long,
-    val pathPrefix: String,
+    val pathPrefix: String
 ) {
     /** Full path including prefix, e.g. "%WinAppDataRoaming%StardewValley/Saves/CHAD_419795178/SaveGameInfo" */
     val fullPath: String get() {
@@ -47,13 +47,11 @@ data class CloudFile(
     override fun hashCode(): Int = fullPath.hashCode()
 }
 
-class SteamCloudService(
-    private val clientManager: SteamClientManager,
-    private val httpClient: OkHttpClient,
-) {
+class SteamCloudService(private val clientManager: SteamClientManager, private val httpClient: OkHttpClient) {
     companion object {
         private const val TAG = "SteamCloud"
         const val STARDEW_APP_ID = 413150
+
         /** Default Steam Cloud path prefix for Stardew Valley saves (matches PC convention) */
         private const val SDV_CLOUD_PATH_PREFIX = "%WinAppDataRoaming%StardewValley/Saves/"
     }
@@ -68,24 +66,32 @@ class SteamCloudService(
         AppLogger.d(TAG, "Requesting cloud file list for AppID $STARDEW_APP_ID...")
         val changeList = cloud.getAppFileListChange(STARDEW_APP_ID, 0).await()
 
-        AppLogger.d(TAG, "Cloud response: changeNumber=${changeList.currentChangeNumber}, " +
+        AppLogger.d(
+            TAG,
+            "Cloud response: changeNumber=${changeList.currentChangeNumber}, " +
                 "files=${changeList.files.size}, isOnlyDelta=${changeList.isOnlyDelta}, " +
-                "pathPrefixes=${changeList.pathPrefixes}, machineNames=${changeList.machineNames}")
+                "pathPrefixes=${changeList.pathPrefixes}, machineNames=${changeList.machineNames}"
+        )
 
         changeList.files.map { file ->
             val prefix = if (file.pathPrefixIndex in changeList.pathPrefixes.indices) {
                 changeList.pathPrefixes[file.pathPrefixIndex]
-            } else ""
+            } else {
+                ""
+            }
 
-            AppLogger.d(TAG, "  File: prefix='$prefix' filename='${file.filename}' " +
-                    "size=${file.rawFileSize} prefixIdx=${file.pathPrefixIndex}")
+            AppLogger.d(
+                TAG,
+                "  File: prefix='$prefix' filename='${file.filename}' " +
+                    "size=${file.rawFileSize} prefixIdx=${file.pathPrefixIndex}"
+            )
 
             CloudFile(
                 filename = file.filename,
                 size = file.rawFileSize,
                 sha = file.shaFile,
                 timestamp = file.timestamp.time,
-                pathPrefix = prefix,
+                pathPrefix = prefix
             )
         }
     }
@@ -99,35 +105,32 @@ class SteamCloudService(
      * (contains "%WinAppDataRoaming%"). This handles orphaned files
      * from uploads that used the wrong path prefix.
      */
-    suspend fun listCloudSaves(): Map<String, List<CloudFile>> {
-        return listCloudFiles()
-            .filter { it.saveFolderName != null }
-            .groupBy { it.saveFolderName!! }
-            .mapValues { (_, files) ->
-                files.groupBy { it.baseName }.map { (_, dupes) ->
-                    if (dupes.size == 1) dupes.first()
-                    else {
-                        // Prefer canonical prefix (%WinAppDataRoaming%), fall back to longest prefix
-                        dupes.firstOrNull { it.pathPrefix.contains("%WinAppDataRoaming%") }
-                            ?: dupes.maxByOrNull { it.pathPrefix.length }
-                            ?: dupes.first()
-                    }
+    suspend fun listCloudSaves(): Map<String, List<CloudFile>> = listCloudFiles()
+        .filter { it.saveFolderName != null }
+        .groupBy { it.saveFolderName!! }
+        .mapValues { (_, files) ->
+            files.groupBy { it.baseName }.map { (_, dupes) ->
+                if (dupes.size == 1) {
+                    dupes.first()
+                } else {
+                    // Prefer canonical prefix (%WinAppDataRoaming%), fall back to longest prefix
+                    dupes.firstOrNull { it.pathPrefix.contains("%WinAppDataRoaming%") }
+                        ?: dupes.maxByOrNull { it.pathPrefix.length }
+                        ?: dupes.first()
                 }
             }
-    }
+        }
 
     /**
      * Download a single file from Steam Cloud.
      * Returns the raw file bytes.
      */
-    suspend fun downloadFile(
-        filename: String,
-    ): ByteArray = withContext(Dispatchers.IO) {
+    suspend fun downloadFile(filename: String): ByteArray = withContext(Dispatchers.IO) {
         val cloud = clientManager.cloud
 
         val downloadInfo = cloud.clientFileDownload(
             STARDEW_APP_ID,
-            filename,
+            filename
         ).await()
 
         val protocol = if (downloadInfo.useHttps) "https" else "http"
@@ -145,15 +148,21 @@ class SteamCloudService(
 
         val rawBytes = response.body?.bytes() ?: throw RuntimeException("Empty response body")
 
-        AppLogger.d(TAG, "Downloaded '$filename': ${rawBytes.size} bytes, " +
-            "isGzip=${GzipUtil.isGzip(rawBytes)}, " +
-            "first4=${rawBytes.take(4).joinToString(" ") { "%02x".format(it) }}")
+        AppLogger.d(
+            TAG,
+            "Downloaded '$filename': ${rawBytes.size} bytes, " +
+                "isGzip=${GzipUtil.isGzip(rawBytes)}, " +
+                "first4=${rawBytes.take(4).joinToString(" ") { "%02x".format(it) }}"
+        )
 
         // Stardew Valley 1.6+ saves are gzip-compressed XML.
         // Steam Cloud stores them as-is, so decompress for all callers.
         val result = GzipUtil.decompressIfGzip(rawBytes)
-        AppLogger.d(TAG, "After decompression: ${result.size} bytes, " +
-            "first50=${String(result, 0, minOf(50, result.size))}")
+        AppLogger.d(
+            TAG,
+            "After decompression: ${result.size} bytes, " +
+                "first50=${String(result, 0, minOf(50, result.size))}"
+        )
         result
     }
 
@@ -164,7 +173,7 @@ class SteamCloudService(
      */
     suspend fun downloadSave(
         saveFolderName: String,
-        onProgress: ((downloaded: Int, total: Int) -> Unit)? = null,
+        onProgress: ((downloaded: Int, total: Int) -> Unit)? = null
     ): Map<String, ByteArray> = withContext(Dispatchers.IO) {
         val cloudSaves = listCloudSaves()
         val saveFiles = cloudSaves[saveFolderName]
@@ -195,7 +204,7 @@ class SteamCloudService(
         saveFolderName: String,
         files: Map<String, ByteArray>,
         pathPrefix: String? = null,
-        onProgress: ((uploaded: Int, total: Int) -> Unit)? = null,
+        onProgress: ((uploaded: Int, total: Int) -> Unit)? = null
     ) = withContext(Dispatchers.IO) {
         val cloud = clientManager.cloud
 
@@ -221,7 +230,9 @@ class SteamCloudService(
             val allFiles = listCloudFiles()
             allFiles.filter { it.saveFolderName == saveFolderName && it.pathPrefix != effectivePrefix }
                 .map { it.fullPath }
-        } else emptyList()
+        } else {
+            emptyList()
+        }
 
         if (orphanedPaths.isNotEmpty()) {
             AppLogger.d(TAG, "uploadSave: will delete ${orphanedPaths.size} orphaned files: $orphanedPaths")
@@ -234,7 +245,7 @@ class SteamCloudService(
             filesToUpload = filePaths,
             filesToDelete = orphanedPaths,
             clientId = 0L,
-            appBuildId = 0L,
+            appBuildId = 0L
         ).await()
 
         val batchId = batchResponse.batchID
@@ -256,7 +267,7 @@ class SteamCloudService(
                     fileSha = sha,
                     timestamp = Date(),
                     filename = fullPath,
-                    uploadBatchId = batchId,
+                    uploadBatchId = batchId
                 ).await()
 
                 // Upload each block via HTTP
@@ -293,7 +304,7 @@ class SteamCloudService(
                     transferSucceeded = true,
                     appId = STARDEW_APP_ID,
                     fileSha = sha,
-                    filename = fullPath,
+                    filename = fullPath
                 ).await()
 
                 if (!committed) {
@@ -310,17 +321,16 @@ class SteamCloudService(
             cloud.completeAppUploadBatch(
                 appId = STARDEW_APP_ID,
                 batchId = batchId,
-                batchEResult = EResult.OK,
+                batchEResult = EResult.OK
             ).await()
             AppLogger.d(TAG, "uploadSave: batch completed successfully")
-
         } catch (e: Exception) {
             // Always complete batch, even on failure
             try {
                 cloud.completeAppUploadBatch(
                     appId = STARDEW_APP_ID,
                     batchId = batchId,
-                    batchEResult = EResult.Fail,
+                    batchEResult = EResult.Fail
                 ).await()
             } catch (_: Exception) {
                 // Ignore cleanup errors
@@ -329,7 +339,5 @@ class SteamCloudService(
         }
     }
 
-    private fun sha1(data: ByteArray): ByteArray {
-        return MessageDigest.getInstance("SHA-1").digest(data)
-    }
+    private fun sha1(data: ByteArray): ByteArray = MessageDigest.getInstance("SHA-1").digest(data)
 }

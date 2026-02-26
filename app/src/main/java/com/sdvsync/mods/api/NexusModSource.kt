@@ -20,10 +20,7 @@ import org.json.JSONObject
  * Nexus Mods API v1 + GraphQL search implementation.
  * Requires an API key for all requests.
  */
-class NexusModSource(
-    private val httpClient: OkHttpClient,
-    private val dataStore: ModDataStore,
-) : ModSource {
+class NexusModSource(private val httpClient: OkHttpClient, private val dataStore: ModDataStore) : ModSource {
 
     companion object {
         private const val TAG = "NexusModSource"
@@ -107,8 +104,13 @@ class NexusModSource(
             Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
         }
         if (!isSuccessful) {
-            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
-                      catch (_: Exception) { "HTTP $code" }
+            val msg = try {
+                JSONObject(bodyString).optString("message", "HTTP $code")
+            } catch (
+                _: Exception
+            ) {
+                "HTTP $code"
+            }
             throw IllegalStateException(msg)
         }
         val json = JSONObject(bodyString)
@@ -132,33 +134,31 @@ class NexusModSource(
                     .takeIf { it != "null" && it.isNotBlank() },
                 endorsements = node.optInt("endorsementCount", 0),
                 downloads = node.optInt("modDownloadCount", 0),
-                lastUpdated = 0,
+                lastUpdated = 0
             )
         }
 
         ModSearchResult(
             mods = mods,
             totalResults = totalCount,
-            hasMore = nodes.length() < totalCount,
+            hasMore = nodes.length() < totalCount
         )
     }
 
-    override suspend fun getTrending(): List<RemoteMod> {
-        return getCachedOrFetch(trendingCache, { trendingCache = it }) {
-            fetchModList("$BASE_URL/games/$GAME_DOMAIN/mods/trending.json")
-        }
+    override suspend fun getTrending(): List<RemoteMod> = getCachedOrFetch(trendingCache, { trendingCache = it }) {
+        fetchModList("$BASE_URL/games/$GAME_DOMAIN/mods/trending.json")
     }
 
-    override suspend fun getLatestAdded(): List<RemoteMod> {
-        return getCachedOrFetch(latestAddedCache, { latestAddedCache = it }) {
-            fetchModList("$BASE_URL/games/$GAME_DOMAIN/mods/latest_added.json")
-        }
+    override suspend fun getLatestAdded(): List<RemoteMod> = getCachedOrFetch(latestAddedCache, {
+        latestAddedCache = it
+    }) {
+        fetchModList("$BASE_URL/games/$GAME_DOMAIN/mods/latest_added.json")
     }
 
-    override suspend fun getLatestUpdated(): List<RemoteMod> {
-        return getCachedOrFetch(latestUpdatedCache, { latestUpdatedCache = it }) {
-            fetchModList("$BASE_URL/games/$GAME_DOMAIN/mods/latest_updated.json")
-        }
+    override suspend fun getLatestUpdated(): List<RemoteMod> = getCachedOrFetch(latestUpdatedCache, {
+        latestUpdatedCache = it
+    }) {
+        fetchModList("$BASE_URL/games/$GAME_DOMAIN/mods/latest_updated.json")
     }
 
     override suspend fun getModDetails(modId: String): RemoteMod = withContext(Dispatchers.IO) {
@@ -174,8 +174,13 @@ class NexusModSource(
             Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
         }
         if (!isSuccessful) {
-            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
-                      catch (_: Exception) { "HTTP $code" }
+            val msg = try {
+                JSONObject(bodyString).optString("message", "HTTP $code")
+            } catch (
+                _: Exception
+            ) {
+                "HTTP $code"
+            }
             throw IllegalStateException(msg)
         }
         val json = JSONObject(bodyString)
@@ -196,8 +201,13 @@ class NexusModSource(
             Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
         }
         if (!isSuccessful) {
-            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
-                      catch (_: Exception) { "HTTP $code" }
+            val msg = try {
+                JSONObject(bodyString).optString("message", "HTTP $code")
+            } catch (
+                _: Exception
+            ) {
+                "HTTP $code"
+            }
             throw IllegalStateException(msg)
         }
         val json = JSONObject(bodyString)
@@ -211,11 +221,19 @@ class NexusModSource(
                 fileVersion = file.optString("version", "").takeIf { it != "null" }?.trim() ?: "",
                 fileSize = file.optLong("size_in_bytes", 0),
                 isPrimary = file.optBoolean("is_primary", false),
-                categoryName = file.optString("category_name", "").let { if (it == "null" || it.isBlank()) "MAIN" else it },
+                categoryName = file.optString("category_name", "").let {
+                    if (it == "null" ||
+                        it.isBlank()
+                    ) {
+                        "MAIN"
+                    } else {
+                        it
+                    }
+                },
                 uploadedAt = file.optLong("uploaded_timestamp", 0) * 1000,
                 description = file.optString("description", "").takeIf { it != "null" } ?: "",
                 changelogHtml = file.optString("changelog_html", "").takeIf { it != "null" && it.isNotBlank() },
-                modVersion = file.optString("mod_version", "").takeIf { it != "null" && it.isNotBlank() },
+                modVersion = file.optString("mod_version", "").takeIf { it != "null" && it.isNotBlank() }
             )
         }
     }
@@ -228,42 +246,43 @@ class NexusModSource(
      * Premium users: pass null for nxmKey/nxmExpires.
      * Free users: pass key/expires from the nxm:// URL generated by Nexus website.
      */
-    suspend fun getDownloadUrl(
-        modId: String,
-        fileId: String,
-        nxmKey: String?,
-        nxmExpires: String?,
-    ): String = withContext(Dispatchers.IO) {
-        val apiKey = getApiKey() ?: throw IllegalStateException("No API key configured")
+    suspend fun getDownloadUrl(modId: String, fileId: String, nxmKey: String?, nxmExpires: String?): String =
+        withContext(Dispatchers.IO) {
+            val apiKey = getApiKey() ?: throw IllegalStateException("No API key configured")
 
-        val baseUrl = "$BASE_URL/games/$GAME_DOMAIN/mods/$modId/files/$fileId/download_link.json"
-        val url = if (nxmKey != null && nxmExpires != null) {
-            "$baseUrl?key=$nxmKey&expires=$nxmExpires"
-        } else {
-            baseUrl
+            val baseUrl = "$BASE_URL/games/$GAME_DOMAIN/mods/$modId/files/$fileId/download_link.json"
+            val url = if (nxmKey != null && nxmExpires != null) {
+                "$baseUrl?key=$nxmKey&expires=$nxmExpires"
+            } else {
+                baseUrl
+            }
+
+            val request = Request.Builder()
+                .url(url)
+                .header("apikey", apiKey)
+                .get()
+                .build()
+
+            val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
+                Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
+            }
+            if (!isSuccessful) {
+                val msg = try {
+                    JSONObject(bodyString).optString("message", "HTTP $code")
+                } catch (
+                    _: Exception
+                ) {
+                    "HTTP $code"
+                }
+                throw IllegalStateException(msg)
+            }
+            val json = JSONArray(bodyString)
+
+            if (json.length() == 0) throw IllegalStateException("No download links available")
+
+            // Return the first (preferred) CDN URL
+            json.getJSONObject(0).getString("URI")
         }
-
-        val request = Request.Builder()
-            .url(url)
-            .header("apikey", apiKey)
-            .get()
-            .build()
-
-        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
-            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
-        }
-        if (!isSuccessful) {
-            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
-                      catch (_: Exception) { "HTTP $code" }
-            throw IllegalStateException(msg)
-        }
-        val json = JSONArray(bodyString)
-
-        if (json.length() == 0) throw IllegalStateException("No download links available")
-
-        // Return the first (preferred) CDN URL
-        json.getJSONObject(0).getString("URI")
-    }
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -280,8 +299,13 @@ class NexusModSource(
             Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
         }
         if (!isSuccessful) {
-            val msg = try { JSONObject(bodyString).optString("message", "HTTP $code") }
-                      catch (_: Exception) { "HTTP $code" }
+            val msg = try {
+                JSONObject(bodyString).optString("message", "HTTP $code")
+            } catch (
+                _: Exception
+            ) {
+                "HTTP $code"
+            }
             throw IllegalStateException(msg)
         }
         val json = JSONArray(bodyString)
@@ -291,27 +315,25 @@ class NexusModSource(
         }
     }
 
-    private fun parseModFromV1(json: JSONObject): RemoteMod {
-        return RemoteMod(
-            sourceId = sourceId,
-            modId = json.getInt("mod_id").toString(),
-            name = json.getString("name"),
-            author = json.optString("author", "Unknown"),
-            summary = json.optString("summary", ""),
-            description = json.optString("description", "").takeIf { it != "null" && it.isNotBlank() },
-            version = json.optString("version", ""),
-            categoryName = json.optString("category_name", "").takeIf { it != "null" && it.isNotBlank() },
-            pictureUrl = json.optString("picture_url", "").takeIf { it != "null" && it.isNotBlank() },
-            endorsements = json.optInt("endorsement_count", 0),
-            downloads = json.optInt("mod_downloads", 0),
-            lastUpdated = json.optLong("updated_timestamp", 0) * 1000,
-        )
-    }
+    private fun parseModFromV1(json: JSONObject): RemoteMod = RemoteMod(
+        sourceId = sourceId,
+        modId = json.getInt("mod_id").toString(),
+        name = json.getString("name"),
+        author = json.optString("author", "Unknown"),
+        summary = json.optString("summary", ""),
+        description = json.optString("description", "").takeIf { it != "null" && it.isNotBlank() },
+        version = json.optString("version", ""),
+        categoryName = json.optString("category_name", "").takeIf { it != "null" && it.isNotBlank() },
+        pictureUrl = json.optString("picture_url", "").takeIf { it != "null" && it.isNotBlank() },
+        endorsements = json.optInt("endorsement_count", 0),
+        downloads = json.optInt("mod_downloads", 0),
+        lastUpdated = json.optLong("updated_timestamp", 0) * 1000
+    )
 
     private suspend fun getCachedOrFetch(
         cache: Pair<Long, List<RemoteMod>>?,
         setCache: (Pair<Long, List<RemoteMod>>) -> Unit,
-        fetch: suspend () -> List<RemoteMod>,
+        fetch: suspend () -> List<RemoteMod>
     ): List<RemoteMod> {
         cacheMutex.withLock {
             val now = System.currentTimeMillis()

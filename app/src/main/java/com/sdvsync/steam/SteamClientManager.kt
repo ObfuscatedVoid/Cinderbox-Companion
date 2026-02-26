@@ -1,18 +1,18 @@
 package com.sdvsync.steam
 
 import com.sdvsync.logging.AppLogger
-import `in`.dragonbra.javasteam.steam.steamclient.SteamClient
-import `in`.dragonbra.javasteam.steam.steamclient.callbackmgr.CallbackManager
-import `in`.dragonbra.javasteam.steam.handlers.steamapps.SteamApps
 import `in`.dragonbra.javasteam.steam.handlers.steamapps.License
+import `in`.dragonbra.javasteam.steam.handlers.steamapps.SteamApps
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.SteamCloud
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.SteamUser
+import `in`.dragonbra.javasteam.steam.steamclient.SteamClient
+import `in`.dragonbra.javasteam.steam.steamclient.callbackmgr.CallbackManager
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import java.util.concurrent.atomic.AtomicBoolean
 
 enum class ConnectionState {
     DISCONNECTED,
@@ -95,7 +95,9 @@ class SteamClientManager {
         if (_connectionState.value == ConnectionState.CONNECTING ||
             _connectionState.value == ConnectionState.CONNECTED ||
             _connectionState.value == ConnectionState.LOGGED_IN
-        ) return
+        ) {
+            return
+        }
 
         _connectionState.value = ConnectionState.CONNECTING
 
@@ -122,15 +124,13 @@ class SteamClientManager {
      * Wait until the client is logged in, with a timeout.
      * Returns true if logged in, false if timed out.
      */
-    suspend fun awaitLoggedIn(timeoutMs: Long = 30_000): Boolean {
-        return try {
-            withTimeout(timeoutMs) {
-                connectionState.first { it == ConnectionState.LOGGED_IN }
-                true
-            }
-        } catch (_: TimeoutCancellationException) {
-            false
+    suspend fun awaitLoggedIn(timeoutMs: Long = 30_000): Boolean = try {
+        withTimeout(timeoutMs) {
+            connectionState.first { it == ConnectionState.LOGGED_IN }
+            true
         }
+    } catch (_: TimeoutCancellationException) {
+        false
     }
 
     fun onConnected() {
@@ -144,7 +144,10 @@ class SteamClientManager {
     }
 
     fun onDisconnected(userInitiated: Boolean) {
-        AppLogger.d(TAG, "Disconnected from Steam (userInitiated=$userInitiated, currentState=${_connectionState.value})")
+        AppLogger.d(
+            TAG,
+            "Disconnected from Steam (userInitiated=$userInitiated, currentState=${_connectionState.value})"
+        )
         // Don't reset state if we're currently CONNECTING — JavaSteam's client.connect()
         // internally calls disconnect() which triggers this callback, and resetting to
         // DISCONNECTED would cause a reconnection cascade.

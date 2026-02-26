@@ -10,8 +10,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sdvsync.ui.theme.GoldAmber
 import com.sdvsync.ui.theme.GoldBright
-import kotlinx.coroutines.isActive
 import kotlin.random.Random
+import kotlinx.coroutines.isActive
 
 private data class Sparkle(
     var x: Float,
@@ -20,7 +20,8 @@ private data class Sparkle(
     var speed: Float,
     var radius: Float,
     var color: Color,
-    var life: Float, // 1.0 → 0.0
+    // 1.0 → 0.0
+    var life: Float
 )
 
 /**
@@ -28,10 +29,7 @@ private data class Sparkle(
  * Spawns tiny gold dots that drift upward and fade out.
  */
 @Composable
-fun SparkleOverlay(
-    modifier: Modifier = Modifier,
-    particleCount: Int = 7,
-) {
+fun SparkleOverlay(modifier: Modifier = Modifier, particleCount: Int = 7) {
     val sparkles = remember { mutableStateListOf<Sparkle>() }
 
     LaunchedEffect(Unit) {
@@ -54,8 +52,8 @@ fun SparkleOverlay(
                         speed = 0.0003f + Random.nextFloat() * 0.0004f,
                         radius = 2f + Random.nextFloat() * 2f,
                         color = if (Random.nextBoolean()) GoldBright else GoldAmber,
-                        life = 1f,
-                    ),
+                        life = 1f
+                    )
                 )
             }
 
@@ -86,9 +84,9 @@ fun SparkleOverlay(
                 radius = s.radius * dpToPx,
                 center = androidx.compose.ui.geometry.Offset(
                     s.x * size.width,
-                    s.y * size.height,
+                    s.y * size.height
                 ),
-                alpha = s.alpha,
+                alpha = s.alpha
             )
         }
     }

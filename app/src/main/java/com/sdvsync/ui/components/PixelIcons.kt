@@ -24,8 +24,8 @@ import com.sdvsync.ui.theme.SyncSynced
 private val SpringPalette = listOf(
     Color.Transparent,
     Color(0xFF3D8B20), // stem green
-    SeasonSpring,      // pink petals
-    GoldBright,        // center
+    SeasonSpring, // pink petals
+    GoldBright // center
 )
 
 private val SpringData = arrayOf(
@@ -40,7 +40,7 @@ private val SpringData = arrayOf(
     intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0),
     intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0),
     intArrayOf(0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0)
 )
 
 // ── Summer: Sun ─────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ private val SpringData = arrayOf(
 private val SummerPalette = listOf(
     Color.Transparent,
     GoldBright,
-    SeasonSummer,
+    SeasonSummer
 )
 
 private val SummerData = arrayOf(
@@ -63,7 +63,7 @@ private val SummerData = arrayOf(
     intArrayOf(0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0),
     intArrayOf(0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0),
     intArrayOf(0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0)
 )
 
 // ── Fall: Maple leaf ────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ private val FallPalette = listOf(
     Color.Transparent,
     SeasonFall,
     Color(0xFFC06820), // darker orange
-    Color(0xFF5A3A1E), // brown stem
+    Color(0xFF5A3A1E) // brown stem
 )
 
 private val FallData = arrayOf(
@@ -87,7 +87,7 @@ private val FallData = arrayOf(
     intArrayOf(1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1),
     intArrayOf(0, 0, 1, 1, 1, 3, 1, 1, 1, 0, 0, 0),
     intArrayOf(0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0)
 )
 
 // ── Winter: Snowflake ───────────────────────────────────────────────────
@@ -95,7 +95,7 @@ private val FallData = arrayOf(
 private val WinterPalette = listOf(
     Color.Transparent,
     SeasonWinter,
-    Color.White,
+    Color.White
 )
 
 private val WinterData = arrayOf(
@@ -110,7 +110,7 @@ private val WinterData = arrayOf(
     intArrayOf(0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0),
     intArrayOf(0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0),
     intArrayOf(0, 0, 0, 1, 0, 2, 2, 0, 1, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0)
 )
 
 // ── Pull: Cloud + down arrow ────────────────────────────────────────────
@@ -118,7 +118,7 @@ private val WinterData = arrayOf(
 private val PullPalette = listOf(
     Color.Transparent,
     SyncPullBlue,
-    Color.White,
+    Color.White
 )
 
 private val PullData = arrayOf(
@@ -133,7 +133,7 @@ private val PullData = arrayOf(
     intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0),
     intArrayOf(0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0),
     intArrayOf(0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0)
 )
 
 // ── Push: Cloud + up arrow ──────────────────────────────────────────────
@@ -141,7 +141,7 @@ private val PullData = arrayOf(
 private val PushPalette = listOf(
     Color.Transparent,
     SyncPushGreen,
-    Color.White,
+    Color.White
 )
 
 private val PushData = arrayOf(
@@ -156,7 +156,7 @@ private val PushData = arrayOf(
     intArrayOf(0, 1, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0),
     intArrayOf(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0),
     intArrayOf(1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1),
-    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
 )
 
 // ── Synced: Checkmark in circle ─────────────────────────────────────────
@@ -164,7 +164,7 @@ private val PushData = arrayOf(
 private val SyncedPalette = listOf(
     Color.Transparent,
     SyncSynced,
-    Color.White,
+    Color.White
 )
 
 private val SyncedData = arrayOf(
@@ -179,7 +179,7 @@ private val SyncedData = arrayOf(
     intArrayOf(1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1),
     intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
     intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0),
-    intArrayOf(0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0)
 )
 
 // ── Conflict: Exclamation in triangle ───────────────────────────────────
@@ -188,7 +188,7 @@ private val ConflictPalette = listOf(
     Color.Transparent,
     SyncConflict,
     Color(0xFF3D1E00), // dark
-    Color.White,
+    Color.White
 )
 
 private val ConflictData = arrayOf(
@@ -203,7 +203,7 @@ private val ConflictData = arrayOf(
     intArrayOf(0, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 0),
     intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 )
 
 // ── Chicken sprite (8x8) ────────────────────────────────────────────────
@@ -213,7 +213,7 @@ private val ChickenPalette = listOf(
     Color.White,
     Color(0xFFE03030), // red comb
     Color(0xFFE8A030), // orange beak
-    Color(0xFF2A1A00), // dark eye/feet
+    Color(0xFF2A1A00) // dark eye/feet
 )
 
 val ChickenIconData = arrayOf(
@@ -224,7 +224,7 @@ val ChickenIconData = arrayOf(
     intArrayOf(0, 1, 1, 1, 1, 1, 1, 0),
     intArrayOf(0, 1, 1, 1, 1, 1, 1, 0),
     intArrayOf(0, 0, 1, 1, 1, 1, 0, 0),
-    intArrayOf(0, 0, 4, 0, 0, 4, 0, 0),
+    intArrayOf(0, 0, 4, 0, 0, 4, 0, 0)
 )
 
 // ── Star sparkle (8x8) ─────────────────────────────────────────────────
@@ -232,7 +232,7 @@ val ChickenIconData = arrayOf(
 private val StarPalette = listOf(
     Color.Transparent,
     GoldBright,
-    GoldAmber,
+    GoldAmber
 )
 
 val StarIconData = arrayOf(
@@ -243,7 +243,7 @@ val StarIconData = arrayOf(
     intArrayOf(0, 0, 2, 1, 2, 0, 0, 0),
     intArrayOf(0, 0, 1, 0, 1, 0, 0, 0),
     intArrayOf(0, 1, 0, 0, 0, 1, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
 )
 
 // ── Arrow Left (8x8) — back navigation ────────────────────────────────
@@ -256,7 +256,7 @@ val ArrowLeftData = arrayOf(
     intArrayOf(1, 1, 1, 1, 1, 1, 1, 0),
     intArrayOf(0, 1, 1, 0, 0, 0, 0, 0),
     intArrayOf(0, 0, 1, 1, 0, 0, 0, 0),
-    intArrayOf(0, 0, 0, 1, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 0, 0, 0, 0)
 )
 
 // ── Refresh (10x10) — circular arrows ─────────────────────────────────
@@ -270,7 +270,7 @@ val RefreshData = arrayOf(
     intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 0, 1),
     intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 0),
     intArrayOf(1, 0, 1, 0, 0, 0, 0, 1, 0, 0),
-    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0)
 )
 
 // ── Clock (10x10) — history/time icon ─────────────────────────────────
@@ -284,7 +284,7 @@ val ClockData = arrayOf(
     intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
     intArrayOf(0, 1, 1, 0, 0, 0, 0, 1, 1, 0),
     intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
-    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0)
 )
 
 // ── Gear (10x10) — settings icon ──────────────────────────────────────
@@ -298,7 +298,7 @@ val GearData = arrayOf(
     intArrayOf(1, 1, 0, 0, 1, 1, 0, 0, 1, 1),
     intArrayOf(0, 1, 1, 0, 0, 0, 0, 1, 1, 0),
     intArrayOf(0, 0, 1, 1, 0, 0, 1, 1, 0, 0),
-    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0)
 )
 
 // ── Trash (10x10) — delete icon ───────────────────────────────────────
@@ -312,7 +312,7 @@ val TrashData = arrayOf(
     intArrayOf(0, 0, 1, 0, 1, 1, 0, 1, 0, 0),
     intArrayOf(0, 0, 1, 0, 1, 1, 0, 1, 0, 0),
     intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
-    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0)
 )
 
 // ── QR Code (10x10) — simplified QR icon ──────────────────────────────
@@ -326,7 +326,7 @@ val QrCodeData = arrayOf(
     intArrayOf(0, 0, 0, 1, 0, 1, 0, 0, 0, 0),
     intArrayOf(1, 1, 1, 0, 0, 0, 0, 1, 0, 1),
     intArrayOf(1, 0, 1, 0, 1, 0, 0, 0, 1, 0),
-    intArrayOf(1, 1, 1, 0, 0, 1, 0, 1, 0, 1),
+    intArrayOf(1, 1, 1, 0, 0, 1, 0, 1, 0, 1)
 )
 
 // ── Eye Open (10x10) — password visibility ────────────────────────────
@@ -340,7 +340,7 @@ val EyeOpenData = arrayOf(
     intArrayOf(0, 0, 1, 0, 0, 0, 0, 1, 0, 0),
     intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
     intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 )
 
 // ── Eye Closed (10x10) — password hidden ──────────────────────────────
@@ -354,7 +354,7 @@ val EyeClosedData = arrayOf(
     intArrayOf(0, 0, 1, 0, 0, 0, 0, 1, 0, 0),
     intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
     intArrayOf(0, 1, 0, 0, 0, 0, 0, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 )
 
 // ── Wheat (10x10) — wheat stalk for Saves tab ─────────────────────────
@@ -368,7 +368,7 @@ val WheatData = arrayOf(
     intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
     intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
     intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
-    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0)
 )
 
 // ── Puzzle (10x10) — puzzle piece for Mods tab ─────────────────────────
@@ -382,7 +382,7 @@ val PuzzleData = arrayOf(
     intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 1, 0),
     intArrayOf(0, 0, 1, 1, 1, 1, 1, 1, 0, 0),
     intArrayOf(0, 0, 0, 1, 1, 1, 1, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 )
 
 // ── Search (10x10) — magnifying glass for browse ───────────────────────
@@ -396,7 +396,7 @@ val SearchData = arrayOf(
     intArrayOf(0, 1, 0, 0, 0, 1, 0, 0, 0, 0),
     intArrayOf(0, 0, 1, 1, 1, 0, 0, 0, 0, 0),
     intArrayOf(0, 0, 0, 0, 0, 1, 1, 0, 0, 0),
-    intArrayOf(0, 0, 0, 0, 0, 0, 1, 1, 0, 0),
+    intArrayOf(0, 0, 0, 0, 0, 0, 1, 1, 0, 0)
 )
 
 // ── Folder (10x10) — folder icon for import ────────────────────────────
@@ -410,7 +410,7 @@ val FolderData = arrayOf(
     intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
     intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
     intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
-    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 0),
+    intArrayOf(0, 1, 1, 1, 1, 1, 1, 1, 1, 0)
 )
 
 // ── UpdateArrow (10x10) — circular arrow for update indicator ──────────
@@ -424,7 +424,7 @@ val UpdateArrowData = arrayOf(
     intArrayOf(1, 0, 0, 0, 0, 0, 0, 0, 0, 1),
     intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 0),
     intArrayOf(0, 1, 1, 0, 0, 0, 0, 1, 0, 0),
-    intArrayOf(0, 0, 1, 1, 1, 1, 1, 0, 0, 0),
+    intArrayOf(0, 0, 1, 1, 1, 1, 1, 0, 0, 0)
 )
 
 // ── Download (10x10) — downward arrow with tray ────────────────────────
@@ -438,7 +438,7 @@ val DownloadData = arrayOf(
     intArrayOf(0, 0, 0, 0, 1, 1, 0, 0, 0, 0),
     intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     intArrayOf(1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
-    intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    intArrayOf(1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 )
 
 // ── Barn (16x12) — pixel farm scene for login ─────────────────────────
@@ -448,9 +448,9 @@ val BarnPalette = listOf(
     Color(0xFF8B5E3C), // brown wall
     Color(0xFFC03020), // red roof
     Color(0xFF4CAF50), // green ground
-    GoldBright,        // gold star
+    GoldBright, // gold star
     Color(0xFF3D1E00), // dark door
-    Color(0xFFA87048), // lighter brown
+    Color(0xFFA87048) // lighter brown
 )
 
 val BarnData = arrayOf(
@@ -465,7 +465,7 @@ val BarnData = arrayOf(
     intArrayOf(0, 0, 0, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1, 0, 0, 0),
     intArrayOf(0, 0, 0, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1, 0, 0, 0),
     intArrayOf(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
-    intArrayOf(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
+    intArrayOf(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
 )
 
 // ── Convenience composables ─────────────────────────────────────────────
@@ -481,23 +481,19 @@ fun PixelIconButton(
     contentDescription: String,
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    size: Dp = 20.dp,
+    size: Dp = 20.dp
 ) {
     IconButton(onClick = onClick, modifier = modifier) {
         PixelIcon(
             pixelData = pixelData,
             palette = listOf(Color.Transparent, tint),
-            size = size,
+            size = size
         )
     }
 }
 
 @Composable
-fun PixelSeasonIcon(
-    season: Int,
-    modifier: Modifier = Modifier,
-    size: Dp = 14.dp,
-) {
+fun PixelSeasonIcon(season: Int, modifier: Modifier = Modifier, size: Dp = 14.dp) {
     when (season) {
         0 -> PixelIcon(SpringData, SpringPalette, modifier, size)
         1 -> PixelIcon(SummerData, SummerPalette, modifier, size)
@@ -507,11 +503,7 @@ fun PixelSeasonIcon(
 }
 
 @Composable
-fun PixelSyncIcon(
-    direction: SyncDirection,
-    modifier: Modifier = Modifier,
-    size: Dp = 14.dp,
-) {
+fun PixelSyncIcon(direction: SyncDirection, modifier: Modifier = Modifier, size: Dp = 14.dp) {
     when (direction) {
         SyncDirection.PULL -> PixelIcon(PullData, PullPalette, modifier, size)
         SyncDirection.PUSH -> PixelIcon(PushData, PushPalette, modifier, size)
@@ -521,12 +513,7 @@ fun PixelSyncIcon(
 }
 
 @Composable
-fun PixelSyncLogIcon(
-    direction: String,
-    success: Boolean,
-    modifier: Modifier = Modifier,
-    size: Dp = 24.dp,
-) {
+fun PixelSyncLogIcon(direction: String, success: Boolean, modifier: Modifier = Modifier, size: Dp = 24.dp) {
     if (!success) {
         // Error state: show conflict icon
         PixelIcon(ConflictData, ConflictPalette, modifier, size)

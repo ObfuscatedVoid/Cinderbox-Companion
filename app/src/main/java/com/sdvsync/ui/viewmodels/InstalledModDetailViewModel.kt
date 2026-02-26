@@ -23,14 +23,14 @@ data class InstalledModDetailState(
     val removed: Boolean = false,
     val updateInfo: ModUpdateInfo? = null,
     val metadata: ModMetadata? = null,
-    val isCheckingUpdate: Boolean = false,
+    val isCheckingUpdate: Boolean = false
 )
 
 class InstalledModDetailViewModel(
     private val fileManager: ModFileManager,
     private val dataStore: ModDataStore,
     private val updateChecker: SmapiUpdateChecker,
-    private val uniqueId: String,
+    private val uniqueId: String
 ) : ViewModel() {
 
     companion object {

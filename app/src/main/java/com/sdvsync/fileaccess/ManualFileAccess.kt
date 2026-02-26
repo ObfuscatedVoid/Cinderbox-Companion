@@ -35,50 +35,40 @@ class ManualFileAccess : FileAccessStrategy {
             ?.map { it.name }
     }
 
-    override suspend fun readFile(file: File): ByteArray? {
-        return try {
-            if (file.exists()) file.readBytes() else null
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
-            null
-        }
+    override suspend fun readFile(file: File): ByteArray? = try {
+        if (file.exists()) file.readBytes() else null
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
+        null
     }
 
-    override suspend fun writeFile(file: File, data: ByteArray): Boolean {
-        return try {
-            file.parentFile?.mkdirs()
-            file.writeBytes(data)
-            true
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
-            false
-        }
+    override suspend fun writeFile(file: File, data: ByteArray): Boolean = try {
+        file.parentFile?.mkdirs()
+        file.writeBytes(data)
+        true
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
+        false
     }
 
-    override suspend fun deleteFile(file: File): Boolean {
-        return try {
-            file.delete()
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
-            false
-        }
+    override suspend fun deleteFile(file: File): Boolean = try {
+        file.delete()
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
+        false
     }
 
-    override suspend fun renameFile(from: File, to: File): Boolean {
-        return try {
-            from.renameTo(to)
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "renameFile failed: ${from.absolutePath}", e)
-            false
-        }
+    override suspend fun renameFile(from: File, to: File): Boolean = try {
+        from.renameTo(to)
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "renameFile failed: ${from.absolutePath}", e)
+        false
     }
 
-    override suspend fun mkdirs(dir: File): Boolean {
-        return try {
-            dir.mkdirs()
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "mkdirs failed: ${dir.absolutePath}", e)
-            false
-        }
+    override suspend fun mkdirs(dir: File): Boolean = try {
+        dir.mkdirs()
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "mkdirs failed: ${dir.absolutePath}", e)
+        false
     }
 }

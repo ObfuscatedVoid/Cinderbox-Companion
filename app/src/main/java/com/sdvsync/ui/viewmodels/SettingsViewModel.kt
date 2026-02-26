@@ -44,7 +44,7 @@ data class SettingsState(
     val hasNexusApiKey: Boolean = false,
     val nexusApiKeyMasked: String? = null,
     val isValidatingApiKey: Boolean = false,
-    val apiKeyError: String? = null,
+    val apiKeyError: String? = null
 )
 
 class SettingsViewModel(
@@ -53,7 +53,7 @@ class SettingsViewModel(
     private val authenticator: SteamAuthenticator,
     private val backupManager: SaveBackupManager,
     private val modDataStore: ModDataStore,
-    private val nexusSource: NexusModSource,
+    private val nexusSource: NexusModSource
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -89,7 +89,7 @@ class SettingsViewModel(
             isLoggedIn = authenticator.authState.value is com.sdvsync.steam.AuthState.LoggedIn,
             maxBackups = backupManager.maxBackups,
             hasNexusApiKey = apiKey != null,
-            nexusApiKeyMasked = maskedKey,
+            nexusApiKeyMasked = maskedKey
         )
     }
 

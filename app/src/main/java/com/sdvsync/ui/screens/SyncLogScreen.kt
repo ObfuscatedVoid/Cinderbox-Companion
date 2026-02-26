@@ -20,14 +20,11 @@ import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.TrashData
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
-import org.koin.androidx.compose.koinViewModel
 import com.sdvsync.ui.viewmodels.SyncLogViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun SyncLogScreen(
-    onBack: () -> Unit,
-    viewModel: SyncLogViewModel = koinViewModel(),
-) {
+fun SyncLogScreen(onBack: () -> Unit, viewModel: SyncLogViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
 
     LaunchedEffect(Unit) {
@@ -43,7 +40,7 @@ fun SyncLogScreen(
                         pixelData = ArrowLeftData,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 actions = {
@@ -51,22 +48,22 @@ fun SyncLogScreen(
                         PixelIconButton(
                             pixelData = TrashData,
                             onClick = { viewModel.clearHistory() },
-                            contentDescription = stringResource(R.string.sync_log_clear),
+                            contentDescription = stringResource(R.string.sync_log_clear)
                         )
                     }
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
         ) {
             when {
                 state.isLoading -> {
                     PixelLoadingSpinner(
-                        modifier = Modifier.align(Alignment.Center),
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
                 state.entries.isEmpty() -> {
@@ -75,14 +72,14 @@ fun SyncLogScreen(
                         subtitle = "Sync history will appear here",
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .padding(24.dp),
+                            .padding(24.dp)
                     )
                 }
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(state.entries) { entry ->
                             SyncLogEntryCard(entry)
@@ -106,27 +103,27 @@ private fun SyncLogEntryCard(entry: SyncHistoryEntry) {
     StardewCard {
         Row(
             modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             PixelSyncLogIcon(
                 direction = entry.direction,
                 success = entry.success,
-                size = 24.dp,
+                size = 24.dp
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         entry.saveName,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleSmall
                     )
                     Text(
                         entry.direction.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = statusColor,
+                        color = statusColor
                     )
                 }
                 Spacer(Modifier.height(2.dp))
@@ -137,12 +134,12 @@ private fun SyncLogEntryCard(entry: SyncHistoryEntry) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
                         extras.syncError
-                    },
+                    }
                 )
                 Text(
                     entry.timestamp,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

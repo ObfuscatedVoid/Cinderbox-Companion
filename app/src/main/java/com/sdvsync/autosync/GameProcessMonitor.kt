@@ -21,10 +21,7 @@ class GameProcessMonitor {
 
     private var monitorJob: Job? = null
 
-    fun start(
-        onGameStarted: () -> Unit = {},
-        onGameStopped: () -> Unit = {},
-    ) {
+    fun start(onGameStarted: () -> Unit = {}, onGameStopped: () -> Unit = {}) {
         if (monitorJob != null) return
 
         monitorJob = CoroutineScope(Dispatchers.IO).launch {
@@ -54,16 +51,14 @@ class GameProcessMonitor {
         _isGameRunning.value = false
     }
 
-    private fun checkGameRunning(): Boolean {
-        return try {
-            val process = Runtime.getRuntime().exec(
-                arrayOf("su", "-c", "pidof $SDV_PACKAGE")
-            )
-            val output = process.inputStream.bufferedReader().readText().trim()
-            process.waitFor()
-            output.isNotEmpty()
-        } catch (e: Exception) {
-            false
-        }
+    private fun checkGameRunning(): Boolean = try {
+        val process = Runtime.getRuntime().exec(
+            arrayOf("su", "-c", "pidof $SDV_PACKAGE")
+        )
+        val output = process.inputStream.bufferedReader().readText().trim()
+        process.waitFor()
+        output.isNotEmpty()
+    } catch (e: Exception) {
+        false
     }
 }

@@ -34,18 +34,18 @@ import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
-import org.koin.androidx.compose.koinViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 private fun SectionHeader(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -66,10 +66,7 @@ private fun formatDate(epochSeconds: Long): String {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun GameDownloadScreen(
-    onBack: () -> Unit,
-    viewModel: GameDownloadViewModel = koinViewModel(),
-) {
+fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
 
     LaunchedEffect(Unit) {
@@ -78,7 +75,7 @@ fun GameDownloadScreen(
 
     val filterChipColors = FilterChipDefaults.filterChipColors(
         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
     )
 
     Scaffold(
@@ -90,18 +87,18 @@ fun GameDownloadScreen(
                         pixelData = ArrowLeftData,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(16.dp)
         ) {
             // App info card
             StardewCard {
@@ -109,12 +106,12 @@ fun GameDownloadScreen(
                     Text(
                         stringResource(R.string.download_app_name),
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         stringResource(R.string.download_app_id),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -133,7 +130,7 @@ fun GameDownloadScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(24.dp),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         PixelLoadingSpinner()
                     }
@@ -143,14 +140,14 @@ fun GameDownloadScreen(
                     Column(modifier = Modifier.padding(12.dp)) {
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             state.branches.forEach { branch ->
                                 FilterChip(
                                     selected = state.selectedBranch == branch.name,
                                     onClick = { viewModel.selectBranch(branch.name) },
                                     label = { Text(branch.name) },
-                                    colors = filterChipColors,
+                                    colors = filterChipColors
                                 )
                             }
                         }
@@ -160,14 +157,18 @@ fun GameDownloadScreen(
                         if (selectedBranch != null) {
                             Spacer(Modifier.height(8.dp))
                             val branchDetail = if (selectedBranch.timeUpdated > 0) {
-                                stringResource(R.string.download_branch_build_date, selectedBranch.buildId, formatDate(selectedBranch.timeUpdated))
+                                stringResource(
+                                    R.string.download_branch_build_date,
+                                    selectedBranch.buildId,
+                                    formatDate(selectedBranch.timeUpdated)
+                                )
                             } else {
                                 stringResource(R.string.download_branch_build, selectedBranch.buildId)
                             }
                             Text(
                                 branchDetail,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             // Password field for password-protected branches
@@ -179,7 +180,7 @@ fun GameDownloadScreen(
                                     label = { Text(stringResource(R.string.download_branch_password)) },
                                     singleLine = true,
                                     shape = RectangleShape,
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
@@ -198,18 +199,18 @@ fun GameDownloadScreen(
                 Column(modifier = Modifier.padding(12.dp)) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         listOf(
                             "windows" to stringResource(R.string.download_platform_windows),
                             "macos" to stringResource(R.string.download_platform_macos),
-                            "linux" to stringResource(R.string.download_platform_linux),
+                            "linux" to stringResource(R.string.download_platform_linux)
                         ).forEach { (os, label) ->
                             FilterChip(
                                 selected = state.selectedOs == os,
                                 onClick = { viewModel.selectOs(os) },
                                 label = { Text(label) },
-                                colors = filterChipColors,
+                                colors = filterChipColors
                             )
                         }
                     }
@@ -235,7 +236,7 @@ fun GameDownloadScreen(
                             label = { Text(stringResource(R.string.download_install_path)) },
                             singleLine = true,
                             shape = RectangleShape,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(Modifier.height(8.dp))
                         StardewOutlinedButton(onClick = { editingPath = false }) {
@@ -247,7 +248,7 @@ fun GameDownloadScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Spacer(Modifier.height(8.dp))
                         StardewOutlinedButton(onClick = { editingPath = true }) {
@@ -263,23 +264,23 @@ fun GameDownloadScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             stringResource(R.string.download_verify_toggle),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
                             stringResource(R.string.download_verify_desc),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(Modifier.width(12.dp))
                     Switch(
                         checked = state.verifyAfterDownload,
-                        onCheckedChange = { viewModel.toggleVerification() },
+                        onCheckedChange = { viewModel.toggleVerification() }
                     )
                 }
             }
@@ -293,7 +294,7 @@ fun GameDownloadScreen(
                         Text(
                             state.error!!,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
                 }
@@ -309,7 +310,7 @@ fun GameDownloadScreen(
                         onClick = { viewModel.startDownload() },
                         variant = StardewButtonVariant.Gold,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = state.branches.isNotEmpty(),
+                        enabled = state.branches.isNotEmpty()
                     ) {
                         Text(stringResource(R.string.download_button))
                     }
@@ -321,13 +322,13 @@ fun GameDownloadScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             PixelLoadingSpinner()
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 stringResource(R.string.download_preparing),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
@@ -340,7 +341,7 @@ fun GameDownloadScreen(
                         totalBytes = state.downloadProgress.totalBytes,
                         bytesPerSecond = state.downloadProgress.bytesPerSecond,
                         overallPercent = state.downloadProgress.overallPercent,
-                        onCancel = { viewModel.cancelDownload() },
+                        onCancel = { viewModel.cancelDownload() }
                     )
                 }
 
@@ -350,16 +351,16 @@ fun GameDownloadScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 PixelLoadingSpinner(modifier = Modifier.size(24.dp))
                                 Spacer(Modifier.width(12.dp))
                                 Text(
                                     stringResource(R.string.download_verifying),
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.titleSmall
                                 )
                             }
                             Spacer(Modifier.height(12.dp))
@@ -370,7 +371,7 @@ fun GameDownloadScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(Modifier.height(8.dp))
                             }
@@ -379,10 +380,10 @@ fun GameDownloadScreen(
                                 stringResource(
                                     R.string.download_verify_progress,
                                     state.downloadProgress.verifiedFiles,
-                                    state.downloadProgress.totalFilesToVerify,
+                                    state.downloadProgress.totalFilesToVerify
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(8.dp))
 
@@ -392,7 +393,7 @@ fun GameDownloadScreen(
                             Text(
                                 "${(state.downloadProgress.overallPercent * 100).toInt()}%",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -403,7 +404,7 @@ fun GameDownloadScreen(
                         currentFile = state.downloadProgress.currentFile,
                         copiedFiles = state.downloadProgress.copiedFiles,
                         totalFiles = state.downloadProgress.totalFilesToCopy,
-                        overallPercent = state.downloadProgress.overallPercent,
+                        overallPercent = state.downloadProgress.overallPercent
                     )
                 }
 
@@ -413,13 +414,13 @@ fun GameDownloadScreen(
                             Text(
                                 stringResource(R.string.download_complete),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 stringResource(R.string.download_complete_desc, state.installDirectory),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             // Show verification result if verification was performed
@@ -429,25 +430,25 @@ fun GameDownloadScreen(
                                     Text(
                                         stringResource(
                                             R.string.download_verify_passed,
-                                            state.downloadProgress.verifiedFiles,
+                                            state.downloadProgress.verifiedFiles
                                         ),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 } else {
                                     Text(
                                         stringResource(
                                             R.string.download_verify_failed,
-                                            state.downloadProgress.verificationErrors.size,
+                                            state.downloadProgress.verificationErrors.size
                                         ),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
+                                        color = MaterialTheme.colorScheme.error
                                     )
                                     state.downloadProgress.verificationErrors.forEach { errorFile ->
                                         Text(
                                             errorFile,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.error,
+                                            color = MaterialTheme.colorScheme.error
                                         )
                                     }
                                 }
@@ -460,25 +461,25 @@ fun GameDownloadScreen(
                                     Text(
                                         stringResource(
                                             R.string.cinderbox_copy_success,
-                                            state.downloadProgress.copiedFiles,
+                                            state.downloadProgress.copiedFiles
                                         ),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 } else {
                                     Text(
                                         stringResource(
                                             R.string.cinderbox_copy_failed,
-                                            state.downloadProgress.copyErrors.size,
+                                            state.downloadProgress.copyErrors.size
                                         ),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
+                                        color = MaterialTheme.colorScheme.error
                                     )
                                     state.downloadProgress.copyErrors.forEach { errorFile ->
                                         Text(
                                             errorFile,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.error,
+                                            color = MaterialTheme.colorScheme.error
                                         )
                                     }
                                 }
@@ -492,7 +493,7 @@ fun GameDownloadScreen(
                         StardewButton(
                             onClick = { viewModel.copyCinderbox() },
                             variant = StardewButtonVariant.Action,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(stringResource(R.string.cinderbox_copy_button))
                         }
@@ -501,7 +502,7 @@ fun GameDownloadScreen(
 
                     StardewOutlinedButton(
                         onClick = { viewModel.resetDownload() },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.download_again))
                     }
@@ -513,13 +514,13 @@ fun GameDownloadScreen(
                             Text(
                                 stringResource(R.string.download_error),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.error,
+                                color = MaterialTheme.colorScheme.error
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 state.downloadProgress.errorMessage ?: stringResource(R.string.download_error_unknown),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -529,7 +530,7 @@ fun GameDownloadScreen(
                             viewModel.resetDownload()
                             viewModel.startDownload()
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.action_retry))
                     }
@@ -541,7 +542,7 @@ fun GameDownloadScreen(
                             Text(
                                 stringResource(R.string.download_cancelled),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -552,7 +553,7 @@ fun GameDownloadScreen(
                             viewModel.startDownload()
                         },
                         variant = StardewButtonVariant.Gold,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.download_button))
                     }
@@ -567,7 +568,7 @@ fun GameDownloadScreen(
             CinderboxSection(
                 cinderboxProgress = state.cinderboxDownloadProgress,
                 onDownload = { viewModel.downloadCinderbox() },
-                onReset = { viewModel.resetCinderboxDownload() },
+                onReset = { viewModel.resetCinderboxDownload() }
             )
 
             // SMAPI Setup section (always visible)
@@ -579,7 +580,7 @@ fun GameDownloadScreen(
                 smapiProgress = state.smapiSetupProgress,
                 isCopying = downloadState == DownloadState.COPYING,
                 onExtract = { viewModel.extractSmapi() },
-                onReset = { viewModel.resetSmapiSetup() },
+                onReset = { viewModel.resetSmapiSetup() }
             )
 
             Spacer(Modifier.height(24.dp))
@@ -592,7 +593,7 @@ private fun SmapiSetupSection(
     smapiProgress: SmapiSetupProgress,
     isCopying: Boolean,
     onExtract: () -> Unit,
-    onReset: () -> Unit,
+    onReset: () -> Unit
 ) {
     SectionHeader(stringResource(R.string.smapi_setup_title))
     Spacer(Modifier.height(8.dp))
@@ -604,13 +605,13 @@ private fun SmapiSetupSection(
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         PixelLoadingSpinner(modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(12.dp))
                         Text(
                             stringResource(R.string.smapi_extracting),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall
                         )
                     }
 
@@ -622,7 +623,7 @@ private fun SmapiSetupSection(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Spacer(Modifier.height(8.dp))
                     }
@@ -631,10 +632,10 @@ private fun SmapiSetupSection(
                         stringResource(
                             R.string.smapi_extract_progress,
                             smapiProgress.extractedFiles,
-                            smapiProgress.totalFiles,
+                            smapiProgress.totalFiles
                         ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(Modifier.height(8.dp))
@@ -643,7 +644,7 @@ private fun SmapiSetupSection(
                     Text(
                         "${(smapiProgress.percent * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -657,19 +658,19 @@ private fun SmapiSetupSection(
                         Text(
                             stringResource(R.string.smapi_extract_error, smapiProgress.errorMessage),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
+                            color = MaterialTheme.colorScheme.error
                         )
                     } else {
                         Text(
                             stringResource(R.string.smapi_extract_success),
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             stringResource(R.string.smapi_extract_success_desc, smapiProgress.extractedFiles),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -677,7 +678,7 @@ private fun SmapiSetupSection(
             Spacer(Modifier.height(8.dp))
             StardewOutlinedButton(
                 onClick = onReset,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.smapi_extract_again))
             }
@@ -690,7 +691,7 @@ private fun SmapiSetupSection(
                     Text(
                         stringResource(R.string.smapi_setup_desc),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -699,7 +700,7 @@ private fun SmapiSetupSection(
                 onClick = onExtract,
                 variant = StardewButtonVariant.Action,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isCopying,
+                enabled = !isCopying
             ) {
                 Text(stringResource(R.string.smapi_extract_button))
             }
@@ -711,7 +712,7 @@ private fun installCinderboxApk(context: Context, apkFile: File) {
     val uri = FileProvider.getUriForFile(
         context,
         "${context.packageName}.fileprovider",
-        apkFile,
+        apkFile
     )
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, "application/vnd.android.package-archive")
@@ -725,7 +726,7 @@ private fun installCinderboxApk(context: Context, apkFile: File) {
 private fun CinderboxSection(
     cinderboxProgress: CinderboxDownloadProgress,
     onDownload: () -> Unit,
-    onReset: () -> Unit,
+    onReset: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -748,13 +749,13 @@ private fun CinderboxSection(
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         PixelLoadingSpinner(modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(12.dp))
                         Text(
                             stringResource(R.string.cinderbox_downloading),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall
                         )
                     }
 
@@ -764,10 +765,10 @@ private fun CinderboxSection(
                         stringResource(
                             R.string.cinderbox_download_progress,
                             formatBytes(cinderboxProgress.downloadedBytes),
-                            if (cinderboxProgress.totalBytes > 0) formatBytes(cinderboxProgress.totalBytes) else "?",
+                            if (cinderboxProgress.totalBytes > 0) formatBytes(cinderboxProgress.totalBytes) else "?"
                         ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(Modifier.height(8.dp))
@@ -776,7 +777,7 @@ private fun CinderboxSection(
                     Text(
                         "${(cinderboxProgress.percent * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -790,19 +791,19 @@ private fun CinderboxSection(
                         Text(
                             stringResource(R.string.cinderbox_download_complete),
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
                             stringResource(R.string.cinderbox_install_permission_title),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
+                            color = MaterialTheme.colorScheme.error
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             stringResource(R.string.cinderbox_install_permission_desc),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -811,12 +812,12 @@ private fun CinderboxSection(
                     onClick = {
                         val intent = Intent(
                             Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                            Uri.parse("package:${context.packageName}"),
+                            Uri.parse("package:${context.packageName}")
                         )
                         permissionLauncher.launch(intent)
                     },
                     variant = StardewButtonVariant.Action,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.cinderbox_grant_permission))
                 }
@@ -827,13 +828,13 @@ private fun CinderboxSection(
                         Text(
                             stringResource(R.string.cinderbox_download_complete),
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             stringResource(R.string.cinderbox_download_complete_desc),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -843,14 +844,14 @@ private fun CinderboxSection(
                         cinderboxProgress.apkFile?.let { installCinderboxApk(context, it) }
                     },
                     variant = StardewButtonVariant.Action,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.cinderbox_install_button))
                 }
                 Spacer(Modifier.height(8.dp))
                 StardewOutlinedButton(
                     onClick = onReset,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.cinderbox_download_again))
                 }
@@ -863,7 +864,7 @@ private fun CinderboxSection(
                     Text(
                         stringResource(R.string.cinderbox_download_error, cinderboxProgress.errorMessage),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -873,7 +874,7 @@ private fun CinderboxSection(
                     onReset()
                     onDownload()
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.action_retry))
             }
@@ -886,7 +887,7 @@ private fun CinderboxSection(
                     Text(
                         stringResource(R.string.cinderbox_section_desc),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -894,7 +895,7 @@ private fun CinderboxSection(
             StardewButton(
                 onClick = onDownload,
                 variant = StardewButtonVariant.Gold,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.cinderbox_download_button))
             }
@@ -909,19 +910,19 @@ private fun DownloadProgressSection(
     totalBytes: Long,
     bytesPerSecond: Long,
     overallPercent: Float,
-    onCancel: () -> Unit,
+    onCancel: () -> Unit
 ) {
     StardewCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 PixelLoadingSpinner(modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(12.dp))
                 Text(
                     stringResource(R.string.download_downloading),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall
                 )
             }
 
@@ -933,7 +934,7 @@ private fun DownloadProgressSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(8.dp))
             }
@@ -954,7 +955,7 @@ private fun DownloadProgressSection(
             Text(
                 sizeText,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.height(8.dp))
@@ -965,14 +966,14 @@ private fun DownloadProgressSection(
             Text(
                 "${(overallPercent * 100).toInt()}%",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.height(12.dp))
 
             StardewOutlinedButton(
                 onClick = onCancel,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.action_cancel))
             }
@@ -981,23 +982,18 @@ private fun DownloadProgressSection(
 }
 
 @Composable
-private fun CopyProgressSection(
-    currentFile: String,
-    copiedFiles: Int,
-    totalFiles: Int,
-    overallPercent: Float,
-) {
+private fun CopyProgressSection(currentFile: String, copiedFiles: Int, totalFiles: Int, overallPercent: Float) {
     StardewCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 PixelLoadingSpinner(modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(12.dp))
                 Text(
                     stringResource(R.string.cinderbox_copying),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall
                 )
             }
 
@@ -1009,7 +1005,7 @@ private fun CopyProgressSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(8.dp))
             }
@@ -1017,7 +1013,7 @@ private fun CopyProgressSection(
             Text(
                 stringResource(R.string.cinderbox_copy_progress, copiedFiles, totalFiles),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.height(8.dp))
@@ -1028,7 +1024,7 @@ private fun CopyProgressSection(
             Text(
                 "${(overallPercent * 100).toInt()}%",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

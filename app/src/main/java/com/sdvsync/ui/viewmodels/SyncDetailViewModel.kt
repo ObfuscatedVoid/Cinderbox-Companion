@@ -17,14 +17,14 @@ data class SyncDetailState(
     val isSyncing: Boolean = false,
     val progressMessage: String = "",
     val result: SyncResult? = null,
-    val isStagingMode: Boolean = false,
+    val isStagingMode: Boolean = false
 )
 
 class SyncDetailViewModel(
     private val context: Context,
     private val syncEngine: SyncEngine,
     private val historyStore: SyncHistoryStore,
-    private val saveFileManager: SaveFileManager,
+    private val saveFileManager: SaveFileManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SyncDetailState(isStagingMode = saveFileManager.isStaging))
@@ -39,10 +39,11 @@ class SyncDetailViewModel(
                 force = force,
                 onProgress = { msg ->
                     _state.value = _state.value.copy(progressMessage = msg)
-                },
+                }
             )
 
-            _state.value = SyncDetailState(isSyncing = false, result = result, isStagingMode = saveFileManager.isStaging)
+            _state.value =
+                SyncDetailState(isSyncing = false, result = result, isStagingMode = saveFileManager.isStaging)
 
             // Log to history
             val success = result is SyncResult.Success
@@ -64,10 +65,11 @@ class SyncDetailViewModel(
                 force = force,
                 onProgress = { msg ->
                     _state.value = _state.value.copy(progressMessage = msg)
-                },
+                }
             )
 
-            _state.value = SyncDetailState(isSyncing = false, result = result, isStagingMode = saveFileManager.isStaging)
+            _state.value =
+                SyncDetailState(isSyncing = false, result = result, isStagingMode = saveFileManager.isStaging)
 
             val success = result is SyncResult.Success
             val message = when (result) {

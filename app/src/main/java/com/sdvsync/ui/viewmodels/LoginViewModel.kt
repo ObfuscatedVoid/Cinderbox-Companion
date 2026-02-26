@@ -10,9 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class LoginViewModel(
-    private val authenticator: SteamAuthenticator,
-) : ViewModel() {
+class LoginViewModel(private val authenticator: SteamAuthenticator) : ViewModel() {
 
     val authState: StateFlow<AuthState> = authenticator.authState
 
@@ -37,9 +35,15 @@ class LoginViewModel(
         }
     }
 
-    fun updateUsername(value: String) { _username.value = value }
-    fun updatePassword(value: String) { _password.value = value }
-    fun updateTwoFactorCode(value: String) { _twoFactorCode.value = value }
+    fun updateUsername(value: String) {
+        _username.value = value
+    }
+    fun updatePassword(value: String) {
+        _password.value = value
+    }
+    fun updateTwoFactorCode(value: String) {
+        _twoFactorCode.value = value
+    }
 
     fun login() {
         viewModelScope.launch {
@@ -67,5 +71,4 @@ class LoginViewModel(
             authenticator.loginWithSavedSession()
         }
     }
-
 }

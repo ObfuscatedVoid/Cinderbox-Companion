@@ -16,7 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 enum class BrowseCategory {
-    TRENDING, LATEST, RECENTLY_UPDATED,
+    TRENDING,
+    LATEST,
+    RECENTLY_UPDATED
 }
 
 data class ModBrowseState(
@@ -28,13 +30,13 @@ data class ModBrowseState(
     val mods: List<RemoteMod> = emptyList(),
     val installedUniqueIds: Set<String> = emptySet(),
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: String? = null
 )
 
 class ModBrowseViewModel(
     private val nexusSource: NexusModSource,
     private val dataStore: ModDataStore,
-    private val fileManager: ModFileManager,
+    private val fileManager: ModFileManager
 ) : ViewModel() {
 
     companion object {
@@ -63,7 +65,7 @@ class ModBrowseViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val mods = fileManager.listInstalledMods()
             _state.value = _state.value.copy(
-                installedUniqueIds = mods.map { it.manifest.uniqueID.lowercase() }.toSet(),
+                installedUniqueIds = mods.map { it.manifest.uniqueID.lowercase() }.toSet()
             )
         }
     }
@@ -76,13 +78,13 @@ class ModBrowseViewModel(
                 dataStore.setNexusApiKey(key)
                 _state.value = _state.value.copy(
                     hasApiKey = true,
-                    isValidatingKey = false,
+                    isValidatingKey = false
                 )
                 loadCategory(BrowseCategory.TRENDING)
             } else {
                 _state.value = _state.value.copy(
                     isValidatingKey = false,
-                    apiKeyError = "Invalid API key",
+                    apiKeyError = "Invalid API key"
                 )
             }
         }
@@ -92,7 +94,7 @@ class ModBrowseViewModel(
         dataStore.setNexusApiKey(null)
         _state.value = _state.value.copy(
             hasApiKey = false,
-            mods = emptyList(),
+            mods = emptyList()
         )
     }
 
@@ -101,7 +103,7 @@ class ModBrowseViewModel(
             category = category,
             searchQuery = "",
             isLoading = true,
-            error = null,
+            error = null
         )
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -115,7 +117,7 @@ class ModBrowseViewModel(
                 AppLogger.e(TAG, "Failed to load category", e)
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Failed to load mods",
+                    error = e.message ?: "Failed to load mods"
                 )
             }
         }
@@ -138,7 +140,7 @@ class ModBrowseViewModel(
                 AppLogger.e(TAG, "Search failed", e)
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Search failed",
+                    error = e.message ?: "Search failed"
                 )
             }
         }

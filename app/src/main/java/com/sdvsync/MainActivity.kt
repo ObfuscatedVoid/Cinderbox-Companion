@@ -25,7 +25,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.sdvsync.logging.AppLogger
@@ -35,8 +34,8 @@ import com.sdvsync.ui.components.BottomTab
 import com.sdvsync.ui.components.StardewBottomBar
 import com.sdvsync.ui.screens.DashboardScreen
 import com.sdvsync.ui.screens.GameDownloadScreen
-import com.sdvsync.ui.screens.LoginScreen
 import com.sdvsync.ui.screens.InstalledModDetailScreen
+import com.sdvsync.ui.screens.LoginScreen
 import com.sdvsync.ui.screens.ModBrowseScreen
 import com.sdvsync.ui.screens.ModDetailScreen
 import com.sdvsync.ui.screens.ModManagerScreen
@@ -91,7 +90,10 @@ class MainActivity : ComponentActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val url = nexusSource.getDownloadUrl(
-                    parsed.modId, parsed.fileId, parsed.key, parsed.expires,
+                    parsed.modId,
+                    parsed.fileId,
+                    parsed.key,
+                    parsed.expires
                 )
                 val modName = try {
                     nexusSource.getModDetails(parsed.modId).name
@@ -105,7 +107,7 @@ class MainActivity : ComponentActivity() {
                     Toast.makeText(
                         this@MainActivity,
                         getString(R.string.nxm_download_failed, e.message ?: "Unknown error"),
-                        Toast.LENGTH_LONG,
+                        Toast.LENGTH_LONG
                     ).show()
                 }
             }
@@ -132,12 +134,7 @@ class MainActivity : ComponentActivity() {
         return NxmDownloadParams(modId, fileId, key, expires)
     }
 
-    private data class NxmDownloadParams(
-        val modId: String,
-        val fileId: String,
-        val key: String,
-        val expires: String,
-    )
+    private data class NxmDownloadParams(val modId: String, val fileId: String, val key: String, val expires: String)
 }
 
 private const val NAV_ANIM_DURATION = 300
@@ -175,40 +172,40 @@ fun SdvSyncNavGraph(navController: NavHostController) {
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut),
+                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
             ) + fadeIn(tween(NAV_ANIM_DURATION))
         },
         exitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut),
+                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
             ) + fadeOut(tween(NAV_ANIM_DURATION))
         },
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut),
+                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
             ) + fadeIn(tween(NAV_ANIM_DURATION))
         },
         popExitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut),
+                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
             ) + fadeOut(tween(NAV_ANIM_DURATION))
-        },
+        }
     ) {
         // Login screen — outside the bottom bar
         composable(
             route = "login",
             enterTransition = { fadeIn(tween(FADE_ANIM_DURATION)) },
-            exitTransition = { fadeOut(tween(FADE_ANIM_DURATION)) },
+            exitTransition = { fadeOut(tween(FADE_ANIM_DURATION)) }
         ) {
             LoginScreen(
                 onLoginSuccess = {
                     navController.navigate("main") {
                         popUpTo("login") { inclusive = true }
                     }
-                },
+                }
             )
         }
 
@@ -217,7 +214,7 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             MainScreen(
                 parentNavController = navController,
                 showBottomBar = showBottomBar,
-                selectedTab = selectedTab,
+                selectedTab = selectedTab
             )
         }
 
@@ -227,8 +224,8 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             arguments = listOf(
                 navArgument("saveFolderName") { type = NavType.StringType },
                 navArgument("hasCloud") { type = NavType.BoolType },
-                navArgument("hasLocal") { type = NavType.BoolType },
-            ),
+                navArgument("hasLocal") { type = NavType.BoolType }
+            )
         ) { backStackEntry ->
             val saveFolderName = backStackEntry.arguments?.getString("saveFolderName") ?: return@composable
             val hasCloud = backStackEntry.arguments?.getBoolean("hasCloud") ?: false
@@ -237,13 +234,13 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 saveFolderName = saveFolderName,
                 hasCloud = hasCloud,
                 hasLocal = hasLocal,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
             )
         }
 
         composable("sync_log") {
             SyncLogScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -251,14 +248,14 @@ fun SdvSyncNavGraph(navController: NavHostController) {
         composable(
             route = "installed_mod/{uniqueId}",
             arguments = listOf(
-                navArgument("uniqueId") { type = NavType.StringType },
-            ),
+                navArgument("uniqueId") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val uniqueId = backStackEntry.arguments?.getString("uniqueId") ?: return@composable
             val viewModel: InstalledModDetailViewModel = koinViewModel { parametersOf(uniqueId) }
             InstalledModDetailScreen(
                 viewModel = viewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -269,7 +266,7 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 onBack = { navController.popBackStack() },
                 onModClick = { modId, source ->
                     navController.navigate("mod_detail/$modId/$source")
-                },
+                }
             )
         }
 
@@ -277,26 +274,22 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             route = "mod_detail/{modId}/{source}",
             arguments = listOf(
                 navArgument("modId") { type = NavType.StringType },
-                navArgument("source") { type = NavType.StringType },
-            ),
+                navArgument("source") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val modId = backStackEntry.arguments?.getString("modId") ?: return@composable
             val source = backStackEntry.arguments?.getString("source") ?: return@composable
             val viewModel: ModDetailViewModel = koinViewModel { parametersOf(modId, source) }
             ModDetailScreen(
                 viewModel = viewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
             )
         }
     }
 }
 
 @Composable
-fun MainScreen(
-    parentNavController: NavHostController,
-    showBottomBar: Boolean,
-    selectedTab: BottomTab,
-) {
+fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, selectedTab: BottomTab) {
     val mainNavController = rememberNavController()
     val mainBackStackEntry by mainNavController.currentBackStackEntryAsState()
     val mainCurrentRoute by remember(mainBackStackEntry) {
@@ -332,10 +325,10 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    },
+                    }
                 )
             }
-        },
+        }
     ) { innerPadding ->
         NavHost(
             navController = mainNavController,
@@ -344,7 +337,7 @@ fun MainScreen(
             enterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
             exitTransition = { fadeOut(tween(NAV_ANIM_DURATION)) },
             popEnterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
-            popExitTransition = { fadeOut(tween(NAV_ANIM_DURATION)) },
+            popExitTransition = { fadeOut(tween(NAV_ANIM_DURATION)) }
         ) {
             // Saves tab
             composable("saves") {
@@ -354,7 +347,7 @@ fun MainScreen(
                     },
                     onSyncLogClick = {
                         parentNavController.navigate("sync_log")
-                    },
+                    }
                 )
             }
 
@@ -366,7 +359,7 @@ fun MainScreen(
                     },
                     onModClick = { uniqueId ->
                         parentNavController.navigate("installed_mod/$uniqueId")
-                    },
+                    }
                 )
             }
 
@@ -381,7 +374,7 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    },
+                    }
                 )
             }
 
@@ -401,7 +394,7 @@ fun MainScreen(
                         parentNavController.navigate("login") {
                             popUpTo(0) { inclusive = true }
                         }
-                    },
+                    }
                 )
             }
         }

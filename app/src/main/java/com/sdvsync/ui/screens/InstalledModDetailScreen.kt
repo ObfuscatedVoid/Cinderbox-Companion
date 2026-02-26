@@ -34,10 +34,7 @@ private fun formatBytes(bytes: Long): String {
 }
 
 @Composable
-fun InstalledModDetailScreen(
-    viewModel: InstalledModDetailViewModel,
-    onBack: () -> Unit,
-) {
+fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsState()
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
 
@@ -56,18 +53,18 @@ fun InstalledModDetailScreen(
                         pixelData = ArrowLeftData,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         if (mod == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator()
@@ -83,7 +80,7 @@ fun InstalledModDetailScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(16.dp)
         ) {
             // Info card
             SectionHeader(stringResource(R.string.mods_info))
@@ -93,12 +90,12 @@ fun InstalledModDetailScreen(
                     Text(
                         mod.manifest.name,
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         stringResource(R.string.mods_author, mod.manifest.author),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
 
@@ -106,27 +103,27 @@ fun InstalledModDetailScreen(
                         Text(
                             mod.manifest.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(8.dp))
                     }
 
                     Text(
                         stringResource(R.string.mods_version, mod.manifest.version),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall
                     )
                     Text(
                         stringResource(R.string.mods_unique_id, mod.manifest.uniqueID),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall
                     )
                     Text(
                         stringResource(R.string.mods_folder_size, formatBytes(mod.fileSize)),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall
                     )
                     if (mod.installedAt > 0) {
                         Text(
                             stringResource(R.string.mods_installed_on, dateFormat.format(Date(mod.installedAt))),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
@@ -142,22 +139,22 @@ fun InstalledModDetailScreen(
                         Text(
                             stringResource(R.string.mods_update_available),
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             stringResource(
                                 R.string.mods_update_available_version,
                                 updateInfo.installedVersion,
-                                updateInfo.latestVersion,
+                                updateInfo.latestVersion
                             ),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium
                         )
                         updateInfo.updateUrl?.let { url ->
                             Spacer(Modifier.height(8.dp))
                             StardewButton(
                                 onClick = { uriHandler.openUri(url) },
-                                variant = StardewButtonVariant.Gold,
+                                variant = StardewButtonVariant.Gold
                             ) {
                                 Text(stringResource(R.string.mods_view_update))
                             }
@@ -176,7 +173,7 @@ fun InstalledModDetailScreen(
                 StardewOutlinedButton(
                     onClick = {
                         uriHandler.openUri("https://www.nexusmods.com/stardewvalley/mods/$nexusModId")
-                    },
+                    }
                 ) {
                     Text(stringResource(R.string.mods_view_on_nexus))
                 }
@@ -194,31 +191,37 @@ fun InstalledModDetailScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            if (mod.enabled) stringResource(R.string.mods_enabled) else stringResource(R.string.mods_disabled),
-                            style = MaterialTheme.typography.bodyMedium,
+                            if (mod.enabled) {
+                                stringResource(
+                                    R.string.mods_enabled
+                                )
+                            } else {
+                                stringResource(R.string.mods_disabled)
+                            },
+                            style = MaterialTheme.typography.bodyMedium
                         )
                         Switch(
                             checked = mod.enabled,
                             onCheckedChange = { viewModel.toggleMod(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            ),
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            )
                         )
                     }
                     Spacer(Modifier.height(12.dp))
                     StardewOutlinedButton(
                         onClick = { viewModel.checkForUpdate() },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isCheckingUpdate,
+                        enabled = !state.isCheckingUpdate
                     ) {
                         if (state.isCheckingUpdate) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
+                                strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.mods_checking_update))
@@ -230,7 +233,7 @@ fun InstalledModDetailScreen(
                     StardewButton(
                         onClick = { viewModel.showRemoveDialog() },
                         variant = StardewButtonVariant.Danger,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.mods_remove))
                     }
@@ -252,11 +255,11 @@ fun InstalledModDetailScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
                                     dep.uniqueID,
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall
                                 )
                                 Text(
                                     if (dep.isRequired) {
@@ -269,7 +272,7 @@ fun InstalledModDetailScreen(
                                         MaterialTheme.colorScheme.error
                                     } else {
                                         MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
+                                    }
                                 )
                             }
                         }
@@ -289,30 +292,30 @@ fun InstalledModDetailScreen(
                     mod.manifest.entryDll?.let {
                         Text(
                             stringResource(R.string.mods_entry_dll, it),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                     mod.manifest.contentPackFor?.let {
                         Text(
                             stringResource(R.string.mods_content_pack_for, it.uniqueID),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                     mod.manifest.minimumApiVersion?.let {
                         Text(
                             stringResource(R.string.mods_min_api_version, it),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                     if (mod.manifest.updateKeys.isNotEmpty()) {
                         Text(
                             stringResource(R.string.mods_update_keys, mod.manifest.updateKeys.joinToString()),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                     Text(
                         stringResource(R.string.mods_folder_path, mod.folderPath),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -327,7 +330,7 @@ fun InstalledModDetailScreen(
                 confirmButton = {
                     StardewButton(
                         onClick = { viewModel.confirmRemove() },
-                        variant = StardewButtonVariant.Danger,
+                        variant = StardewButtonVariant.Danger
                     ) {
                         Text(stringResource(R.string.mods_remove_confirm))
                     }
@@ -336,7 +339,7 @@ fun InstalledModDetailScreen(
                     StardewButton(onClick = { viewModel.dismissRemoveDialog() }) {
                         Text(stringResource(R.string.action_cancel))
                     }
-                },
+                }
             )
         }
     }
@@ -347,6 +350,6 @@ private fun SectionHeader(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.primary
     )
 }

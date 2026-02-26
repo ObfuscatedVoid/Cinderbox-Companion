@@ -54,15 +54,13 @@ class FileAccessDetector(private val context: Context) {
     /**
      * Get a specific strategy by name.
      */
-    fun getStrategy(name: String): FileAccessStrategy {
-        return when (name.lowercase()) {
-            "root" -> RootFileAccess()
-            "shizuku" -> ShizukuFileAccess()
-            "all files" -> AllFilesAccess()
-            "saf", "saf (staging)" -> SAFFileAccess.createInstance(context) ?: ManualFileAccess()
-            "manual" -> ManualFileAccess()
-            else -> detectBestStrategy()
-        }
+    fun getStrategy(name: String): FileAccessStrategy = when (name.lowercase()) {
+        "root" -> RootFileAccess()
+        "shizuku" -> ShizukuFileAccess()
+        "all files" -> AllFilesAccess()
+        "saf", "saf (staging)" -> SAFFileAccess.createInstance(context) ?: ManualFileAccess()
+        "manual" -> ManualFileAccess()
+        else -> detectBestStrategy()
     }
 
     /**
@@ -78,23 +76,22 @@ class FileAccessDetector(private val context: Context) {
         return methods
     }
 
-    fun getPreferredStrategy(): String? {
-        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_PREFERRED, null)
-    }
+    fun getPreferredStrategy(): String? = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        .getString(KEY_PREFERRED, null)
 
     fun setPreferredStrategy(name: String?) {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             .edit().apply {
-                if (name == null) remove(KEY_PREFERRED)
-                else putString(KEY_PREFERRED, name)
+                if (name == null) {
+                    remove(KEY_PREFERRED)
+                } else {
+                    putString(KEY_PREFERRED, name)
+                }
             }.apply()
     }
 
-    fun isCinderboxMode(): Boolean {
-        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_CINDERBOX_MODE, true)
-    }
+    fun isCinderboxMode(): Boolean = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        .getBoolean(KEY_CINDERBOX_MODE, true)
 
     fun setCinderboxMode(enabled: Boolean) {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

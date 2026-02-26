@@ -23,7 +23,7 @@ enum class StardewButtonVariant {
     Primary,
     Action,
     Gold,
-    Danger,
+    Danger
 }
 
 private val ButtonPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
@@ -34,7 +34,7 @@ fun StardewButton(
     modifier: Modifier = Modifier,
     variant: StardewButtonVariant = StardewButtonVariant.Primary,
     enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit,
+    content: @Composable RowScope.() -> Unit
 ) {
     val (containerColor, contentColor) = when (variant) {
         StardewButtonVariant.Primary -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
@@ -80,9 +80,9 @@ fun StardewButton(
         contentPadding = ButtonPadding,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
-            contentColor = contentColor,
+            contentColor = contentColor
         ),
-        content = content,
+        content = content
     )
 }
 
@@ -91,7 +91,7 @@ fun StardewOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit,
+    content: @Composable RowScope.() -> Unit
 ) {
     val borderColors = SdvSyncThemeExtras.colors
     val borderDark = borderColors.pixelBorderDark
@@ -120,6 +120,6 @@ fun StardewOutlinedButton(
         shape = RectangleShape,
         contentPadding = ButtonPadding,
         border = null,
-        content = content,
+        content = content
     )
 }

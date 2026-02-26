@@ -14,10 +14,7 @@ import com.sdvsync.ui.theme.GoldBright
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
 
 @Composable
-fun PixelProgressBar(
-    progress: Float,
-    modifier: Modifier = Modifier,
-) {
+fun PixelProgressBar(progress: Float, modifier: Modifier = Modifier) {
     val borderColors = SdvSyncThemeExtras.colors
     val dark = borderColors.pixelBorderDark
     val plank = borderColors.pixelBorderPlank
@@ -27,7 +24,7 @@ fun PixelProgressBar(
             .fillMaxWidth()
             .pixelBorderThin()
             .padding(4.dp) // inside the thin border
-            .height(12.dp),
+            .height(12.dp)
     ) {
         val px = 2.dp.toPx()
         val fillWidth = size.width * progress.coerceIn(0f, 1f)
@@ -42,7 +39,7 @@ fun PixelProgressBar(
             drawRect(
                 color = color,
                 topLeft = Offset(x, 0f),
-                size = Size(blockWidth, size.height),
+                size = Size(blockWidth, size.height)
             )
             x += px
         }
@@ -52,7 +49,7 @@ fun PixelProgressBar(
             drawRect(
                 color = plank.copy(alpha = 0.3f),
                 topLeft = Offset(fillWidth, 0f),
-                size = Size(size.width - fillWidth, size.height),
+                size = Size(size.width - fillWidth, size.height)
             )
         }
     }

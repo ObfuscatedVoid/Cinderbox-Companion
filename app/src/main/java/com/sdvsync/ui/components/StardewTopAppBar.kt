@@ -16,11 +16,7 @@ import com.sdvsync.ui.theme.SdvSyncThemeExtras
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StardewTopAppBar(
-    title: String,
-    navigationIcon: @Composable () -> Unit = {},
-    actions: @Composable () -> Unit = {},
-) {
+fun StardewTopAppBar(title: String, navigationIcon: @Composable () -> Unit = {}, actions: @Composable () -> Unit = {}) {
     val borderColors = SdvSyncThemeExtras.colors
 
     TopAppBar(
@@ -29,7 +25,7 @@ fun StardewTopAppBar(
                 title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary
             )
         },
         navigationIcon = navigationIcon,
@@ -37,7 +33,7 @@ fun StardewTopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             navigationIconContentColor = MaterialTheme.colorScheme.primary,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         modifier = Modifier.drawBehind {
             val px = 2.dp.toPx()
@@ -53,11 +49,11 @@ fun StardewTopAppBar(
                 drawRect(
                     color = color,
                     topLeft = Offset(x, y),
-                    size = Size(px, px),
+                    size = Size(px, px)
                 )
                 x += px
                 useHighlight = !useHighlight
             }
-        },
+        }
     )
 }

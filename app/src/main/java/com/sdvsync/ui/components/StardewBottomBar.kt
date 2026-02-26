@@ -29,15 +29,11 @@ enum class BottomTab(val route: String, val labelRes: Int) {
     SAVES("saves", R.string.tab_saves),
     MODS("mods", R.string.tab_mods),
     DOWNLOAD("game_download", R.string.tab_download),
-    SETTINGS("settings", R.string.tab_settings),
+    SETTINGS("settings", R.string.tab_settings)
 }
 
 @Composable
-fun StardewBottomBar(
-    selectedTab: BottomTab,
-    onTabSelected: (BottomTab) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun StardewBottomBar(selectedTab: BottomTab, onTabSelected: (BottomTab) -> Unit, modifier: Modifier = Modifier) {
     val borderColors = SdvSyncThemeExtras.colors
 
     Surface(
@@ -56,21 +52,21 @@ fun StardewBottomBar(
                     drawRect(
                         color = color,
                         topLeft = Offset(x, 0f),
-                        size = Size(px, px),
+                        size = Size(px, px)
                     )
                     x += px
                     useHighlight = !useHighlight
                 }
             },
         shape = RectangleShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 4.dp)
                 .navigationBarsPadding(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             BottomTab.entries.forEach { tab ->
                 val selected = tab == selectedTab
@@ -78,7 +74,7 @@ fun StardewBottomBar(
                     tab = tab,
                     selected = selected,
                     onClick = { onTabSelected(tab) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -86,12 +82,7 @@ fun StardewBottomBar(
 }
 
 @Composable
-private fun BottomTabItem(
-    tab: BottomTab,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun BottomTabItem(tab: BottomTab, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val tint = if (selected) {
         MaterialTheme.colorScheme.primary
     } else {
@@ -110,20 +101,20 @@ private fun BottomTabItem(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick,
+                onClick = onClick
             )
             .padding(vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         PixelIcon(
             pixelData = iconData,
             palette = listOf(Color.Transparent, tint),
-            size = 20.dp,
+            size = 20.dp
         )
         Text(
             text = stringResource(tab.labelRes),
             style = MaterialTheme.typography.labelSmall,
-            color = tint,
+            color = tint
         )
     }
 }

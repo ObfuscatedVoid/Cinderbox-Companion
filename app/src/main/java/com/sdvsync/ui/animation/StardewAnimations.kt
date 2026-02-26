@@ -16,11 +16,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
 
 @Composable
-fun StaggeredAnimatedItem(
-    index: Int,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
+fun StaggeredAnimatedItem(index: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -33,19 +29,15 @@ fun StaggeredAnimatedItem(
         modifier = modifier,
         enter = fadeIn(tween(300)) + slideInVertically(
             animationSpec = tween(300),
-            initialOffsetY = { it / 4 },
-        ),
+            initialOffsetY = { it / 4 }
+        )
     ) {
         content()
     }
 }
 
 @Composable
-fun PulseOnChange(
-    key: Any,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
+fun PulseOnChange(key: Any, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val scale = remember { Animatable(1f) }
 
     LaunchedEffect(key) {
@@ -57,7 +49,7 @@ fun PulseOnChange(
         modifier = modifier.graphicsLayer {
             scaleX = scale.value
             scaleY = scale.value
-        },
+        }
     ) {
         content()
     }

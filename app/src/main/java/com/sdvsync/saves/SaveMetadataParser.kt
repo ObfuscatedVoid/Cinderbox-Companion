@@ -3,9 +3,9 @@ package com.sdvsync.saves
 import android.util.Xml
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.util.GzipUtil
-import org.xmlpull.v1.XmlPullParser
 import java.io.ByteArrayInputStream
 import java.io.File
+import org.xmlpull.v1.XmlPullParser
 
 data class SaveMetadata(
     val farmerName: String,
@@ -15,7 +15,7 @@ data class SaveMetadata(
     val year: Int,
     val gameVersion: String,
     val millisecondsPlayed: Long,
-    val uniqueId: String,
+    val uniqueId: String
 ) {
     val daysPlayed: Int get() = (year - 1) * 112 + season * 28 + dayOfMonth
 
@@ -41,21 +41,25 @@ class SaveMetadataParser {
      * Parse SaveGameInfo XML from bytes.
      * SaveGameInfo is small (~2KB) and safe to fully parse.
      */
-    fun parseFromBytes(data: ByteArray): SaveMetadata? {
-        return try {
-            AppLogger.d(TAG, "parseFromBytes: input size=${data.size}, isGzip=${GzipUtil.isGzip(data)}")
-            // Stardew 1.6+ saves may be gzip-compressed — decompress before parsing XML
-            val xmlData = GzipUtil.decompressIfGzip(data)
-            AppLogger.d(TAG, "parseFromBytes: after decompression size=${xmlData.size}, " +
-                "first50=${String(xmlData, 0, minOf(50, xmlData.size))}")
-            val result = parse(ByteArrayInputStream(xmlData))
-            AppLogger.d(TAG, "parseFromBytes: parsed farmer='${result.farmerName}', farm='${result.farmName}', " +
-                "day=${result.dayOfMonth}, season=${result.season}, year=${result.year}")
-            result
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "Failed to parse SaveGameInfo from bytes (size=${data.size})", e)
-            null
-        }
+    fun parseFromBytes(data: ByteArray): SaveMetadata? = try {
+        AppLogger.d(TAG, "parseFromBytes: input size=${data.size}, isGzip=${GzipUtil.isGzip(data)}")
+        // Stardew 1.6+ saves may be gzip-compressed — decompress before parsing XML
+        val xmlData = GzipUtil.decompressIfGzip(data)
+        AppLogger.d(
+            TAG,
+            "parseFromBytes: after decompression size=${xmlData.size}, " +
+                "first50=${String(xmlData, 0, minOf(50, xmlData.size))}"
+        )
+        val result = parse(ByteArrayInputStream(xmlData))
+        AppLogger.d(
+            TAG,
+            "parseFromBytes: parsed farmer='${result.farmerName}', farm='${result.farmName}', " +
+                "day=${result.dayOfMonth}, season=${result.season}, year=${result.year}"
+        )
+        result
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "Failed to parse SaveGameInfo from bytes (size=${data.size})", e)
+        null
     }
 
     /**
@@ -129,7 +133,7 @@ class SaveMetadataParser {
             year = year,
             gameVersion = gameVersion,
             millisecondsPlayed = millisecondsPlayed,
-            uniqueId = uniqueId,
+            uniqueId = uniqueId
         )
     }
 

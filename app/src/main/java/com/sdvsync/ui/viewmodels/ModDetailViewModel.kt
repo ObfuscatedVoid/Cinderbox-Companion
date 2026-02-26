@@ -24,7 +24,7 @@ data class ModDetailState(
     val error: String? = null,
     val downloadProgress: ModDownloadProgress = ModDownloadProgress(),
     val installedUniqueIds: Set<String> = emptySet(),
-    val downloadErrorUrl: String? = null,
+    val downloadErrorUrl: String? = null
 )
 
 class ModDetailViewModel(
@@ -32,7 +32,7 @@ class ModDetailViewModel(
     private val downloadManager: ModDownloadManager,
     private val fileManager: ModFileManager,
     private val modId: String,
-    private val source: String,
+    private val source: String
 ) : ViewModel() {
 
     companion object {
@@ -95,7 +95,7 @@ class ModDetailViewModel(
                     it.copy(
                         isDownloading = false,
                         error = friendlyMessage,
-                        downloadErrorUrl = browserUrl,
+                        downloadErrorUrl = browserUrl
                     )
                 }
             }
@@ -113,9 +113,10 @@ class ModDetailViewModel(
             message.contains("No File found", ignoreCase = true) ->
                 "This file is no longer available for download" to nexusUrl
             message.contains("Not Premium", ignoreCase = true) ||
-            message.contains("premium", ignoreCase = true) ||
-            message.contains("403") ->
-                "Free account: tap below to open Nexus, then tap \"Mod Manager Download\" on the file you want. The download will start automatically." to nexusUrl
+                message.contains("premium", ignoreCase = true) ||
+                message.contains("403") ->
+                "Free account: tap below to open Nexus, then tap \"Mod Manager Download\"" +
+                    " on the file you want. The download will start automatically." to nexusUrl
             message.contains("429") ->
                 "Rate limit reached. Please try again later." to null
             else -> message to nexusUrl

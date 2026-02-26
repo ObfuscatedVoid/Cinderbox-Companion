@@ -28,35 +28,28 @@ fun seasonColor(season: Int): Color {
 }
 
 @Composable
-fun SeasonAccentBar(
-    season: Int,
-    modifier: Modifier = Modifier,
-) {
+fun SeasonAccentBar(season: Int, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(3.dp)
-            .background(seasonColor(season)),
+            .background(seasonColor(season))
     )
 }
 
 @Composable
-fun SeasonBadge(
-    season: Int,
-    seasonName: String,
-    modifier: Modifier = Modifier,
-) {
+fun SeasonBadge(season: Int, seasonName: String, modifier: Modifier = Modifier) {
     val color = seasonColor(season)
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         PixelSeasonIcon(season = season, size = 14.dp)
         Text(
             seasonName,
             style = MaterialTheme.typography.labelSmall,
-            color = color,
+            color = color
         )
     }
 }

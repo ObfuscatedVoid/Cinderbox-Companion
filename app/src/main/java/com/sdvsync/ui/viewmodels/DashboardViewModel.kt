@@ -2,9 +2,9 @@ package com.sdvsync.ui.viewmodels
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-import com.sdvsync.logging.AppLogger
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
@@ -27,7 +27,7 @@ data class SaveEntry(
     val syncDirection: SyncDirection,
     val statusMessage: String,
     val hasCloud: Boolean,
-    val hasLocal: Boolean,
+    val hasLocal: Boolean
 )
 
 data class DashboardState(
@@ -35,7 +35,7 @@ data class DashboardState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val isStagingMode: Boolean = false,
+    val isStagingMode: Boolean = false
 )
 
 class DashboardViewModel(
@@ -44,7 +44,7 @@ class DashboardViewModel(
     private val cloudService: SteamCloudService,
     private val saveFileManager: SaveFileManager,
     private val metadataParser: SaveMetadataParser,
-    private val conflictResolver: ConflictResolver,
+    private val conflictResolver: ConflictResolver
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
@@ -56,7 +56,7 @@ class DashboardViewModel(
                 isLoading = !isUserRefresh,
                 isRefreshing = isUserRefresh,
                 error = null,
-                isStagingMode = saveFileManager.isStaging,
+                isStagingMode = saveFileManager.isStaging
             )
 
             try {
@@ -68,7 +68,7 @@ class DashboardViewModel(
                         _state.value = _state.value.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            error = context.getString(R.string.error_not_connected),
+                            error = context.getString(R.string.error_not_connected)
                         )
                         return@launch
                     }
@@ -124,12 +124,12 @@ class DashboardViewModel(
                         syncDirection = comparison.direction,
                         statusMessage = comparison.message,
                         hasCloud = folderName in cloudSaves,
-                        hasLocal = localMeta != null,
+                        hasLocal = localMeta != null
                     )
                 }.sortedByDescending {
                     maxOf(
                         it.cloudMeta?.daysPlayed ?: 0,
-                        it.localMeta?.daysPlayed ?: 0,
+                        it.localMeta?.daysPlayed ?: 0
                     )
                 }
 
@@ -137,16 +137,15 @@ class DashboardViewModel(
                     saves = entries,
                     isLoading = false,
                     isRefreshing = false,
-                    isStagingMode = saveFileManager.isStaging,
+                    isStagingMode = saveFileManager.isStaging
                 )
-
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "Failed to load saves", e)
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isRefreshing = false,
-                    error = context.getString(R.string.error_load_saves_failed, e.message ?: "Unknown error"),
+                    error = context.getString(R.string.error_load_saves_failed, e.message ?: "Unknown error")
                 )
             }
         }
@@ -160,10 +159,7 @@ class DashboardViewModel(
      * takes up to ~1s to be processed by the callback loop, and auto-reconnect adds a 2s delay.
      * So we must wait long enough for the full disconnect→reconnect cycle to complete.
      */
-    private suspend fun <T> retryOnDisconnect(
-        maxRetries: Int = 5,
-        block: suspend () -> T,
-    ): T {
+    private suspend fun <T> retryOnDisconnect(maxRetries: Int = 5, block: suspend () -> T): T {
         var lastException: Exception? = null
         repeat(maxRetries) { attempt ->
             try {
@@ -186,7 +182,10 @@ class DashboardViewModel(
 
                 // If still not logged in, wait for the auto-reconnect to fully complete
                 if (!clientManager.isLoggedIn) {
-                    AppLogger.d(TAG, "Not logged in yet (state=${clientManager.connectionState.value}), waiting for reconnection...")
+                    AppLogger.d(
+                        TAG,
+                        "Not logged in yet (state=${clientManager.connectionState.value}), waiting for reconnection..."
+                    )
                     val reconnected = clientManager.awaitLoggedIn(timeoutMs = 30_000)
                     if (!reconnected) {
                         throw RuntimeException("Lost connection to Steam", e)

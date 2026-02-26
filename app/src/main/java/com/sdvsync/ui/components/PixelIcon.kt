@@ -16,12 +16,7 @@ import androidx.compose.ui.unit.dp
  * @param size The rendered size of the icon.
  */
 @Composable
-fun PixelIcon(
-    pixelData: Array<IntArray>,
-    palette: List<Color>,
-    modifier: Modifier = Modifier,
-    size: Dp = 24.dp,
-) {
+fun PixelIcon(pixelData: Array<IntArray>, palette: List<Color>, modifier: Modifier = Modifier, size: Dp = 24.dp) {
     Canvas(modifier = modifier.size(size)) {
         val rows = pixelData.size
         val cols = pixelData.maxOfOrNull { it.size } ?: return@Canvas
@@ -36,12 +31,12 @@ fun PixelIcon(
                         color = palette[idx],
                         topLeft = androidx.compose.ui.geometry.Offset(
                             col * cellW,
-                            row * cellH,
+                            row * cellH
                         ),
                         size = androidx.compose.ui.geometry.Size(
                             cellW + 0.5f,
-                            cellH + 0.5f,
-                        ),
+                            cellH + 0.5f
+                        )
                     )
                 }
             }

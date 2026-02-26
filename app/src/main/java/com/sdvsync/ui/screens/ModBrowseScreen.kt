@@ -34,7 +34,7 @@ import com.sdvsync.ui.viewmodels.ModBrowseViewModel
 fun ModBrowseScreen(
     viewModel: ModBrowseViewModel,
     onBack: () -> Unit,
-    onModClick: (modId: String, source: String) -> Unit,
+    onModClick: (modId: String, source: String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -49,18 +49,18 @@ fun ModBrowseScreen(
                         pixelData = ArrowLeftData,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // API key setup card
             if (!state.hasApiKey) {
@@ -69,13 +69,13 @@ fun ModBrowseScreen(
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 stringResource(R.string.mods_api_key_title),
-                                style = MaterialTheme.typography.titleSmall,
+                                style = MaterialTheme.typography.titleSmall
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 stringResource(R.string.mods_api_key_description),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(12.dp))
                             OutlinedTextField(
@@ -84,27 +84,27 @@ fun ModBrowseScreen(
                                 label = { Text(stringResource(R.string.mods_api_key_hint)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RectangleShape,
-                                singleLine = true,
+                                singleLine = true
                             )
                             if (state.apiKeyError != null) {
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     state.apiKeyError!!,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
+                                    color = MaterialTheme.colorScheme.error
                                 )
                             }
                             Spacer(Modifier.height(12.dp))
                             StardewButton(
                                 onClick = { viewModel.validateAndSaveApiKey(apiKeyInput) },
                                 enabled = apiKeyInput.isNotBlank() && !state.isValidatingKey,
-                                variant = StardewButtonVariant.Action,
+                                variant = StardewButtonVariant.Action
                             ) {
                                 if (state.isValidatingKey) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(16.dp),
                                         strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        color = MaterialTheme.colorScheme.onPrimary
                                     )
                                     Spacer(Modifier.width(8.dp))
                                 }
@@ -114,16 +114,16 @@ fun ModBrowseScreen(
                             Text(
                                 stringResource(R.string.mods_api_key_get),
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    textDecoration = TextDecoration.Underline,
+                                    textDecoration = TextDecoration.Underline
                                 ),
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.clickable {
                                     val intent = Intent(
                                         Intent.ACTION_VIEW,
-                                        Uri.parse("https://www.nexusmods.com/users/myaccount?tab=api+access"),
+                                        Uri.parse("https://www.nexusmods.com/users/myaccount?tab=api+access")
                                     )
                                     context.startActivity(intent)
-                                },
+                                }
                             )
                         }
                     }
@@ -145,9 +145,9 @@ fun ModBrowseScreen(
                             pixelData = SearchData,
                             onClick = {},
                             contentDescription = "Search",
-                            size = 16.dp,
+                            size = 16.dp
                         )
-                    },
+                    }
                 )
             }
 
@@ -155,22 +155,22 @@ fun ModBrowseScreen(
             if (state.searchQuery.isBlank()) {
                 item {
                     FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
                             selected = state.category == BrowseCategory.TRENDING,
                             onClick = { viewModel.loadCategory(BrowseCategory.TRENDING) },
-                            label = { Text(stringResource(R.string.mods_trending)) },
+                            label = { Text(stringResource(R.string.mods_trending)) }
                         )
                         FilterChip(
                             selected = state.category == BrowseCategory.LATEST,
                             onClick = { viewModel.loadCategory(BrowseCategory.LATEST) },
-                            label = { Text(stringResource(R.string.mods_latest)) },
+                            label = { Text(stringResource(R.string.mods_latest)) }
                         )
                         FilterChip(
                             selected = state.category == BrowseCategory.RECENTLY_UPDATED,
                             onClick = { viewModel.loadCategory(BrowseCategory.RECENTLY_UPDATED) },
-                            label = { Text(stringResource(R.string.mods_recently_updated)) },
+                            label = { Text(stringResource(R.string.mods_recently_updated)) }
                         )
                     }
                 }
@@ -183,7 +183,7 @@ fun ModBrowseScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         PixelLoadingSpinner()
                     }
@@ -194,16 +194,16 @@ fun ModBrowseScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             state.error!!,
                             color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge
                         )
                         Spacer(Modifier.height(16.dp))
                         StardewButton(
-                            onClick = { viewModel.loadCategory(state.category) },
+                            onClick = { viewModel.loadCategory(state.category) }
                         ) {
                             Text(stringResource(R.string.action_retry))
                         }
@@ -215,12 +215,12 @@ fun ModBrowseScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(24.dp),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             stringResource(R.string.mods_no_results),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -230,7 +230,7 @@ fun ModBrowseScreen(
                         BrowseModCard(
                             mod = mod,
                             isInstalled = state.installedUniqueIds.contains(mod.name.lowercase()),
-                            onClick = { onModClick(mod.modId, mod.sourceId) },
+                            onClick = { onModClick(mod.modId, mod.sourceId) }
                         )
                     }
                 }
@@ -241,12 +241,12 @@ fun ModBrowseScreen(
                 Spacer(Modifier.height(8.dp))
                 TextButton(
                     onClick = { viewModel.removeApiKey() },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         stringResource(R.string.mods_api_key_remove),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
