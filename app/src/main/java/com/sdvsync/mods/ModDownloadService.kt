@@ -16,11 +16,11 @@ import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.models.InstallResult
 import com.sdvsync.mods.models.ModDownloadProgress
 import com.sdvsync.mods.models.ModDownloadState
+import java.io.File
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.koin.android.ext.android.inject
-import java.io.File
 
 class ModDownloadService : Service() {
 
@@ -35,12 +35,13 @@ class ModDownloadService : Service() {
         private const val EXTRA_SOURCE = "source"
 
         fun start(context: Context, url: String, modName: String, modId: String, source: String) {
-            val intent = Intent(context, ModDownloadService::class.java).apply {
-                putExtra(EXTRA_URL, url)
-                putExtra(EXTRA_MOD_NAME, modName)
-                putExtra(EXTRA_MOD_ID, modId)
-                putExtra(EXTRA_SOURCE, source)
-            }
+            val intent =
+                    Intent(context, ModDownloadService::class.java).apply {
+                        putExtra(EXTRA_URL, url)
+                        putExtra(EXTRA_MOD_NAME, modName)
+                        putExtra(EXTRA_MOD_ID, modId)
+                        putExtra(EXTRA_SOURCE, source)
+                    }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
@@ -74,9 +75,7 @@ class ModDownloadService : Service() {
         val source = intent.getStringExtra(EXTRA_SOURCE) ?: ""
 
         downloadJob?.cancel()
-        downloadJob = serviceScope.launch {
-            runDownload(url, modName, modId, source)
-        }
+        downloadJob = serviceScope.launch { runDownload(url, modName, modId, source) }
 
         return START_NOT_STICKY
     }
@@ -85,32 +84,37 @@ class ModDownloadService : Service() {
         downloadJob?.cancel()
         serviceScope.cancel()
         val currentState = ModDownloadManager._progress.value.state
-        if (currentState == ModDownloadState.DOWNLOADING || currentState == ModDownloadState.EXTRACTING) {
-            ModDownloadManager._progress.value = ModDownloadProgress(
-                state = ModDownloadState.ERROR,
-                errorMessage = "Download cancelled",
-            )
+        if (currentState == ModDownloadState.DOWNLOADING ||
+                        currentState == ModDownloadState.EXTRACTING
+        ) {
+            ModDownloadManager._progress.value =
+                    ModDownloadProgress(
+                            state = ModDownloadState.ERROR,
+                            errorMessage = "Download cancelled",
+                    )
         }
         super.onDestroy()
     }
 
     private suspend fun runDownload(url: String, modName: String, modId: String, source: String) {
         try {
-            // Phase 1: Download
-            ModDownloadManager._progress.value = ModDownloadProgress(
-                state = ModDownloadState.DOWNLOADING,
-                modName = modName,
-            )
+            // Download
+            ModDownloadManager._progress.value =
+                    ModDownloadProgress(
+                            state = ModDownloadState.DOWNLOADING,
+                            modName = modName,
+                    )
             updateNotification(getString(R.string.mods_download_downloading, modName))
 
             val tempFile = File(cacheDir, "mod_download_${System.currentTimeMillis()}.zip")
             downloadFile(url, tempFile)
 
-            // Phase 2: Extract + Install
-            ModDownloadManager._progress.value = ModDownloadProgress(
-                state = ModDownloadState.INSTALLING,
-                modName = modName,
-            )
+            // Extract + Install
+            ModDownloadManager._progress.value =
+                    ModDownloadProgress(
+                            state = ModDownloadState.INSTALLING,
+                            modName = modName,
+                    )
             updateNotification(getString(R.string.mods_download_installing))
 
             val result = fileManager.installFromZip(tempFile)
@@ -121,26 +125,28 @@ class ModDownloadService : Service() {
                     // Save metadata for each installed mod
                     for (mod in result.mods) {
                         dataStore.setModMetadata(
-                            mod.manifest.uniqueID,
-                            ModMetadata(
-                                installedFrom = "$source:$modId",
-                                installedAt = System.currentTimeMillis(),
-                            ),
+                                mod.manifest.uniqueID,
+                                ModMetadata(
+                                        installedFrom = "$source:$modId",
+                                        installedAt = System.currentTimeMillis(),
+                                ),
                         )
                     }
 
-                    ModDownloadManager._progress.value = ModDownloadProgress(
-                        state = ModDownloadState.COMPLETED,
-                        modName = modName,
-                    )
+                    ModDownloadManager._progress.value =
+                            ModDownloadProgress(
+                                    state = ModDownloadState.COMPLETED,
+                                    modName = modName,
+                            )
                     updateNotification(getString(R.string.mods_download_complete, modName))
                 }
                 is InstallResult.Error -> {
-                    ModDownloadManager._progress.value = ModDownloadProgress(
-                        state = ModDownloadState.ERROR,
-                        modName = modName,
-                        errorMessage = result.message,
-                    )
+                    ModDownloadManager._progress.value =
+                            ModDownloadProgress(
+                                    state = ModDownloadState.ERROR,
+                                    modName = modName,
+                                    errorMessage = result.message,
+                            )
                     updateNotification(getString(R.string.mods_download_failed, result.message))
                 }
             }
@@ -148,12 +154,15 @@ class ModDownloadService : Service() {
             AppLogger.d(TAG, "Download cancelled")
         } catch (e: Exception) {
             AppLogger.e(TAG, "Download failed", e)
-            ModDownloadManager._progress.value = ModDownloadProgress(
-                state = ModDownloadState.ERROR,
-                modName = modName,
-                errorMessage = e.message ?: "Unknown error",
+            ModDownloadManager._progress.value =
+                    ModDownloadProgress(
+                            state = ModDownloadState.ERROR,
+                            modName = modName,
+                            errorMessage = e.message ?: "Unknown error",
+                    )
+            updateNotification(
+                    getString(R.string.mods_download_failed, e.message ?: "Unknown error")
             )
-            updateNotification(getString(R.string.mods_download_failed, e.message ?: "Unknown error"))
         } finally {
             stopSelf()
         }
@@ -181,10 +190,11 @@ class ModDownloadService : Service() {
                         output.write(buffer, 0, bytesRead)
                         downloadedBytes += bytesRead
 
-                        ModDownloadManager._progress.value = ModDownloadManager._progress.value.copy(
-                            downloadedBytes = downloadedBytes,
-                            totalBytes = totalBytes,
-                        )
+                        ModDownloadManager._progress.value =
+                                ModDownloadManager._progress.value.copy(
+                                        downloadedBytes = downloadedBytes,
+                                        totalBytes = totalBytes,
+                                )
                     }
                 }
             }
@@ -193,32 +203,37 @@ class ModDownloadService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.mods_download_notification_channel),
-                NotificationManager.IMPORTANCE_LOW,
-            ).apply {
-                description = getString(R.string.mods_download_notification_channel_desc)
-            }
+            val channel =
+                    NotificationChannel(
+                                    CHANNEL_ID,
+                                    getString(R.string.mods_download_notification_channel),
+                                    NotificationManager.IMPORTANCE_LOW,
+                            )
+                            .apply {
+                                description =
+                                        getString(R.string.mods_download_notification_channel_desc)
+                            }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
 
     private fun buildNotification(text: String): Notification {
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE,
-        )
+        val pendingIntent =
+                PendingIntent.getActivity(
+                        this,
+                        0,
+                        Intent(this, MainActivity::class.java),
+                        PendingIntent.FLAG_IMMUTABLE,
+                )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.mods_download_notification_title))
-            .setContentText(text)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .build()
+                .setContentTitle(getString(R.string.mods_download_notification_title))
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .build()
     }
 
     private fun updateNotification(text: String) {
