@@ -8,9 +8,11 @@ import com.sdvsync.R
 import com.sdvsync.download.DownloadProgress
 import com.sdvsync.download.DownloadState
 import com.sdvsync.download.GameDownloadManager
+import com.sdvsync.download.SmapiSetupProgress
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.steam.SteamContentService
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +27,7 @@ data class GameDownloadState(
     val installDirectory: String = "",
     val verifyAfterDownload: Boolean = true,
     val downloadProgress: DownloadProgress = DownloadProgress(),
+    val smapiSetupProgress: SmapiSetupProgress = SmapiSetupProgress(),
     val error: String? = null,
 )
 
@@ -40,6 +43,7 @@ class GameDownloadViewModel(
 
     private val _state = MutableStateFlow(GameDownloadState())
     val state: StateFlow<GameDownloadState> = _state.asStateFlow()
+    private var smapiJob: Job? = null
 
     init {
         val defaultDir = Environment.getExternalStoragePublicDirectory(
@@ -50,6 +54,11 @@ class GameDownloadViewModel(
         viewModelScope.launch {
             downloadManager.progress.collect { progress ->
                 _state.value = _state.value.copy(downloadProgress = progress)
+            }
+        }
+        viewModelScope.launch {
+            downloadManager.smapiProgress.collect { progress ->
+                _state.value = _state.value.copy(smapiSetupProgress = progress)
             }
         }
     }
@@ -141,5 +150,22 @@ class GameDownloadViewModel(
         _state.value = _state.value.copy(
             downloadProgress = DownloadProgress(),
         )
+    }
+
+    fun extractSmapi() {
+        if (smapiJob?.isActive == true) return
+        smapiJob = viewModelScope.launch {
+            try {
+                downloadManager.extractSmapiAsset()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "SMAPI extraction failed", e)
+            }
+        }
+    }
+
+    fun resetSmapiSetup() {
+        GameDownloadManager._smapiProgress.value = SmapiSetupProgress()
     }
 }

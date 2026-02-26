@@ -238,6 +238,17 @@
     <string name="download_verify_failed">Verification failed for %1$d file(s)</string>
     <string name="download_notification_verifying">Verifying files\u2026 %1$d%%</string>
 
+    <!-- SMAPI Setup -->
+    <string name="smapi_setup_title">SMAPI Setup</string>
+    <string name="smapi_setup_desc">Extract SMAPI internals to your device. Required for running mods with Cinderbox. This works independently of the game download.</string>
+    <string name="smapi_extract_button">Extract SMAPI Internals</string>
+    <string name="smapi_extracting">Extracting SMAPI\u2026</string>
+    <string name="smapi_extract_progress">%1$d / %2$d files extracted</string>
+    <string name="smapi_extract_success">SMAPI setup complete!</string>
+    <string name="smapi_extract_success_desc">%1$d files extracted to /StardewValley/smapi-internal/</string>
+    <string name="smapi_extract_error">SMAPI extraction had errors: %1$s</string>
+    <string name="smapi_extract_again">Extract Again</string>
+
     <!-- Cinderbox copy -->
     <string name="cinderbox_copy_button">Copy to Cinderbox</string>
     <string name="cinderbox_copying">Copying to Cinderbox\u2026</string>

@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.download.DownloadState
+import com.sdvsync.download.SmapiSetupProgress
 import com.sdvsync.ui.components.ArrowLeftData
 import com.sdvsync.ui.components.PixelDivider
 import com.sdvsync.ui.components.PixelIconButton
@@ -548,7 +549,139 @@ fun GameDownloadScreen(
                 }
             }
 
+            // SMAPI Setup section (always visible)
             Spacer(Modifier.height(24.dp))
+            PixelDivider()
+            Spacer(Modifier.height(24.dp))
+
+            SmapiSetupSection(
+                smapiProgress = state.smapiSetupProgress,
+                isCopying = downloadState == DownloadState.COPYING,
+                onExtract = { viewModel.extractSmapi() },
+                onReset = { viewModel.resetSmapiSetup() },
+            )
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun SmapiSetupSection(
+    smapiProgress: SmapiSetupProgress,
+    isCopying: Boolean,
+    onExtract: () -> Unit,
+    onReset: () -> Unit,
+) {
+    SectionHeader(stringResource(R.string.smapi_setup_title))
+    Spacer(Modifier.height(8.dp))
+
+    when {
+        smapiProgress.isRunning -> {
+            // Running state
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            stringResource(R.string.smapi_extracting),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    if (smapiProgress.currentFile.isNotEmpty()) {
+                        Text(
+                            smapiProgress.currentFile,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    Text(
+                        stringResource(
+                            R.string.smapi_extract_progress,
+                            smapiProgress.extractedFiles,
+                            smapiProgress.totalFiles,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                    PixelProgressBar(progress = smapiProgress.percent)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "${(smapiProgress.percent * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        smapiProgress.completed -> {
+            // Completed state
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    if (smapiProgress.errorMessage != null) {
+                        Text(
+                            stringResource(R.string.smapi_extract_error, smapiProgress.errorMessage),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.smapi_extract_success),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.smapi_extract_success_desc, smapiProgress.extractedFiles),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            StardewOutlinedButton(
+                onClick = onReset,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.smapi_extract_again))
+            }
+        }
+
+        else -> {
+            // Idle state
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.smapi_setup_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            StardewButton(
+                onClick = onExtract,
+                variant = StardewButtonVariant.Action,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isCopying,
+            ) {
+                Text(stringResource(R.string.smapi_extract_button))
+            }
         }
     }
 }

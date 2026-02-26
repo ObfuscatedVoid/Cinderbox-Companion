@@ -40,6 +40,16 @@ data class DownloadProgress(
     val copyErrors: List<String> = emptyList(),
 )
 
+data class SmapiSetupProgress(
+    val isRunning: Boolean = false,
+    val percent: Float = 0f,
+    val currentFile: String = "",
+    val extractedFiles: Int = 0,
+    val totalFiles: Int = 0,
+    val completed: Boolean = false,
+    val errorMessage: String? = null,
+)
+
 class GameDownloadManager(
     private val context: Context,
 ) {
@@ -47,6 +57,7 @@ class GameDownloadManager(
         private const val TAG = "GameDownloadManager"
 
         internal val _progress = MutableStateFlow(DownloadProgress())
+        internal val _smapiProgress = MutableStateFlow(SmapiSetupProgress())
 
         val CINDERBOX_DLLS = listOf(
             "Stardew Valley.dll",
@@ -63,6 +74,7 @@ class GameDownloadManager(
     }
 
     val progress: StateFlow<DownloadProgress> = _progress.asStateFlow()
+    val smapiProgress: StateFlow<SmapiSetupProgress> = _smapiProgress.asStateFlow()
 
     fun startDownload(
         branch: String = "public",
@@ -83,6 +95,106 @@ class GameDownloadManager(
 
     fun cancelDownload() {
         GameDownloadService.stop(context)
+    }
+
+    suspend fun extractSmapiAsset() {
+        _smapiProgress.value = SmapiSetupProgress(isRunning = true, currentFile = "Counting files…")
+
+        val buffer = ByteArray(256 * 1024)
+        val smapiDestDir = File(SMAPI_DEST)
+        val errors = mutableListOf<String>()
+        var extracted = 0
+
+        // Count entries first
+        val totalEntries = try {
+            context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) } + 1 // +1 for Mods/
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            AppLogger.e(TAG, "Failed to count SMAPI entries", e)
+            _smapiProgress.value = SmapiSetupProgress(
+                completed = true,
+                errorMessage = "Failed to open SMAPI asset: ${e.message}",
+            )
+            return
+        }
+
+        _smapiProgress.value = SmapiSetupProgress(
+            isRunning = true,
+            totalFiles = totalEntries,
+        )
+
+        // Extract zip from assets
+        try {
+            context.assets.open(SMAPI_ASSET_NAME).use { assetStream ->
+                ZipInputStream(assetStream).use { zip ->
+                    var entry = zip.nextEntry
+                    while (entry != null) {
+                        coroutineContext.ensureActive()
+
+                        val entryName = entry.name
+                        val displayName = "smapi-internal/$entryName"
+
+                        _smapiProgress.value = _smapiProgress.value.copy(
+                            currentFile = displayName,
+                            extractedFiles = extracted,
+                            percent = if (totalEntries > 0) extracted.toFloat() / totalEntries else 0f,
+                        )
+
+                        if (!entry.isDirectory) {
+                            try {
+                                val destFile = File(smapiDestDir, entryName)
+                                destFile.parentFile?.mkdirs()
+                                destFile.outputStream().buffered().use { output ->
+                                    var bytesRead: Int
+                                    while (zip.read(buffer).also { bytesRead = it } != -1) {
+                                        coroutineContext.ensureActive()
+                                        output.write(buffer, 0, bytesRead)
+                                    }
+                                }
+                                extracted++
+                            } catch (e: Exception) {
+                                if (e is kotlinx.coroutines.CancellationException) throw e
+                                AppLogger.e(TAG, "Failed to extract $displayName", e)
+                                errors.add(displayName)
+                            }
+                        }
+
+                        zip.closeEntry()
+                        entry = zip.nextEntry
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            AppLogger.e(TAG, "Failed to open SMAPI asset", e)
+            errors.add(SMAPI_ASSET_NAME)
+        }
+
+        // Create Mods/ directory
+        _smapiProgress.value = _smapiProgress.value.copy(
+            currentFile = "Mods/",
+            extractedFiles = extracted,
+            percent = if (totalEntries > 0) extracted.toFloat() / totalEntries else 0f,
+        )
+        try {
+            File(MODS_DIR).mkdirs()
+            extracted++
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            AppLogger.e(TAG, "Failed to create Mods directory", e)
+            errors.add("Mods/")
+        }
+
+        AppLogger.i(TAG, "SMAPI setup complete: $extracted/$totalEntries files, ${errors.size} errors")
+
+        _smapiProgress.value = SmapiSetupProgress(
+            isRunning = false,
+            percent = 1f,
+            extractedFiles = extracted,
+            totalFiles = totalEntries,
+            completed = true,
+            errorMessage = if (errors.isNotEmpty()) errors.joinToString(", ") else null,
+        )
     }
 
     private fun countZipEntries(inputStream: InputStream): Int {
