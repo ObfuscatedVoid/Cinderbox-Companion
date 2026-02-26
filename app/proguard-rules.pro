@@ -8,3 +8,12 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+# SpongyCastle — LDAP/JNDI classes not available on Android
+-dontwarn javax.naming.**
+
+# Tink / ErrorProne annotations — compile-time only
+-dontwarn com.google.errorprone.annotations.**
+
+# JavaSteam — optional Zstd dependency not bundled
+-dontwarn com.github.luben.zstd.**

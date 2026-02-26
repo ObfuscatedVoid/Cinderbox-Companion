@@ -150,7 +150,7 @@
     <string name="settings_backups_description">A backup is created before every sync to protect your save data.</string>
     <string name="settings_backups_count">Keep up to %1$d backups per save</string>
     <string name="settings_about_title">About</string>
-    <string name="settings_about">Cinderbox Companion v0.1.0</string>
+    <string name="settings_about">Cinderbox Companion v0.0.1</string>
     <string name="settings_about_desc">Companion app for Cinderbox \u2014 sync saves, download game files, and manage mods.</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_share_logs">Share Logs</string>
