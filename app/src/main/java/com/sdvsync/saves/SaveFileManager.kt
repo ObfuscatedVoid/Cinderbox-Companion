@@ -13,10 +13,12 @@ class SaveFileManager(
         private const val TAG = "SaveFileManager"
         const val SDV_SAVE_PATH =
             "/storage/emulated/0/Android/data/com.chucklefish.stardewvalley/files/Saves"
+        const val CINDERBOX_SAVE_PATH =
+            "/storage/emulated/0/StardewValley/Saves"
     }
 
     /** True when SAF points to a staging directory instead of the game folder. */
-    val isStaging: Boolean get() = basePath != SDV_SAVE_PATH
+    val isStaging: Boolean get() = basePath != SDV_SAVE_PATH && basePath != CINDERBOX_SAVE_PATH
 
     /**
      * List all local saves with their metadata.

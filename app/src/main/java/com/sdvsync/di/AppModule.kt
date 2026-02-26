@@ -65,8 +65,13 @@ val appModule = module {
     single { SaveValidator() }
     single { SaveBackupManager(androidContext()) }
     factory {
+        val detector = get<FileAccessDetector>()
         val strategy = get<FileAccessStrategy>()
-        val basePath = if (strategy is SAFFileAccess) strategy.basePath else SaveFileManager.SDV_SAVE_PATH
+        val basePath = when {
+            detector.isCinderboxMode() -> SaveFileManager.CINDERBOX_SAVE_PATH
+            strategy is SAFFileAccess -> strategy.basePath
+            else -> SaveFileManager.SDV_SAVE_PATH
+        }
         SaveFileManager(strategy, get(), basePath)
     }
 

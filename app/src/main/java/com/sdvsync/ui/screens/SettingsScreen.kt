@@ -117,6 +117,44 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+            // Game mode
+            SectionHeader(stringResource(R.string.settings_game_mode_title))
+            Spacer(Modifier.height(8.dp))
+            StardewCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.settings_cinderbox_mode),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            if (state.cinderboxMode) {
+                                stringResource(R.string.settings_cinderbox_mode_desc)
+                            } else {
+                                stringResource(R.string.settings_cinderbox_mode_off_desc)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Switch(
+                        checked = state.cinderboxMode,
+                        onCheckedChange = { viewModel.toggleCinderboxMode(it) },
+                        colors = switchColors,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            PixelDivider()
+            Spacer(Modifier.height(24.dp))
+
             // File access mode
             SectionHeader(stringResource(R.string.settings_file_access))
             Spacer(Modifier.height(8.dp))

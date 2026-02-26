@@ -9,6 +9,7 @@ class FileAccessDetector(private val context: Context) {
         private const val TAG = "FileAccessDetector"
         private const val PREF_NAME = "file_access"
         private const val KEY_PREFERRED = "preferred_strategy"
+        private const val KEY_CINDERBOX_MODE = "cinderbox_mode"
     }
 
     /**
@@ -88,5 +89,15 @@ class FileAccessDetector(private val context: Context) {
                 if (name == null) remove(KEY_PREFERRED)
                 else putString(KEY_PREFERRED, name)
             }.apply()
+    }
+
+    fun isCinderboxMode(): Boolean {
+        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_CINDERBOX_MODE, true)
+    }
+
+    fun setCinderboxMode(enabled: Boolean) {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_CINDERBOX_MODE, enabled).apply()
     }
 }

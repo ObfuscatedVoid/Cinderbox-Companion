@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SettingsState(
+    val cinderboxMode: Boolean = true,
     val fileAccessMode: String = "auto",
     val availableModes: List<String> = emptyList(),
     val hasRoot: Boolean = false,
@@ -70,6 +71,7 @@ class SettingsViewModel(
         }
 
         _state.value = SettingsState(
+            cinderboxMode = fileAccessDetector.isCinderboxMode(),
             availableModes = fileAccessDetector.availableMethods(),
             fileAccessMode = fileAccessDetector.resolveStrategy().name,
             hasRoot = hasRoot,
@@ -121,6 +123,11 @@ class SettingsViewModel(
     fun setMaxBackups(count: Int) {
         backupManager.setMaxBackupsAndPrune(count)
         _state.update { it.copy(maxBackups = backupManager.maxBackups) }
+    }
+
+    fun toggleCinderboxMode(enabled: Boolean) {
+        fileAccessDetector.setCinderboxMode(enabled)
+        load()
     }
 
     fun setFileAccessMode(name: String?) {
