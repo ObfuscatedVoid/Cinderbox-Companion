@@ -4,12 +4,35 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Cloud shape -->
+    <!-- Pixel art campfire — 4dp grid -->
+
+    <!-- Sparks -->
     <path
-        android:fillColor="#4CAF50"
-        android:pathData="M54,30 C45,30 37.5,36 35,44 C28,44.5 23,50 23,57 C23,64.5 29,70 36.5,70 L71.5,70 C77.5,70 83,65 83,58.5 C83,52.5 78.5,47.5 73,47 C72.5,37.5 64.5,30 54,30Z" />
-    <!-- Sync arrows -->
+        android:fillColor="#FFF9C4"
+        android:pathData="M46,22h4v4h-4z M60,24h4v4h-4z" />
+
+    <!-- Brown logs -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M46,50 L40,56 L46,62 L46,58 L58,58 L58,62 L64,56 L58,50 L58,54 L46,54 Z" />
+        android:fillColor="#5D4037"
+        android:pathData="M42,70h8v4h-8z M58,70h8v4h-8z M38,74h8v4h-8z M62,74h8v4h-8z M42,78h8v4h-8z M58,78h8v4h-8z" />
+
+    <!-- Dark ember / coal -->
+    <path
+        android:fillColor="#BF360C"
+        android:pathData="M50,66h8v4h-8z" />
+
+    <!-- Red flame (outer base) -->
+    <path
+        android:fillColor="#D84315"
+        android:pathData="M46,50h16v4h-16z M42,54h24v8h-24z M46,62h16v4h-16z" />
+
+    <!-- Orange flame (middle) -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M42,38h8v4h-8z M58,38h8v4h-8z M38,42h32v8h-32z M38,50h8v4h-8z M62,50h8v4h-8z" />
+
+    <!-- Yellow flame (core / tip) -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M50,26h8v4h-8z M46,30h16v8h-16z M50,38h8v4h-8z" />
 </vector>

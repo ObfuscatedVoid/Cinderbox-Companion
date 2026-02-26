@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SDV Sync</string>
+    <string name="app_name">Cinderbox Companion</string>
 
     <!-- Common actions -->
     <string name="action_back">Back</string>
@@ -11,7 +11,7 @@
     <string name="action_push">Push</string>
 
     <!-- Login -->
-    <string name="login_title">SDV Sync \u2014 Steam Login</string>
+    <string name="login_title">Cinderbox Companion \u2014 Steam Login</string>
     <string name="login_username_hint">Steam Username</string>
     <string name="login_password_hint">Password</string>
     <string name="login_button">Log In</string>
@@ -125,6 +125,10 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_game_mode_title">Game Mode</string>
+    <string name="settings_cinderbox_mode">Cinderbox Mode</string>
+    <string name="settings_cinderbox_mode_desc">Saves are read from /StardewValley/Saves/ which is directly accessible without special permissions.</string>
+    <string name="settings_cinderbox_mode_off_desc">Saves are read from the native Stardew Valley Android directory. Requires Root, Shizuku, or SAF file access.</string>
     <string name="settings_file_access">File Access</string>
     <string name="settings_file_access_current">Current: %1$s</string>
     <string name="settings_file_access_available">Available: %1$s</string>
@@ -146,8 +150,8 @@
     <string name="settings_backups_description">A backup is created before every sync to protect your save data.</string>
     <string name="settings_backups_count">Keep up to %1$d backups per save</string>
     <string name="settings_about_title">About</string>
-    <string name="settings_about">SDV Sync v0.1.0</string>
-    <string name="settings_about_desc">Sync Stardew Valley saves between Steam Cloud and Android.</string>
+    <string name="settings_about">Cinderbox Companion v0.1.0</string>
+    <string name="settings_about_desc">Companion app for Cinderbox \u2014 sync saves, download game files, and manage mods.</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_share_logs">Share Logs</string>
     <string name="settings_share_logs_desc">Export app logs for troubleshooting. Logs are sanitized to remove credentials.</string>
@@ -403,7 +407,7 @@
 
     <!-- Auto-sync notification -->
     <string name="notification_channel_sync">Save Sync</string>
-    <string name="notification_auto_sync_title">SDV Sync</string>
+    <string name="notification_auto_sync_title">Cinderbox Companion</string>
     <string name="notification_auto_sync_monitoring">Monitoring Stardew Valley\u2026</string>
     <string name="notification_auto_sync_uploading">Uploading save to Steam Cloud\u2026</string>
 </resources>
