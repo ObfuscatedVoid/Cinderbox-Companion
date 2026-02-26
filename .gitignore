@@ -15,3 +15,6 @@ local.properties
 *.jks
 *.keystore
 .kotlin/
+smapi-internal.zip
+CINDERBOX_INSTALL_INSTRUCTIONS.md
+kls_database.db
