@@ -238,6 +238,21 @@
     <string name="download_verify_failed">Verification failed for %1$d file(s)</string>
     <string name="download_notification_verifying">Verifying files\u2026 %1$d%%</string>
 
+    <!-- Cinderbox App -->
+    <string name="cinderbox_section_title">Cinderbox App</string>
+    <string name="cinderbox_section_desc">Download and install the Cinderbox APK to run modded Stardew Valley on Android. This is required before setting up game files or SMAPI.</string>
+    <string name="cinderbox_download_button">Download Cinderbox</string>
+    <string name="cinderbox_downloading">Downloading Cinderbox\u2026</string>
+    <string name="cinderbox_download_progress">%1$s / %2$s</string>
+    <string name="cinderbox_download_complete">Download complete!</string>
+    <string name="cinderbox_download_complete_desc">Cinderbox APK is ready to install.</string>
+    <string name="cinderbox_install_button">Install Cinderbox</string>
+    <string name="cinderbox_download_again">Download Again</string>
+    <string name="cinderbox_download_error">Download failed: %1$s</string>
+    <string name="cinderbox_install_permission_title">Permission Required</string>
+    <string name="cinderbox_install_permission_desc">Android requires you to allow installing apps from this source. Tap the button below to open settings, then enable the toggle.</string>
+    <string name="cinderbox_grant_permission">Grant Permission</string>
+
     <!-- SMAPI Setup -->
     <string name="smapi_setup_title">SMAPI Setup</string>
     <string name="smapi_setup_desc">Extract SMAPI internals to your device. Required for running mods with Cinderbox. This works independently of the game download.</string>

@@ -6,6 +6,10 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipInputStream
@@ -40,6 +44,16 @@ data class DownloadProgress(
     val copyErrors: List<String> = emptyList(),
 )
 
+data class CinderboxDownloadProgress(
+    val isDownloading: Boolean = false,
+    val percent: Float = 0f,
+    val downloadedBytes: Long = 0,
+    val totalBytes: Long = 0,
+    val completed: Boolean = false,
+    val apkFile: File? = null,
+    val errorMessage: String? = null,
+)
+
 data class SmapiSetupProgress(
     val isRunning: Boolean = false,
     val percent: Float = 0f,
@@ -52,12 +66,17 @@ data class SmapiSetupProgress(
 
 class GameDownloadManager(
     private val context: Context,
+    private val httpClient: OkHttpClient,
 ) {
     companion object {
         private const val TAG = "GameDownloadManager"
 
         internal val _progress = MutableStateFlow(DownloadProgress())
         internal val _smapiProgress = MutableStateFlow(SmapiSetupProgress())
+        internal val _cinderboxProgress = MutableStateFlow(CinderboxDownloadProgress())
+
+        const val CINDERBOX_APK_URL = "https://cdn.discordapp.com/attachments/1467922462669803570/1476123951875883091/Cinderbox-v0.2.0.apk?ex=69a14c8f&is=699ffb0f&hm=8a24157868058b96ee5d4268244d9d69972c51f259c511dcbe4f324774e2346c&"
+        const val CINDERBOX_APK_FILENAME = "Cinderbox-v0.2.0.apk"
 
         val CINDERBOX_DLLS = listOf(
             "Stardew Valley.dll",
@@ -75,6 +94,7 @@ class GameDownloadManager(
 
     val progress: StateFlow<DownloadProgress> = _progress.asStateFlow()
     val smapiProgress: StateFlow<SmapiSetupProgress> = _smapiProgress.asStateFlow()
+    val cinderboxProgress: StateFlow<CinderboxDownloadProgress> = _cinderboxProgress.asStateFlow()
 
     fun startDownload(
         branch: String = "public",
@@ -95,6 +115,71 @@ class GameDownloadManager(
 
     fun cancelDownload() {
         GameDownloadService.stop(context)
+    }
+
+    suspend fun downloadCinderboxApk() {
+        _cinderboxProgress.value = CinderboxDownloadProgress(isDownloading = true)
+
+        withContext(Dispatchers.IO) {
+            val destFile = File(context.cacheDir, CINDERBOX_APK_FILENAME)
+            try {
+                val request = Request.Builder().url(CINDERBOX_APK_URL).get().build()
+                val response = httpClient.newCall(request).execute()
+
+                if (!response.isSuccessful) {
+                    _cinderboxProgress.value = CinderboxDownloadProgress(
+                        errorMessage = "HTTP ${response.code}",
+                    )
+                    return@withContext
+                }
+
+                val body = response.body ?: run {
+                    _cinderboxProgress.value = CinderboxDownloadProgress(
+                        errorMessage = "Empty response body",
+                    )
+                    return@withContext
+                }
+
+                val totalBytes = body.contentLength()
+                var downloadedBytes = 0L
+                val buffer = ByteArray(64 * 1024)
+
+                destFile.outputStream().buffered().use { output ->
+                    body.byteStream().use { input ->
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            coroutineContext.ensureActive()
+                            output.write(buffer, 0, bytesRead)
+                            downloadedBytes += bytesRead
+
+                            _cinderboxProgress.value = CinderboxDownloadProgress(
+                                isDownloading = true,
+                                percent = if (totalBytes > 0) downloadedBytes.toFloat() / totalBytes else 0f,
+                                downloadedBytes = downloadedBytes,
+                                totalBytes = totalBytes,
+                            )
+                        }
+                    }
+                }
+
+                AppLogger.i(TAG, "Cinderbox APK downloaded: ${destFile.length()} bytes")
+
+                _cinderboxProgress.value = CinderboxDownloadProgress(
+                    completed = true,
+                    percent = 1f,
+                    downloadedBytes = downloadedBytes,
+                    totalBytes = totalBytes,
+                    apkFile = destFile,
+                )
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                AppLogger.e(TAG, "Cinderbox APK download failed", e)
+                destFile.delete()
+                _cinderboxProgress.value = CinderboxDownloadProgress(
+                    errorMessage = e.message ?: "Unknown error",
+                )
+            }
+        }
     }
 
     suspend fun extractSmapiAsset() {

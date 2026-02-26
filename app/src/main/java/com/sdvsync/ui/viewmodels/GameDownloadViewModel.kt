@@ -5,6 +5,7 @@ import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
+import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadProgress
 import com.sdvsync.download.DownloadState
 import com.sdvsync.download.GameDownloadManager
@@ -28,6 +29,7 @@ data class GameDownloadState(
     val verifyAfterDownload: Boolean = true,
     val downloadProgress: DownloadProgress = DownloadProgress(),
     val smapiSetupProgress: SmapiSetupProgress = SmapiSetupProgress(),
+    val cinderboxDownloadProgress: CinderboxDownloadProgress = CinderboxDownloadProgress(),
     val error: String? = null,
 )
 
@@ -44,6 +46,7 @@ class GameDownloadViewModel(
     private val _state = MutableStateFlow(GameDownloadState())
     val state: StateFlow<GameDownloadState> = _state.asStateFlow()
     private var smapiJob: Job? = null
+    private var cinderboxJob: Job? = null
 
     init {
         val defaultDir = Environment.getExternalStoragePublicDirectory(
@@ -59,6 +62,11 @@ class GameDownloadViewModel(
         viewModelScope.launch {
             downloadManager.smapiProgress.collect { progress ->
                 _state.value = _state.value.copy(smapiSetupProgress = progress)
+            }
+        }
+        viewModelScope.launch {
+            downloadManager.cinderboxProgress.collect { progress ->
+                _state.value = _state.value.copy(cinderboxDownloadProgress = progress)
             }
         }
     }
@@ -167,5 +175,22 @@ class GameDownloadViewModel(
 
     fun resetSmapiSetup() {
         GameDownloadManager._smapiProgress.value = SmapiSetupProgress()
+    }
+
+    fun downloadCinderbox() {
+        if (cinderboxJob?.isActive == true) return
+        cinderboxJob = viewModelScope.launch {
+            try {
+                downloadManager.downloadCinderboxApk()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Cinderbox download failed", e)
+            }
+        }
+    }
+
+    fun resetCinderboxDownload() {
+        GameDownloadManager._cinderboxProgress.value = CinderboxDownloadProgress()
     }
 }

@@ -54,7 +54,7 @@ val appModule = module {
     single { SteamAuthenticator(androidContext(), get(), get()) }
     single { SteamCloudService(get(), get()) }
     single { SteamContentService(get()) }
-    single { GameDownloadManager(androidContext()) }
+    single { GameDownloadManager(androidContext(), get()) }
 
     // File access
     single { FileAccessDetector(androidContext()) }
