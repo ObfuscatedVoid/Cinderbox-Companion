@@ -2,18 +2,18 @@ package com.sdvsync.download
 
 import android.content.Context
 import com.sdvsync.logging.AppLogger
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipInputStream
 import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 enum class DownloadState {
     IDLE,
@@ -27,46 +27,46 @@ enum class DownloadState {
 }
 
 data class DownloadProgress(
-    val state: DownloadState = DownloadState.IDLE,
-    val overallPercent: Float = 0f,
-    val currentFile: String = "",
-    val downloadedBytes: Long = 0,
-    val totalBytes: Long = 0,
-    val bytesPerSecond: Long = 0,
-    val errorMessage: String? = null,
-    val verifiedFiles: Int = 0,
-    val totalFilesToVerify: Int = 0,
-    val verificationPassed: Boolean = true,
-    val verificationErrors: List<String> = emptyList(),
-    val copiedFiles: Int = 0,
-    val totalFilesToCopy: Int = 0,
-    val copyCompleted: Boolean = false,
-    val copyErrors: List<String> = emptyList(),
+        val state: DownloadState = DownloadState.IDLE,
+        val overallPercent: Float = 0f,
+        val currentFile: String = "",
+        val downloadedBytes: Long = 0,
+        val totalBytes: Long = 0,
+        val bytesPerSecond: Long = 0,
+        val errorMessage: String? = null,
+        val verifiedFiles: Int = 0,
+        val totalFilesToVerify: Int = 0,
+        val verificationPassed: Boolean = true,
+        val verificationErrors: List<String> = emptyList(),
+        val copiedFiles: Int = 0,
+        val totalFilesToCopy: Int = 0,
+        val copyCompleted: Boolean = false,
+        val copyErrors: List<String> = emptyList(),
 )
 
 data class CinderboxDownloadProgress(
-    val isDownloading: Boolean = false,
-    val percent: Float = 0f,
-    val downloadedBytes: Long = 0,
-    val totalBytes: Long = 0,
-    val completed: Boolean = false,
-    val apkFile: File? = null,
-    val errorMessage: String? = null,
+        val isDownloading: Boolean = false,
+        val percent: Float = 0f,
+        val downloadedBytes: Long = 0,
+        val totalBytes: Long = 0,
+        val completed: Boolean = false,
+        val apkFile: File? = null,
+        val errorMessage: String? = null,
 )
 
 data class SmapiSetupProgress(
-    val isRunning: Boolean = false,
-    val percent: Float = 0f,
-    val currentFile: String = "",
-    val extractedFiles: Int = 0,
-    val totalFiles: Int = 0,
-    val completed: Boolean = false,
-    val errorMessage: String? = null,
+        val isRunning: Boolean = false,
+        val percent: Float = 0f,
+        val currentFile: String = "",
+        val extractedFiles: Int = 0,
+        val totalFiles: Int = 0,
+        val completed: Boolean = false,
+        val errorMessage: String? = null,
 )
 
 class GameDownloadManager(
-    private val context: Context,
-    private val httpClient: OkHttpClient,
+        private val context: Context,
+        private val httpClient: OkHttpClient,
 ) {
     companion object {
         private const val TAG = "GameDownloadManager"
@@ -75,18 +75,24 @@ class GameDownloadManager(
         internal val _smapiProgress = MutableStateFlow(SmapiSetupProgress())
         internal val _cinderboxProgress = MutableStateFlow(CinderboxDownloadProgress())
 
-        const val CINDERBOX_APK_URL = "https://cdn.discordapp.com/attachments/1467922462669803570/1476123951875883091/Cinderbox-v0.2.0.apk?ex=69a14c8f&is=699ffb0f&hm=8a24157868058b96ee5d4268244d9d69972c51f259c511dcbe4f324774e2346c&"
-        const val CINDERBOX_APK_FILENAME = "Cinderbox-v0.2.0.apk"
+        // TODO: replace with a stable URL once Cinderbox is available via GitHub releases or
+        // something similar
+        const val CINDERBOX_APK_URL =
+                "https://cdn.discordapp.com/attachments/1467922462669803570/1476123951875883091/Cinderbox-v0.2.0.apk?ex=69a14c8f&is=699ffb0f&hm=8a24157868058b96ee5d4268244d9d69972c51f259c511dcbe4f324774e2346c&"
+        const val CINDERBOX_APK_FILENAME =
+                "Cinderbox-v0.2.0.apk" // TODO: deal with this later, hardcode version bad
 
-        val CINDERBOX_DLLS = listOf(
-            "Stardew Valley.dll",
-            "StardewValley.GameData.dll",
-            "BmFont.dll",
-            "xTile.dll",
-            "Lidgren.Network.dll",
-        )
+        val CINDERBOX_DLLS =
+                listOf(
+                        "Stardew Valley.dll",
+                        "StardewValley.GameData.dll",
+                        "BmFont.dll",
+                        "xTile.dll",
+                        "Lidgren.Network.dll",
+                )
         const val CINDERBOX_CONTENT_DIR = "Content"
         const val CINDERBOX_DEST = "/storage/emulated/0/StardewValley/GameFiles"
+        // TODO: not sure if distributing SMAPI files as an asset is the best approach or even legal
         const val SMAPI_ASSET_NAME = "smapi-internal.zip"
         const val SMAPI_DEST = "/storage/emulated/0/StardewValley/smapi-internal"
         const val MODS_DIR = "/storage/emulated/0/StardewValley/Mods"
@@ -97,19 +103,19 @@ class GameDownloadManager(
     val cinderboxProgress: StateFlow<CinderboxDownloadProgress> = _cinderboxProgress.asStateFlow()
 
     fun startDownload(
-        branch: String = "public",
-        branchPassword: String? = null,
-        installDirectory: String,
-        os: String = "windows",
-        verifyAfterDownload: Boolean = true,
+            branch: String = "public",
+            branchPassword: String? = null,
+            installDirectory: String,
+            os: String = "windows",
+            verifyAfterDownload: Boolean = true,
     ) {
         GameDownloadService.start(
-            context = context,
-            branch = branch,
-            password = branchPassword,
-            installDir = installDirectory,
-            os = os,
-            verify = verifyAfterDownload,
+                context = context,
+                branch = branch,
+                password = branchPassword,
+                installDir = installDirectory,
+                os = os,
+                verify = verifyAfterDownload,
         )
     }
 
@@ -127,18 +133,22 @@ class GameDownloadManager(
                 val response = httpClient.newCall(request).execute()
 
                 if (!response.isSuccessful) {
-                    _cinderboxProgress.value = CinderboxDownloadProgress(
-                        errorMessage = "HTTP ${response.code}",
-                    )
+                    _cinderboxProgress.value =
+                            CinderboxDownloadProgress(
+                                    errorMessage = "HTTP ${response.code}",
+                            )
                     return@withContext
                 }
 
-                val body = response.body ?: run {
-                    _cinderboxProgress.value = CinderboxDownloadProgress(
-                        errorMessage = "Empty response body",
-                    )
-                    return@withContext
-                }
+                val body =
+                        response.body
+                                ?: run {
+                                    _cinderboxProgress.value =
+                                            CinderboxDownloadProgress(
+                                                    errorMessage = "Empty response body",
+                                            )
+                                    return@withContext
+                                }
 
                 val totalBytes = body.contentLength()
                 var downloadedBytes = 0L
@@ -152,32 +162,38 @@ class GameDownloadManager(
                             output.write(buffer, 0, bytesRead)
                             downloadedBytes += bytesRead
 
-                            _cinderboxProgress.value = CinderboxDownloadProgress(
-                                isDownloading = true,
-                                percent = if (totalBytes > 0) downloadedBytes.toFloat() / totalBytes else 0f,
-                                downloadedBytes = downloadedBytes,
-                                totalBytes = totalBytes,
-                            )
+                            _cinderboxProgress.value =
+                                    CinderboxDownloadProgress(
+                                            isDownloading = true,
+                                            percent =
+                                                    if (totalBytes > 0)
+                                                            downloadedBytes.toFloat() / totalBytes
+                                                    else 0f,
+                                            downloadedBytes = downloadedBytes,
+                                            totalBytes = totalBytes,
+                                    )
                         }
                     }
                 }
 
                 AppLogger.i(TAG, "Cinderbox APK downloaded: ${destFile.length()} bytes")
 
-                _cinderboxProgress.value = CinderboxDownloadProgress(
-                    completed = true,
-                    percent = 1f,
-                    downloadedBytes = downloadedBytes,
-                    totalBytes = totalBytes,
-                    apkFile = destFile,
-                )
+                _cinderboxProgress.value =
+                        CinderboxDownloadProgress(
+                                completed = true,
+                                percent = 1f,
+                                downloadedBytes = downloadedBytes,
+                                totalBytes = totalBytes,
+                                apkFile = destFile,
+                        )
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "Cinderbox APK download failed", e)
                 destFile.delete()
-                _cinderboxProgress.value = CinderboxDownloadProgress(
-                    errorMessage = e.message ?: "Unknown error",
-                )
+                _cinderboxProgress.value =
+                        CinderboxDownloadProgress(
+                                errorMessage = e.message ?: "Unknown error",
+                        )
             }
         }
     }
@@ -191,22 +207,26 @@ class GameDownloadManager(
         var extracted = 0
 
         // Count entries first
-        val totalEntries = try {
-            context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) } + 1 // +1 for Mods/
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            AppLogger.e(TAG, "Failed to count SMAPI entries", e)
-            _smapiProgress.value = SmapiSetupProgress(
-                completed = true,
-                errorMessage = "Failed to open SMAPI asset: ${e.message}",
-            )
-            return
-        }
+        val totalEntries =
+                try {
+                    context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) } +
+                            1 // +1 for Mods/
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    AppLogger.e(TAG, "Failed to count SMAPI entries", e)
+                    _smapiProgress.value =
+                            SmapiSetupProgress(
+                                    completed = true,
+                                    errorMessage = "Failed to open SMAPI asset: ${e.message}",
+                            )
+                    return
+                }
 
-        _smapiProgress.value = SmapiSetupProgress(
-            isRunning = true,
-            totalFiles = totalEntries,
-        )
+        _smapiProgress.value =
+                SmapiSetupProgress(
+                        isRunning = true,
+                        totalFiles = totalEntries,
+                )
 
         // Extract zip from assets
         try {
@@ -219,11 +239,15 @@ class GameDownloadManager(
                         val entryName = entry.name
                         val displayName = "smapi-internal/$entryName"
 
-                        _smapiProgress.value = _smapiProgress.value.copy(
-                            currentFile = displayName,
-                            extractedFiles = extracted,
-                            percent = if (totalEntries > 0) extracted.toFloat() / totalEntries else 0f,
-                        )
+                        _smapiProgress.value =
+                                _smapiProgress.value.copy(
+                                        currentFile = displayName,
+                                        extractedFiles = extracted,
+                                        percent =
+                                                if (totalEntries > 0)
+                                                        extracted.toFloat() / totalEntries
+                                                else 0f,
+                                )
 
                         if (!entry.isDirectory) {
                             try {
@@ -256,11 +280,12 @@ class GameDownloadManager(
         }
 
         // Create Mods/ directory
-        _smapiProgress.value = _smapiProgress.value.copy(
-            currentFile = "Mods/",
-            extractedFiles = extracted,
-            percent = if (totalEntries > 0) extracted.toFloat() / totalEntries else 0f,
-        )
+        _smapiProgress.value =
+                _smapiProgress.value.copy(
+                        currentFile = "Mods/",
+                        extractedFiles = extracted,
+                        percent = if (totalEntries > 0) extracted.toFloat() / totalEntries else 0f,
+                )
         try {
             File(MODS_DIR).mkdirs()
             extracted++
@@ -270,16 +295,20 @@ class GameDownloadManager(
             errors.add("Mods/")
         }
 
-        AppLogger.i(TAG, "SMAPI setup complete: $extracted/$totalEntries files, ${errors.size} errors")
-
-        _smapiProgress.value = SmapiSetupProgress(
-            isRunning = false,
-            percent = 1f,
-            extractedFiles = extracted,
-            totalFiles = totalEntries,
-            completed = true,
-            errorMessage = if (errors.isNotEmpty()) errors.joinToString(", ") else null,
+        AppLogger.i(
+                TAG,
+                "SMAPI setup complete: $extracted/$totalEntries files, ${errors.size} errors"
         )
+
+        _smapiProgress.value =
+                SmapiSetupProgress(
+                        isRunning = false,
+                        percent = 1f,
+                        extractedFiles = extracted,
+                        totalFiles = totalEntries,
+                        completed = true,
+                        errorMessage = if (errors.isNotEmpty()) errors.joinToString(", ") else null,
+                )
     }
 
     private fun countZipEntries(inputStream: InputStream): Int {
@@ -318,15 +347,19 @@ class GameDownloadManager(
         val smapiEntryCount = context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) }
         val totalFiles = filesToCopy.size + smapiEntryCount + 1 // +1 for Mods/ dir
 
-        AppLogger.i(TAG, "Cinderbox setup: ${filesToCopy.size} game files + $smapiEntryCount SMAPI files + Mods dir = $totalFiles total")
-
-        _progress.value = _progress.value.copy(
-            state = DownloadState.COPYING,
-            currentFile = "",
-            copiedFiles = 0,
-            totalFilesToCopy = totalFiles,
-            overallPercent = 0f,
+        AppLogger.i(
+                TAG,
+                "Cinderbox setup: ${filesToCopy.size} game files + $smapiEntryCount SMAPI files + Mods dir = $totalFiles total"
         )
+
+        _progress.value =
+                _progress.value.copy(
+                        state = DownloadState.COPYING,
+                        currentFile = "",
+                        copiedFiles = 0,
+                        totalFilesToCopy = totalFiles,
+                        overallPercent = 0f,
+                )
 
         val errors = mutableListOf<String>()
         var copied = 0
@@ -337,11 +370,13 @@ class GameDownloadManager(
             coroutineContext.ensureActive()
 
             val relativeName = src.relativeTo(srcDir).path
-            _progress.value = _progress.value.copy(
-                currentFile = relativeName,
-                copiedFiles = copied,
-                overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f,
-            )
+            _progress.value =
+                    _progress.value.copy(
+                            currentFile = relativeName,
+                            copiedFiles = copied,
+                            overallPercent =
+                                    if (totalFiles > 0) copied.toFloat() / totalFiles else 0f,
+                    )
 
             try {
                 dest.parentFile?.mkdirs()
@@ -374,11 +409,14 @@ class GameDownloadManager(
                         val entryName = entry.name
                         val displayName = "smapi-internal/$entryName"
 
-                        _progress.value = _progress.value.copy(
-                            currentFile = displayName,
-                            copiedFiles = copied,
-                            overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f,
-                        )
+                        _progress.value =
+                                _progress.value.copy(
+                                        currentFile = displayName,
+                                        copiedFiles = copied,
+                                        overallPercent =
+                                                if (totalFiles > 0) copied.toFloat() / totalFiles
+                                                else 0f,
+                                )
 
                         if (!entry.isDirectory) {
                             try {
@@ -411,11 +449,12 @@ class GameDownloadManager(
         }
 
         // --- Phase 3: Create Mods/ directory ---
-        _progress.value = _progress.value.copy(
-            currentFile = "Mods/",
-            copiedFiles = copied,
-            overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f,
-        )
+        _progress.value =
+                _progress.value.copy(
+                        currentFile = "Mods/",
+                        copiedFiles = copied,
+                        overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f,
+                )
         try {
             File(MODS_DIR).mkdirs()
             copied++
@@ -425,16 +464,20 @@ class GameDownloadManager(
             errors.add("Mods/")
         }
 
-        AppLogger.i(TAG, "Cinderbox setup complete: $copied/$totalFiles files, ${errors.size} errors")
-
-        _progress.value = _progress.value.copy(
-            state = DownloadState.COMPLETED,
-            currentFile = "",
-            copiedFiles = copied,
-            totalFilesToCopy = totalFiles,
-            overallPercent = 1f,
-            copyCompleted = true,
-            copyErrors = errors,
+        AppLogger.i(
+                TAG,
+                "Cinderbox setup complete: $copied/$totalFiles files, ${errors.size} errors"
         )
+
+        _progress.value =
+                _progress.value.copy(
+                        state = DownloadState.COMPLETED,
+                        currentFile = "",
+                        copiedFiles = copied,
+                        totalFilesToCopy = totalFiles,
+                        overallPercent = 1f,
+                        copyCompleted = true,
+                        copyErrors = errors,
+                )
     }
 }
