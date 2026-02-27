@@ -8,10 +8,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
+import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadState
 import com.sdvsync.download.SmapiSetupProgress
 import com.sdvsync.ui.components.ArrowLeftData
@@ -25,6 +27,7 @@ import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.installCinderboxApk
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import java.text.SimpleDateFormat
@@ -571,6 +574,16 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
             )
 
             Spacer(Modifier.height(24.dp))
+            PixelDivider()
+            Spacer(Modifier.height(24.dp))
+
+            CinderboxSection(
+                cinderboxProgress = state.cinderboxDownloadProgress,
+                onDownload = { viewModel.downloadCinderbox() },
+                onReset = { viewModel.resetCinderboxDownload() }
+            )
+
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -768,6 +781,143 @@ private fun DownloadProgressSection(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.action_cancel))
+            }
+        }
+    }
+}
+
+@Composable
+private fun CinderboxSection(
+    cinderboxProgress: CinderboxDownloadProgress,
+    onDownload: () -> Unit,
+    onReset: () -> Unit
+) {
+    val context = LocalContext.current
+
+    SectionHeader(stringResource(R.string.cinderbox_section_title))
+    Spacer(Modifier.height(8.dp))
+
+    when {
+        cinderboxProgress.completed && cinderboxProgress.errorMessage == null -> {
+            // Download complete — offer install
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.cinderbox_download_complete),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.cinderbox_download_complete_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            StardewButton(
+                onClick = {
+                    cinderboxProgress.apkFile?.let { installCinderboxApk(context, it) }
+                },
+                variant = StardewButtonVariant.Action,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = cinderboxProgress.apkFile != null
+            ) {
+                Text(stringResource(R.string.cinderbox_install_button))
+            }
+            Spacer(Modifier.height(8.dp))
+            StardewOutlinedButton(
+                onClick = onReset,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.cinderbox_download_again))
+            }
+        }
+
+        cinderboxProgress.isDownloading -> {
+            // Downloading
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            stringResource(R.string.cinderbox_downloading),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        stringResource(
+                            R.string.cinderbox_download_progress,
+                            formatBytes(cinderboxProgress.downloadedBytes),
+                            if (cinderboxProgress.totalBytes > 0) {
+                                formatBytes(cinderboxProgress.totalBytes)
+                            } else {
+                                "?"
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    PixelProgressBar(progress = cinderboxProgress.percent)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "${(cinderboxProgress.percent * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        cinderboxProgress.errorMessage != null -> {
+            // Error
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.cinderbox_download_error, cinderboxProgress.errorMessage),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            StardewButton(
+                onClick = {
+                    onReset()
+                    onDownload()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.cinderbox_download_button))
+            }
+        }
+
+        else -> {
+            // Idle
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.cinderbox_section_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            StardewButton(
+                onClick = onDownload,
+                variant = StardewButtonVariant.Action,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.cinderbox_download_button))
             }
         }
     }
