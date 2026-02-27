@@ -8,8 +8,10 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import com.sdvsync.logging.AppLogger
+import com.sdvsync.mods.models.AssociatedMod
 import com.sdvsync.mods.models.ModProfile
 import com.sdvsync.mods.models.ModUpdateInfo
+import com.sdvsync.mods.models.SaveModAssociation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -29,6 +31,7 @@ class ModDataStore(private val context: Context) {
         private val LAST_UPDATE_CHECK_KEY = longPreferencesKey("last_update_check")
         private val MOD_METADATA_KEY = stringPreferencesKey("mod_metadata")
         private val PROFILES_KEY = stringPreferencesKey("mod_profiles")
+        private val SAVE_MOD_ASSOCIATIONS_KEY = stringPreferencesKey("save_mod_associations")
 
         private const val ENCRYPTED_PREFS_NAME = "mod_encrypted_prefs"
         private const val KEY_NEXUS_API_KEY = "nexus_api_key"
@@ -172,6 +175,86 @@ class ModDataStore(private val context: Context) {
         emptyList()
     }
 
+    // ── Save Mod Associations ──────────────────────────────────────────
+
+    suspend fun getSaveModAssociation(saveFolderName: String): SaveModAssociation? = context.modDataStore.data
+        .map { prefs ->
+            prefs[SAVE_MOD_ASSOCIATIONS_KEY]?.let { parseAssociations(it) }?.get(saveFolderName)
+        }
+        .first()
+
+    suspend fun setSaveModAssociation(association: SaveModAssociation) {
+        val all = getAllAssociations().toMutableMap()
+        all[association.saveFolderName] = association
+        context.modDataStore.edit { prefs ->
+            prefs[SAVE_MOD_ASSOCIATIONS_KEY] = serializeAssociations(all)
+        }
+    }
+
+    suspend fun deleteSaveModAssociation(saveFolderName: String) {
+        val all = getAllAssociations().toMutableMap()
+        all.remove(saveFolderName)
+        context.modDataStore.edit { prefs ->
+            prefs[SAVE_MOD_ASSOCIATIONS_KEY] = serializeAssociations(all)
+        }
+    }
+
+    private suspend fun getAllAssociations(): Map<String, SaveModAssociation> = context.modDataStore.data
+        .map { prefs ->
+            prefs[SAVE_MOD_ASSOCIATIONS_KEY]?.let { parseAssociations(it) } ?: emptyMap()
+        }
+        .first()
+
+    private fun serializeAssociations(associations: Map<String, SaveModAssociation>): String {
+        val obj = JSONObject()
+        associations.forEach { (saveName, assoc) ->
+            val modsArray = JSONArray()
+            assoc.enabledMods.forEach { mod ->
+                modsArray.put(
+                    JSONObject().apply {
+                        put("uniqueID", mod.uniqueID)
+                        put("name", mod.name)
+                        put("version", mod.version)
+                    }
+                )
+            }
+            obj.put(
+                saveName,
+                JSONObject().apply {
+                    put("capturedAt", assoc.capturedAt)
+                    put("mods", modsArray)
+                }
+            )
+        }
+        return obj.toString()
+    }
+
+    private fun parseAssociations(json: String): Map<String, SaveModAssociation> = try {
+        val obj = JSONObject(json)
+        val result = mutableMapOf<String, SaveModAssociation>()
+        obj.keys().forEach { saveName ->
+            val item = obj.getJSONObject(saveName)
+            val modsArray = item.getJSONArray("mods")
+            val mods = (0 until modsArray.length()).map { i ->
+                val modObj = modsArray.getJSONObject(i)
+                AssociatedMod(
+                    uniqueID = modObj.getString("uniqueID"),
+                    name = modObj.getString("name"),
+                    version = modObj.getString("version")
+                )
+            }.toSet()
+            result[saveName] = SaveModAssociation(
+                saveFolderName = saveName,
+                enabledMods = mods,
+                capturedAt = item.optLong("capturedAt", 0)
+            )
+        }
+        result
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "Failed to parse save mod associations", e)
+        emptyMap()
+    }
+
     // ── Serialization ───────────────────────────────────────────────────
 
     private fun serializeUpdateCache(updates: Map<String, ModUpdateInfo>): String {
@@ -185,6 +268,7 @@ class ModDataStore(private val context: Context) {
                     put("latestVersion", info.latestVersion)
                     put("updateUrl", info.updateUrl ?: JSONObject.NULL)
                     put("source", info.source)
+                    put("changelogHtml", info.changelogHtml ?: JSONObject.NULL)
                 }
             )
         }
@@ -201,7 +285,8 @@ class ModDataStore(private val context: Context) {
                 installedVersion = item.getString("installedVersion"),
                 latestVersion = item.getString("latestVersion"),
                 updateUrl = item.optString("updateUrl").takeIf { it != "null" && it.isNotBlank() },
-                source = item.getString("source")
+                source = item.getString("source"),
+                changelogHtml = item.optString("changelogHtml").takeIf { it != "null" && it.isNotBlank() }
             )
         }
         result

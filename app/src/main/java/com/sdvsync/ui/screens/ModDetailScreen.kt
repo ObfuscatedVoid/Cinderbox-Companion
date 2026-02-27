@@ -1,7 +1,5 @@
 package com.sdvsync.ui.screens
 
-import android.text.method.LinkMovementMethod
-import android.widget.TextView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -24,12 +22,11 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.text.HtmlCompat
 import coil3.compose.AsyncImage
 import com.sdvsync.R
 import com.sdvsync.mods.models.ModDownloadState
 import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.HtmlText
 import com.sdvsync.ui.components.PixelDivider
 import com.sdvsync.ui.components.PixelIcon
 import com.sdvsync.ui.components.PixelIconButton
@@ -39,90 +36,12 @@ import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.toHtmlIfFormatted
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-private val HTML_TAG_REGEX = Regex("<[a-zA-Z/]")
-private val BBCODE_TAG_REGEX = Regex(
-    "\\[(?:b|i|u|s|url|img|size|color|font|list|quote|code|center|spoiler|line|heading)[=\\]/]",
-    RegexOption.IGNORE_CASE
-)
-
-private fun bbCodeToHtml(bbcode: String): String {
-    var html = bbcode
-
-    // Simple paired tags: [b]→<b>, [i]→<i>, etc.
-    for (tag in listOf("b", "i", "u", "s")) {
-        html = html.replace(Regex("\\[$tag]", RegexOption.IGNORE_CASE), "<$tag>")
-        html = html.replace(Regex("\\[/$tag]", RegexOption.IGNORE_CASE), "</$tag>")
-    }
-
-    // [url=X]Y[/url] → <a href="X">Y</a>
-    html = html.replace(
-        Regex("\\[url=([^\\]]+)](.*?)\\[/url]", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    ) { "<a href=\"${it.groupValues[1]}\">${it.groupValues[2]}</a>" }
-
-    // [url]X[/url] → <a href="X">X</a>
-    html = html.replace(
-        Regex("\\[url](.*?)\\[/url]", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    ) { "<a href=\"${it.groupValues[1]}\">${it.groupValues[1]}</a>" }
-
-    // [img]X[/img] → strip (can't render in TextView)
-    html = html.replace(Regex("\\[img](.*?)\\[/img]", RegexOption.IGNORE_CASE), "")
-
-    // [size=N] → <big>
-    html = html.replace(Regex("\\[size=[^\\]]+]", RegexOption.IGNORE_CASE), "<big>")
-    html = html.replace(Regex("\\[/size]", RegexOption.IGNORE_CASE), "</big>")
-
-    // [color=X] → <font color="X">
-    html = html.replace(Regex("\\[color=([^\\]]+)]", RegexOption.IGNORE_CASE)) {
-        "<font color=\"${it.groupValues[1]}\">"
-    }
-    html = html.replace(Regex("\\[/color]", RegexOption.IGNORE_CASE), "</font>")
-
-    // [font=X] → strip (not supported in HtmlCompat)
-    html = html.replace(Regex("\\[font=[^\\]]+]", RegexOption.IGNORE_CASE), "")
-    html = html.replace(Regex("\\[/font]", RegexOption.IGNORE_CASE), "")
-
-    // Lists: [list]→remove, [*]→bullet
-    html = html.replace(Regex("\\[list(?:=[^\\]]*)?]", RegexOption.IGNORE_CASE), "")
-    html = html.replace(Regex("\\[/list]", RegexOption.IGNORE_CASE), "")
-    html = html.replace("[*]", "<br>&#8226; ")
-
-    // [quote] → blockquote
-    html = html.replace(Regex("\\[quote(?:=[^\\]]*)?]", RegexOption.IGNORE_CASE), "<blockquote>")
-    html = html.replace(Regex("\\[/quote]", RegexOption.IGNORE_CASE), "</blockquote>")
-
-    // [code] → monospace
-    html = html.replace(Regex("\\[code]", RegexOption.IGNORE_CASE), "<tt>")
-    html = html.replace(Regex("\\[/code]", RegexOption.IGNORE_CASE), "</tt>")
-
-    // Strip unsupported tags
-    for (tag in listOf("center", "spoiler", "heading")) {
-        html = html.replace(Regex("\\[/?$tag]", RegexOption.IGNORE_CASE), "")
-    }
-
-    // [line] → horizontal rule text
-    html = html.replace(Regex("\\[line]", RegexOption.IGNORE_CASE), "<br>──────────<br>")
-
-    // Newlines → <br>
-    html = html.replace("\r\n", "<br>").replace("\n", "<br>")
-
-    return html
-}
-
-/**
- * Detects BBCode or HTML in the text and returns processed HTML string,
- * or null if the text is plain.
- */
-private fun toHtmlIfFormatted(text: String): String? = when {
-    BBCODE_TAG_REGEX.containsMatchIn(text) -> bbCodeToHtml(text)
-    HTML_TAG_REGEX.containsMatchIn(text) -> text
-    else -> null
-}
 
 private fun formatCount(count: Int): String {
     if (count < 1000) return count.toString()
@@ -541,22 +460,4 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
             }
         }
     }
-}
-
-@Composable
-private fun HtmlText(html: String, textColor: Int, linkColor: Int, textSizeSp: Float, modifier: Modifier = Modifier) {
-    AndroidView(
-        modifier = modifier,
-        factory = { ctx ->
-            TextView(ctx).apply {
-                movementMethod = LinkMovementMethod.getInstance()
-                setTextColor(textColor)
-                setLinkTextColor(linkColor)
-                textSize = textSizeSp
-            }
-        },
-        update = { tv ->
-            tv.text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT)
-        }
-    )
 }

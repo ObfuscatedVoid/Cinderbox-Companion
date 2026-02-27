@@ -1,5 +1,10 @@
 package com.sdvsync.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -7,12 +12,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.HtmlText
 import com.sdvsync.ui.components.PixelDivider
+import com.sdvsync.ui.components.PixelIcon
 import com.sdvsync.ui.components.PixelIconButton
 import com.sdvsync.ui.components.StardewButton
 import com.sdvsync.ui.components.StardewButtonVariant
@@ -20,6 +30,7 @@ import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewDialog
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.toHtmlIfFormatted
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import java.text.SimpleDateFormat
@@ -150,6 +161,58 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                                 variant = StardewButtonVariant.Gold
                             ) {
                                 Text(stringResource(R.string.mods_view_update))
+                            }
+                        }
+
+                        // Changelog section
+                        if (updateInfo.changelogHtml != null) {
+                            Spacer(Modifier.height(12.dp))
+                            PixelDivider()
+                            Spacer(Modifier.height(8.dp))
+
+                            var changelogExpanded by remember { mutableStateOf(false) }
+                            val chevronRotation by animateFloatAsState(
+                                targetValue = if (changelogExpanded) -90f else -180f,
+                                label = "changelogChevron"
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { changelogExpanded = !changelogExpanded },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    stringResource(R.string.changelog_title),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                PixelIcon(
+                                    pixelData = ArrowLeftData,
+                                    palette = listOf(
+                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    size = 16.dp,
+                                    modifier = Modifier.rotate(chevronRotation)
+                                )
+                            }
+
+                            AnimatedVisibility(
+                                visible = changelogExpanded,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                val processed = toHtmlIfFormatted(updateInfo.changelogHtml!!)
+                                    ?: updateInfo.changelogHtml!!
+                                HtmlText(
+                                    html = processed,
+                                    textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb(),
+                                    linkColor = MaterialTheme.colorScheme.primary.toArgb(),
+                                    textSizeSp = MaterialTheme.typography.bodySmall.fontSize.value,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
                             }
                         }
                     }

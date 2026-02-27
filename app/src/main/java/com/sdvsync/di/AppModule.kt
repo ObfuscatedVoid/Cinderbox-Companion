@@ -11,6 +11,7 @@ import com.sdvsync.mods.ModManifestParser
 import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.mods.api.SmapiUpdateChecker
 import com.sdvsync.saves.SaveBackupManager
+import com.sdvsync.saves.SaveBundleManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveFileParser
 import com.sdvsync.saves.SaveMetadataParser
@@ -91,18 +92,19 @@ val appModule = module {
     single { ModDownloadManager(androidContext()) }
     single { NexusModSource(get(), get()) }
     single { SmapiUpdateChecker(get()) }
+    single { SaveBundleManager(androidContext(), get(), get(), get()) }
 
     // ViewModels
     viewModel { LoginViewModel(get()) }
-    viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { SyncDetailViewModel(androidContext(), get(), get(), get(), get()) }
+    viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SyncDetailViewModel(androidContext(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
     viewModel { GameDownloadViewModel(androidContext(), get(), get(), get()) }
     viewModel { ModManagerViewModel(androidContext(), get(), get(), get()) }
     viewModel { ModBrowseViewModel(get(), get(), get()) }
     viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), modId, source) }
-    viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), get(), uniqueId) }
+    viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), get(), get(), uniqueId) }
     viewModel { BackupListViewModel(androidContext(), get(), get(), get()) }
     viewModel { SaveViewerViewModel(androidContext(), get(), get()) }
 }

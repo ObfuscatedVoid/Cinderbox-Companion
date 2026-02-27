@@ -1,10 +1,14 @@
 package com.sdvsync.ui.viewmodels
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
+import com.sdvsync.saves.BundleManifest
+import com.sdvsync.saves.ImportResult
+import com.sdvsync.saves.SaveBundleManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
@@ -12,6 +16,7 @@ import com.sdvsync.steam.SteamClientManager
 import com.sdvsync.steam.SteamCloudService
 import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncDirection
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +40,11 @@ data class DashboardState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val isStagingMode: Boolean = false
+    val isStagingMode: Boolean = false,
+    val importPreview: BundleManifest? = null,
+    val importUri: Uri? = null,
+    val isImporting: Boolean = false,
+    val importResult: String? = null
 )
 
 class DashboardViewModel(
@@ -44,7 +53,8 @@ class DashboardViewModel(
     private val cloudService: SteamCloudService,
     private val saveFileManager: SaveFileManager,
     private val metadataParser: SaveMetadataParser,
-    private val conflictResolver: ConflictResolver
+    private val conflictResolver: ConflictResolver,
+    private val bundleManager: SaveBundleManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
@@ -149,6 +159,82 @@ class DashboardViewModel(
                 )
             }
         }
+    }
+
+    fun previewImport(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                if (inputStream == null) {
+                    _state.value =
+                        _state.value.copy(importResult = context.getString(R.string.import_error, "Cannot read file"))
+                    return@launch
+                }
+                val manifest = inputStream.use { bundleManager.readManifest(it) }
+                if (manifest == null) {
+                    _state.value =
+                        _state.value.copy(importResult = context.getString(R.string.import_error, "Invalid bundle"))
+                    return@launch
+                }
+                _state.value = _state.value.copy(importPreview = manifest, importUri = uri)
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Preview import failed", e)
+                _state.value = _state.value.copy(
+                    importResult = context.getString(R.string.import_error, e.message ?: "Unknown error")
+                )
+            }
+        }
+    }
+
+    fun confirmImport() {
+        val uri = _state.value.importUri ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.value = _state.value.copy(isImporting = true, importPreview = null)
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                if (inputStream == null) {
+                    _state.value = _state.value.copy(
+                        isImporting = false,
+                        importResult = context.getString(R.string.import_error, "Cannot read file")
+                    )
+                    return@launch
+                }
+                val result = inputStream.use { bundleManager.importBundle(it, null) }
+                when (result) {
+                    is ImportResult.Success -> {
+                        _state.value = _state.value.copy(
+                            isImporting = false,
+                            importUri = null,
+                            importResult = context.getString(R.string.import_success)
+                        )
+                        // Refresh saves list
+                        refresh()
+                    }
+                    is ImportResult.Error -> {
+                        _state.value = _state.value.copy(
+                            isImporting = false,
+                            importUri = null,
+                            importResult = context.getString(R.string.import_error, result.message)
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Import failed", e)
+                _state.value = _state.value.copy(
+                    isImporting = false,
+                    importUri = null,
+                    importResult = context.getString(R.string.import_error, e.message ?: "Unknown error")
+                )
+            }
+        }
+    }
+
+    fun dismissImportPreview() {
+        _state.value = _state.value.copy(importPreview = null, importUri = null)
+    }
+
+    fun clearImportResult() {
+        _state.value = _state.value.copy(importResult = null)
     }
 
     /**

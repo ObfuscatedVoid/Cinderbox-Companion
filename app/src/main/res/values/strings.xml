@@ -503,6 +503,30 @@
     <string name="widget_description">Shows last sync status for each save</string>
     <string name="widget_no_syncs">No syncs yet</string>
 
+    <!-- Mod Update Changelog -->
+    <string name="changelog_title">What\'s new</string>
+
+    <!-- Export/Import Save Bundle -->
+    <string name="export_button">Export Save</string>
+    <string name="export_exporting">Creating bundle\u2026</string>
+    <string name="export_error">Export failed: %1$s</string>
+    <string name="import_button">Import Save</string>
+    <string name="import_preview_title">Import Save Bundle</string>
+    <string name="import_preview_farmer">Farmer: %1$s</string>
+    <string name="import_preview_farm">Farm: %1$s</string>
+    <string name="import_preview_date">%1$s %2$d, Year %3$d</string>
+    <string name="import_preview_mods">%1$d mods included</string>
+    <string name="import_confirm">Import</string>
+    <string name="import_success">Save imported successfully</string>
+    <string name="import_error">Import failed: %1$s</string>
+
+    <!-- Mod Associations -->
+    <string name="mod_mismatch_title">Mod Mismatch</string>
+    <string name="mod_mismatch_missing">Missing since last sync:</string>
+    <string name="mod_mismatch_extra">New since last sync:</string>
+    <string name="mod_mismatch_last_synced">Last synced: %1$s</string>
+    <string name="mod_mismatch_update">Update Association</string>
+
     <!-- Auto-sync notification -->
     <string name="notification_channel_sync">Save Sync</string>
     <string name="notification_auto_sync_title">Cinderbox Companion</string>

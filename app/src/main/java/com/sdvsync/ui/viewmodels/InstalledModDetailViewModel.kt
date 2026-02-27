@@ -6,6 +6,7 @@ import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModDataStore
 import com.sdvsync.mods.ModFileManager
 import com.sdvsync.mods.ModMetadata
+import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.mods.api.SmapiUpdateChecker
 import com.sdvsync.mods.models.InstalledMod
 import com.sdvsync.mods.models.ModUpdateInfo
@@ -30,6 +31,7 @@ class InstalledModDetailViewModel(
     private val fileManager: ModFileManager,
     private val dataStore: ModDataStore,
     private val updateChecker: SmapiUpdateChecker,
+    private val nexusSource: NexusModSource,
     private val uniqueId: String
 ) : ViewModel() {
 
@@ -93,7 +95,25 @@ class InstalledModDetailViewModel(
             _state.update { it.copy(isCheckingUpdate = true) }
             try {
                 val updates = updateChecker.checkForUpdates(listOf(mod))
-                val info = updates[mod.manifest.uniqueID]
+                var info = updates[mod.manifest.uniqueID]
+
+                // Fetch changelog from Nexus if source is a Nexus update key
+                if (info != null && info.source.startsWith("Nexus:", ignoreCase = true)) {
+                    val nexusModId = info.source.removePrefix("Nexus:").removePrefix("nexus:").trim()
+                    try {
+                        val files = nexusSource.getModFiles(nexusModId)
+                        // Find file matching latest version, fall back to most recent primary file
+                        val matchingFile = files.find {
+                            it.modVersion == info!!.latestVersion || it.fileVersion == info!!.latestVersion
+                        } ?: files.filter { it.isPrimary }.maxByOrNull { it.uploadedAt }
+                        if (matchingFile?.changelogHtml != null) {
+                            info = info.copy(changelogHtml = matchingFile.changelogHtml)
+                        }
+                    } catch (e: Exception) {
+                        AppLogger.w(TAG, "Failed to fetch Nexus changelog for mod $nexusModId", e)
+                    }
+                }
+
                 _state.update { it.copy(updateInfo = info, isCheckingUpdate = false) }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Update check failed", e)

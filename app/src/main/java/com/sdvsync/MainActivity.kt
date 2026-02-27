@@ -60,20 +60,42 @@ class MainActivity : ComponentActivity() {
     private val nexusSource: NexusModSource by inject()
     private val downloadManager: ModDownloadManager by inject()
 
+    /** URI from an incoming .sdvsync file intent, consumed by the DashboardScreen. */
+    var pendingImportUri: android.net.Uri? = null
+        private set
+
+    fun consumePendingImportUri(): android.net.Uri? {
+        val uri = pendingImportUri
+        pendingImportUri = null
+        return uri
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleIncomingIntent(intent)
         setContent {
             SdvSyncTheme {
                 val navController = rememberNavController()
                 SdvSyncNavGraph(navController)
             }
         }
-        handleNxmIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent == null) return
+        val uri = intent.data
+        if (uri != null && intent.action == Intent.ACTION_VIEW && uri.scheme != "nxm") {
+            // Likely a .sdvsync file opened via share/file manager
+            pendingImportUri = uri
+            intent.data = null
+            return
+        }
         handleNxmIntent(intent)
     }
 
