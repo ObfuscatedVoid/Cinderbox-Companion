@@ -12,6 +12,7 @@ import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.mods.api.SmapiUpdateChecker
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveFileManager
+import com.sdvsync.saves.SaveFileParser
 import com.sdvsync.saves.SaveMetadataParser
 import com.sdvsync.saves.SaveValidator
 import com.sdvsync.steam.SteamAuthenticator
@@ -22,6 +23,7 @@ import com.sdvsync.steam.SteamSessionStore
 import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
+import com.sdvsync.ui.viewmodels.BackupListViewModel
 import com.sdvsync.ui.viewmodels.DashboardViewModel
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
@@ -29,6 +31,7 @@ import com.sdvsync.ui.viewmodels.LoginViewModel
 import com.sdvsync.ui.viewmodels.ModBrowseViewModel
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
 import com.sdvsync.ui.viewmodels.ModManagerViewModel
+import com.sdvsync.ui.viewmodels.SaveViewerViewModel
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
 import com.sdvsync.ui.viewmodels.SyncLogViewModel
@@ -64,6 +67,7 @@ val appModule = module {
     single { SaveMetadataParser() }
     single { SaveValidator() }
     single { SaveBackupManager(androidContext()) }
+    single { SaveFileParser() }
     factory {
         val detector = get<FileAccessDetector>()
         val strategy = get<FileAccessStrategy>()
@@ -91,7 +95,7 @@ val appModule = module {
     // ViewModels
     viewModel { LoginViewModel(get()) }
     viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { SyncDetailViewModel(androidContext(), get(), get(), get()) }
+    viewModel { SyncDetailViewModel(androidContext(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
     viewModel { GameDownloadViewModel(androidContext(), get(), get(), get()) }
@@ -99,4 +103,6 @@ val appModule = module {
     viewModel { ModBrowseViewModel(get(), get(), get()) }
     viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), modId, source) }
     viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), get(), uniqueId) }
+    viewModel { BackupListViewModel(androidContext(), get(), get(), get()) }
+    viewModel { SaveViewerViewModel(androidContext(), get(), get()) }
 }

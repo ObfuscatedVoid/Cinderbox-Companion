@@ -59,6 +59,18 @@
             android:foregroundServiceType="dataSync"
             android:exported="false" />
 
+        <!-- Widget -->
+        <receiver
+            android:name=".widget.SyncStatusWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sync_widget_info" />
+        </receiver>
+
         <!-- FileProvider for log sharing -->
         <provider
             android:name="androidx.core.content.FileProvider"

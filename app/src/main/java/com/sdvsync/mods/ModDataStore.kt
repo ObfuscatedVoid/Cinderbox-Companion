@@ -8,9 +8,11 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import com.sdvsync.logging.AppLogger
+import com.sdvsync.mods.models.ModProfile
 import com.sdvsync.mods.models.ModUpdateInfo
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
 import org.json.JSONObject
 
 private val Context.modDataStore by preferencesDataStore(name = "mod_data")
@@ -26,6 +28,7 @@ class ModDataStore(private val context: Context) {
         private val UPDATE_CACHE_KEY = stringPreferencesKey("update_cache")
         private val LAST_UPDATE_CHECK_KEY = longPreferencesKey("last_update_check")
         private val MOD_METADATA_KEY = stringPreferencesKey("mod_metadata")
+        private val PROFILES_KEY = stringPreferencesKey("mod_profiles")
 
         private const val ENCRYPTED_PREFS_NAME = "mod_encrypted_prefs"
         private const val KEY_NEXUS_API_KEY = "nexus_api_key"
@@ -109,6 +112,65 @@ class ModDataStore(private val context: Context) {
             prefs[MOD_METADATA_KEY]?.let { parseMetadata(it) } ?: emptyMap()
         }
         .first()
+
+    // ── Mod Profiles ──────────────────────────────────────────────────
+
+    suspend fun getProfiles(): List<ModProfile> = context.modDataStore.data
+        .map { prefs ->
+            prefs[PROFILES_KEY]?.let { parseProfiles(it) } ?: emptyList()
+        }
+        .first()
+
+    suspend fun saveProfile(profile: ModProfile) {
+        val profiles = getProfiles().toMutableList()
+        val existingIndex = profiles.indexOfFirst { it.name == profile.name }
+        if (existingIndex >= 0) {
+            profiles[existingIndex] = profile
+        } else {
+            profiles.add(profile)
+        }
+        context.modDataStore.edit { prefs ->
+            prefs[PROFILES_KEY] = serializeProfiles(profiles)
+        }
+    }
+
+    suspend fun deleteProfile(name: String) {
+        val profiles = getProfiles().filter { it.name != name }
+        context.modDataStore.edit { prefs ->
+            prefs[PROFILES_KEY] = serializeProfiles(profiles)
+        }
+    }
+
+    private fun serializeProfiles(profiles: List<ModProfile>): String {
+        val array = JSONArray()
+        profiles.forEach { profile ->
+            array.put(
+                JSONObject().apply {
+                    put("name", profile.name)
+                    put("enabledModIds", JSONArray(profile.enabledModIds.toList()))
+                    put("createdAt", profile.createdAt)
+                }
+            )
+        }
+        return array.toString()
+    }
+
+    private fun parseProfiles(json: String): List<ModProfile> = try {
+        val array = JSONArray(json)
+        (0 until array.length()).map { i ->
+            val obj = array.getJSONObject(i)
+            val idsArray = obj.getJSONArray("enabledModIds")
+            val ids = (0 until idsArray.length()).map { j -> idsArray.getString(j) }.toSet()
+            ModProfile(
+                name = obj.getString("name"),
+                enabledModIds = ids,
+                createdAt = obj.optLong("createdAt", 0)
+            )
+        }
+    } catch (e: Exception) {
+        AppLogger.e(TAG, "Failed to parse profiles", e)
+        emptyList()
+    }
 
     // ── Serialization ───────────────────────────────────────────────────
 

@@ -150,7 +150,7 @@
     <string name="settings_backups_description">A backup is created before every sync to protect your save data.</string>
     <string name="settings_backups_count">Keep up to %1$d backups per save</string>
     <string name="settings_about_title">About</string>
-    <string name="settings_about">Cinderbox Companion v0.0.1</string>
+    <string name="settings_about">Cinderbox Companion v0.0.2</string>
     <string name="settings_about_desc">Companion app for Cinderbox \u2014 sync saves, download game files, and manage mods.</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_share_logs">Share Logs</string>
@@ -430,6 +430,78 @@
     <string name="mods_error_api_key_required">A Nexus API key is required to browse mods</string>
     <string name="mods_error_rate_limited">Nexus API rate limit reached. Please try again later.</string>
     <string name="mods_error_network">Network error. Check your connection.</string>
+
+    <!-- Health Check -->
+    <string name="health_check_title">Save Health</string>
+    <string name="health_check_run">Check</string>
+    <string name="health_check_checking">Checking save health\u2026</string>
+    <string name="health_check_healthy">\u2714 Save is healthy</string>
+    <string name="health_check_warnings">Warnings:</string>
+    <string name="health_check_errors">Errors:</string>
+
+    <!-- Backups -->
+    <string name="backups_title">Backups</string>
+    <string name="backups_view">View Backups</string>
+    <string name="backups_empty">No backups yet</string>
+    <string name="backups_empty_subtitle">Backups are created automatically before each sync</string>
+    <string name="backups_restore">Restore</string>
+    <string name="backups_restore_title">Restore backup?</string>
+    <string name="backups_restore_message">Your current save will be backed up first, then replaced with this backup.</string>
+    <string name="backups_files">%1$d files \u2022 %2$s</string>
+    <string name="backups_days_behind">%1$d day(s) behind current</string>
+    <string name="backups_days_ahead">%1$d day(s) ahead of current</string>
+    <string name="backups_same_as_current">Same progress as current</string>
+    <string name="backups_current_save">Current Save</string>
+    <string name="backups_no_metadata">Could not read save metadata</string>
+
+    <!-- Mod Profiles -->
+    <string name="profiles_title">Profiles</string>
+    <string name="profiles_active">Active: %1$s</string>
+    <string name="profiles_save_current">Save Current</string>
+    <string name="profiles_save_title">Save Profile</string>
+    <string name="profiles_save_message">Save the current enabled/disabled mod configuration as a named profile.</string>
+    <string name="profiles_save_hint">Profile name</string>
+    <string name="profiles_save_button">Save</string>
+    <string name="profiles_apply_confirm_title">Apply profile?</string>
+    <string name="profiles_apply_confirm_message">This will enable/disable mods to match the \"%1$s\" profile.</string>
+    <string name="profiles_delete_title">Delete profile?</string>
+    <string name="profiles_delete_message">Delete the \"%1$s\" profile? This cannot be undone.</string>
+    <string name="profiles_delete_button">Delete</string>
+
+    <!-- Save Viewer -->
+    <string name="save_viewer_button">View Save</string>
+    <string name="save_viewer_title">Save Viewer</string>
+    <string name="save_viewer_tab_farmer">Farmer</string>
+    <string name="save_viewer_tab_relationships">Friends</string>
+    <string name="save_viewer_tab_animals">Animals</string>
+    <string name="save_viewer_tab_bundles">Bundles</string>
+    <string name="save_viewer_tab_museum">Museum</string>
+    <string name="save_viewer_tab_crafting">Crafting</string>
+    <string name="save_viewer_favorite_thing">Favorite thing: %1$s</string>
+    <string name="save_viewer_money">Gold</string>
+    <string name="save_viewer_total_earned">Total earned: %1$sg</string>
+    <string name="save_viewer_skills">Skills</string>
+    <string name="save_viewer_skill_farming">Farming</string>
+    <string name="save_viewer_skill_mining">Mining</string>
+    <string name="save_viewer_skill_combat">Combat</string>
+    <string name="save_viewer_skill_foraging">Foraging</string>
+    <string name="save_viewer_skill_fishing">Fishing</string>
+    <string name="save_viewer_no_relationships">No relationships yet</string>
+    <string name="save_viewer_no_animals">No farm animals yet</string>
+    <string name="save_viewer_bundles_title">Community Center</string>
+    <string name="save_viewer_bundles_progress">%1$d / %2$d bundles completed</string>
+    <string name="save_viewer_bundles_none">No bundle data found</string>
+    <string name="save_viewer_museum_title">Museum</string>
+    <string name="save_viewer_museum_progress">%1$d / %2$d items donated</string>
+    <string name="save_viewer_crafting_recipes">Crafting Recipes (%1$d)</string>
+    <string name="save_viewer_cooking_recipes">Cooking Recipes (%1$d)</string>
+    <string name="save_viewer_no_recipes">No recipes learned yet</string>
+    <string name="save_viewer_times_crafted">\u00d7%1$d</string>
+
+    <!-- Widget -->
+    <string name="widget_title">Stardew Sync</string>
+    <string name="widget_description">Shows last sync status for each save</string>
+    <string name="widget_no_syncs">No syncs yet</string>
 
     <!-- Auto-sync notification -->
     <string name="notification_channel_sync">Save Sync</string>

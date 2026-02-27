@@ -10,6 +10,7 @@ import com.sdvsync.mods.ModFileManager
 import com.sdvsync.mods.api.SmapiUpdateChecker
 import com.sdvsync.mods.models.InstallResult
 import com.sdvsync.mods.models.InstalledMod
+import com.sdvsync.mods.models.ModProfile
 import com.sdvsync.mods.models.ModUpdateInfo
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -32,7 +33,11 @@ data class ModManagerState(
     val sortOrder: ModSortOrder = ModSortOrder.NAME,
     val filter: ModFilter = ModFilter.ALL,
     val searchQuery: String = "",
-    val displayedMods: List<InstalledMod> = emptyList()
+    val displayedMods: List<InstalledMod> = emptyList(),
+    val profiles: List<ModProfile> = emptyList(),
+    val activeProfileName: String? = null,
+    val isApplyingProfile: Boolean = false,
+    val profileMessage: String? = null
 )
 
 class ModManagerViewModel(
@@ -64,6 +69,7 @@ class ModManagerViewModel(
                     it.copy(installedMods = mods, updates = updates, isLoading = false)
                 }
                 updateDisplayedMods()
+                loadProfiles()
 
                 // Auto-check for updates if stale
                 val lastCheck = dataStore.getLastUpdateCheck()
@@ -173,6 +179,92 @@ class ModManagerViewModel(
     fun setSearchQuery(query: String) {
         _state.update { it.copy(searchQuery = query) }
         updateDisplayedMods()
+    }
+
+    // ── Profiles ─────────────────────────────────────────────────────────
+
+    private fun loadProfiles() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val profiles = dataStore.getProfiles()
+                val activeName = detectActiveProfile(profiles)
+                _state.update { it.copy(profiles = profiles, activeProfileName = activeName) }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to load profiles", e)
+            }
+        }
+    }
+
+    fun saveCurrentAsProfile(name: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val enabledIds = _state.value.installedMods
+                .filter { it.enabled }
+                .map { it.manifest.uniqueID }
+                .toSet()
+
+            val profile = ModProfile(name = name, enabledModIds = enabledIds)
+            dataStore.saveProfile(profile)
+
+            val profiles = dataStore.getProfiles()
+            _state.update {
+                it.copy(
+                    profiles = profiles,
+                    activeProfileName = name,
+                    profileMessage = "Profile \"$name\" saved"
+                )
+            }
+        }
+    }
+
+    fun applyProfile(profile: ModProfile) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update { it.copy(isApplyingProfile = true) }
+            try {
+                val mods = _state.value.installedMods
+                for (mod in mods) {
+                    val shouldEnable = mod.manifest.uniqueID in profile.enabledModIds
+                    if (mod.enabled != shouldEnable) {
+                        if (shouldEnable) {
+                            fileManager.enableMod(mod.folderName)
+                        } else {
+                            fileManager.disableMod(mod.folderName)
+                        }
+                    }
+                }
+                _state.update {
+                    it.copy(
+                        isApplyingProfile = false,
+                        profileMessage = "Profile \"${profile.name}\" applied"
+                    )
+                }
+                loadInstalledMods()
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to apply profile", e)
+                _state.update {
+                    it.copy(isApplyingProfile = false, profileMessage = "Failed to apply profile")
+                }
+            }
+        }
+    }
+
+    fun deleteProfile(name: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dataStore.deleteProfile(name)
+            loadProfiles()
+        }
+    }
+
+    fun clearProfileMessage() {
+        _state.update { it.copy(profileMessage = null) }
+    }
+
+    private fun detectActiveProfile(profiles: List<ModProfile>): String? {
+        val currentEnabled = _state.value.installedMods
+            .filter { it.enabled }
+            .map { it.manifest.uniqueID }
+            .toSet()
+
+        return profiles.find { it.enabledModIds == currentEnabled }?.name
     }
 
     private fun updateDisplayedMods() {

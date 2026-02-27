@@ -36,6 +36,10 @@ xz = "1.10"
 # Image loading
 coil = "3.1.0"
 
+# Widget
+glance = "1.1.1"
+workRuntime = "2.9.1"
+
 # Shizuku
 shizuku = "13.1.5"
 
@@ -84,6 +88,11 @@ xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
 # Image loading
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+
+# Widget
+androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
+androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
 
 # Shizuku
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }

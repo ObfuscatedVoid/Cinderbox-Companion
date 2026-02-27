@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.saves.SaveFileManager
+import com.sdvsync.saves.SaveValidator
+import com.sdvsync.saves.ValidationResult
 import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
 import com.sdvsync.sync.SyncResult
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,14 +20,17 @@ data class SyncDetailState(
     val isSyncing: Boolean = false,
     val progressMessage: String = "",
     val result: SyncResult? = null,
-    val isStagingMode: Boolean = false
+    val isStagingMode: Boolean = false,
+    val healthCheck: ValidationResult? = null,
+    val isCheckingHealth: Boolean = false
 )
 
 class SyncDetailViewModel(
     private val context: Context,
     private val syncEngine: SyncEngine,
     private val historyStore: SyncHistoryStore,
-    private val saveFileManager: SaveFileManager
+    private val saveFileManager: SaveFileManager,
+    private val saveValidator: SaveValidator
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SyncDetailState(isStagingMode = saveFileManager.isStaging))
@@ -78,6 +84,27 @@ class SyncDetailViewModel(
                 is SyncResult.NeedsConflictResolution -> context.getString(R.string.sync_conflict_detected)
             }
             historyStore.addEntry(saveFolderName, "push", success, message)
+        }
+    }
+
+    fun checkSaveHealth(saveFolderName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.value = _state.value.copy(isCheckingHealth = true, healthCheck = null)
+            try {
+                val files = saveFileManager.readLocalSave(saveFolderName)
+                val mainSaveData = files[saveFolderName]
+                val saveGameInfoData = files["SaveGameInfo"]
+                val result = saveValidator.deepValidateSaveData(mainSaveData, saveGameInfoData)
+                _state.value = _state.value.copy(healthCheck = result, isCheckingHealth = false)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    healthCheck = ValidationResult(
+                        valid = false,
+                        errors = listOf("Health check failed: ${e.message}")
+                    ),
+                    isCheckingHealth = false
+                )
+            }
         }
     }
 
