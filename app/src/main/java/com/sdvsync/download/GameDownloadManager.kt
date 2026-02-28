@@ -76,7 +76,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
         // or
         // something similar
         const val CINDERBOX_APK_URL =
-            "https://cdn.discordapp.com/attachments/1467922462669803570/1476123951875883091/Cinderbox-v0.2.0.apk?ex=69a29e0f&is=69a14c8f&hm=4f31c6c1c0d19868f4b5d8750f84fd979d21c00727a7289c1bedf8b7b37ff97c&"
+            "https://cdn.discordapp.com/attachments/1467922462669803570/1476123951875883091/Cinderbox-v0.2.0.apk?ex=69a4984f&is=69a346cf&hm=e342d7825487964a44a8c057e3e50e3d33c719f9eeaa9be15d60324e3b14962a&"
         const val CINDERBOX_APK_FILENAME =
             "Cinderbox-v0.2.0.apk" // TODO: deal with this later, hardcode version bad
 
