@@ -63,7 +63,8 @@ data class ModUpdateInfo(
     val installedVersion: String,
     val latestVersion: String,
     val updateUrl: String?,
-    val source: String
+    val source: String,
+    val changelogHtml: String? = null
 )
 
 data class ModDownloadProgress(

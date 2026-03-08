@@ -468,6 +468,19 @@ val BarnData = arrayOf(
     intArrayOf(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
 )
 
+val ImportData = arrayOf(
+    intArrayOf(0, 1, 1, 1, 1, 1, 0, 0, 0, 0),
+    intArrayOf(0, 1, 0, 0, 0, 1, 0, 0, 0, 0),
+    intArrayOf(0, 1, 0, 0, 0, 1, 0, 0, 1, 0),
+    intArrayOf(0, 1, 0, 0, 0, 1, 0, 1, 1, 0),
+    intArrayOf(0, 1, 0, 0, 0, 1, 1, 1, 1, 1),
+    intArrayOf(0, 1, 0, 0, 0, 1, 0, 1, 1, 0),
+    intArrayOf(0, 1, 0, 0, 0, 1, 0, 0, 1, 0),
+    intArrayOf(0, 1, 0, 0, 0, 1, 0, 0, 0, 0),
+    intArrayOf(0, 1, 0, 0, 0, 1, 0, 0, 0, 0),
+    intArrayOf(0, 1, 1, 1, 1, 1, 0, 0, 0, 0)
+)
+
 // ── Convenience composables ─────────────────────────────────────────────
 
 /**

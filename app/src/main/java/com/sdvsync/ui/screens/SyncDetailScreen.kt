@@ -1,18 +1,24 @@
 package com.sdvsync.ui.screens
 
+import android.content.Intent
+import android.text.format.DateUtils
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.sdvsync.R
 import com.sdvsync.sync.SyncDirection
 import com.sdvsync.sync.SyncResult
@@ -35,11 +41,35 @@ fun SyncDetailScreen(
     hasCloud: Boolean,
     hasLocal: Boolean,
     onBack: () -> Unit,
+    onBackupsClick: () -> Unit = {},
+    onViewSaveClick: () -> Unit = {},
     viewModel: SyncDetailViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     var showPullConfirm by remember { mutableStateOf(false) }
     var showPushConfirm by remember { mutableStateOf(false) }
+
+    LaunchedEffect(saveFolderName) {
+        viewModel.loadModAssociation(saveFolderName)
+    }
+
+    // Share export file when ready
+    val exportContext = LocalContext.current
+    LaunchedEffect(state.exportFile) {
+        val file = state.exportFile ?: return@LaunchedEffect
+        val uri = FileProvider.getUriForFile(
+            exportContext,
+            "${exportContext.packageName}.fileprovider",
+            file
+        )
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        exportContext.startActivity(Intent.createChooser(shareIntent, null))
+        viewModel.clearExportFile()
+    }
 
     Scaffold(
         topBar = {
@@ -60,6 +90,7 @@ fun SyncDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -119,6 +150,122 @@ fun SyncDetailScreen(
                     PixelSyncIcon(direction = SyncDirection.PUSH, size = 18.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.action_push))
+                }
+            }
+
+            // Extra action buttons (View Save, View Backups, Export)
+            if (hasLocal) {
+                Spacer(Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StardewButton(
+                        onClick = onViewSaveClick,
+                        modifier = Modifier.weight(1f),
+                        variant = StardewButtonVariant.Gold,
+                        enabled = !state.isSyncing
+                    ) {
+                        Text(stringResource(R.string.save_viewer_button))
+                    }
+
+                    StardewOutlinedButton(
+                        onClick = onBackupsClick,
+                        modifier = Modifier.weight(1f),
+                        enabled = !state.isSyncing
+                    ) {
+                        Text(stringResource(R.string.backups_view))
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                StardewOutlinedButton(
+                    onClick = { viewModel.exportSave(saveFolderName) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isSyncing && !state.isExporting
+                ) {
+                    if (state.isExporting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_exporting))
+                    } else {
+                        Text(stringResource(R.string.export_button))
+                    }
+                }
+
+                if (state.exportError != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.export_error, state.exportError!!),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            // Mod mismatch warning
+            val mismatch = state.modMismatch
+            if (mismatch != null && hasLocal) {
+                Spacer(Modifier.height(16.dp))
+                val ctx = LocalContext.current
+                StardewCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            stringResource(R.string.mod_mismatch_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        if (mismatch.missingMods.isNotEmpty()) {
+                            Text(
+                                stringResource(R.string.mod_mismatch_missing),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                mismatch.missingMods.joinToString(", ") { it.name },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        if (mismatch.extraMods.isNotEmpty()) {
+                            if (mismatch.missingMods.isNotEmpty()) Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.mod_mismatch_extra),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                            Text(
+                                mismatch.extraMods.joinToString(", "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(
+                                R.string.mod_mismatch_last_synced,
+                                DateUtils.getRelativeTimeSpanString(
+                                    mismatch.lastSyncTime,
+                                    System.currentTimeMillis(),
+                                    DateUtils.MINUTE_IN_MILLIS
+                                ).toString()
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        StardewOutlinedButton(
+                            onClick = { viewModel.updateModAssociation(saveFolderName) }
+                        ) {
+                            Text(stringResource(R.string.mod_mismatch_update))
+                        }
+                    }
                 }
             }
 
@@ -215,6 +362,86 @@ fun SyncDetailScreen(
                                     ) {
                                         Text(stringResource(R.string.sync_keep_local))
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Health Check section
+            if (hasLocal) {
+                Spacer(Modifier.height(24.dp))
+
+                StardewCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                stringResource(R.string.health_check_title),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            StardewOutlinedButton(
+                                onClick = { viewModel.checkSaveHealth(saveFolderName) },
+                                enabled = !state.isCheckingHealth && !state.isSyncing
+                            ) {
+                                Text(stringResource(R.string.health_check_run))
+                            }
+                        }
+
+                        if (state.isCheckingHealth) {
+                            Spacer(Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.health_check_checking),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+
+                        state.healthCheck?.let { check ->
+                            Spacer(Modifier.height(12.dp))
+                            if (check.valid && check.warnings.isEmpty()) {
+                                Text(
+                                    stringResource(R.string.health_check_healthy),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                            if (check.warnings.isNotEmpty()) {
+                                Text(
+                                    stringResource(R.string.health_check_warnings),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                                check.warnings.forEach { warning ->
+                                    Text(
+                                        "• $warning",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
+                                }
+                            }
+                            if (check.errors.isNotEmpty()) {
+                                Text(
+                                    stringResource(R.string.health_check_errors),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                check.errors.forEach { error ->
+                                    Text(
+                                        "• $error",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             }
                         }

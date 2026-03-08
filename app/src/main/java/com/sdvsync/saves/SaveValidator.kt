@@ -1,8 +1,12 @@
 package com.sdvsync.saves
 
+import android.util.Xml
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.util.GzipUtil
+import java.io.ByteArrayInputStream
 import java.io.File
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserException
 
 data class ValidationResult(
     val valid: Boolean,
@@ -116,6 +120,121 @@ class SaveValidator {
         }
 
         return ValidationResult(valid = errors.isEmpty(), errors = errors)
+    }
+
+    /**
+     * Deep structural validation of save data.
+     * Runs shallow validation first, then streams XML to verify required elements.
+     */
+    fun deepValidateSaveData(mainSaveData: ByteArray?, saveGameInfoData: ByteArray?): ValidationResult {
+        // Run shallow validation first
+        val shallow = validateSaveData(mainSaveData, saveGameInfoData)
+        if (!shallow.valid) return shallow
+
+        val errors = mutableListOf<String>()
+        val warnings = mutableListOf<String>()
+
+        // Validate main save structure
+        if (mainSaveData != null) {
+            val xmlData = GzipUtil.decompressIfGzip(mainSaveData)
+
+            if (xmlData.size < 100 * 1024) {
+                warnings.add("Main save is small (${xmlData.size / 1024}KB) — may be truncated")
+            }
+
+            try {
+                val requiredChildren = setOf("player", "locations", "currentSeason", "dayOfMonth", "year")
+                val foundChildren = mutableSetOf<String>()
+
+                val parser = Xml.newPullParser()
+                parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                parser.setInput(ByteArrayInputStream(xmlData), "UTF-8")
+
+                var depth = 0
+                var insideSaveGame = false
+
+                while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+                    when (parser.eventType) {
+                        XmlPullParser.START_TAG -> {
+                            depth++
+                            if (depth == 1 && parser.name == "SaveGame") {
+                                insideSaveGame = true
+                            }
+                            if (insideSaveGame && depth == 2) {
+                                foundChildren.add(parser.name)
+                            }
+                        }
+                        XmlPullParser.END_TAG -> {
+                            if (depth == 1) insideSaveGame = false
+                            depth--
+                        }
+                    }
+                    parser.next()
+                }
+
+                val missing = requiredChildren - foundChildren
+                if (missing.isNotEmpty()) {
+                    errors.add("Missing required elements: ${missing.joinToString(", ")}")
+                }
+            } catch (e: XmlPullParserException) {
+                errors.add("XML parse error at line ${e.lineNumber}: ${e.message}")
+            } catch (e: Exception) {
+                errors.add("Failed to parse main save: ${e.message}")
+            }
+        }
+
+        // Validate SaveGameInfo structure
+        if (saveGameInfoData != null) {
+            try {
+                val xmlData = GzipUtil.decompressIfGzip(saveGameInfoData)
+                val parser = Xml.newPullParser()
+                parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                parser.setInput(ByteArrayInputStream(xmlData), "UTF-8")
+
+                var foundName = false
+                var foundFarmName = false
+                var season = -1
+                var day = -1
+                var year = -1
+                var currentTag = ""
+
+                while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+                    when (parser.eventType) {
+                        XmlPullParser.START_TAG -> currentTag = parser.name
+                        XmlPullParser.TEXT -> {
+                            val text = parser.text?.trim() ?: ""
+                            if (text.isNotEmpty()) {
+                                when (currentTag) {
+                                    "name" -> if (!foundName) foundName = true
+                                    "farmName" -> foundFarmName = true
+                                    "seasonForSaveGame" -> season = text.toIntOrNull() ?: -1
+                                    "dayOfMonthForSaveGame" -> day = text.toIntOrNull() ?: -1
+                                    "yearForSaveGame" -> year = text.toIntOrNull() ?: -1
+                                }
+                            }
+                        }
+                        XmlPullParser.END_TAG -> currentTag = ""
+                    }
+                    parser.next()
+                }
+
+                if (!foundName) errors.add("SaveGameInfo: missing farmer name")
+                if (!foundFarmName) errors.add("SaveGameInfo: missing farm name")
+                if (season !in 0..3) errors.add("SaveGameInfo: invalid season ($season)")
+                if (day !in 1..28) errors.add("SaveGameInfo: invalid day ($day)")
+                if (year < 1) errors.add("SaveGameInfo: invalid year ($year)")
+            } catch (e: XmlPullParserException) {
+                errors.add("SaveGameInfo XML error at line ${e.lineNumber}: ${e.message}")
+            } catch (e: Exception) {
+                errors.add("Failed to parse SaveGameInfo: ${e.message}")
+            }
+        }
+
+        return ValidationResult(
+            valid = errors.isEmpty(),
+            errors = errors,
+            warnings = warnings
+        )
     }
 
     private fun validateXmlEnding(file: File, expectedTag: String): Boolean = try {

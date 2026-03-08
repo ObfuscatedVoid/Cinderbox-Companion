@@ -1,6 +1,8 @@
 package com.sdvsync.sync
 
 import android.content.Context
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveBackupManager
@@ -9,6 +11,7 @@ import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
 import com.sdvsync.saves.SaveValidator
 import com.sdvsync.steam.SteamCloudService
+import com.sdvsync.widget.WidgetUpdateWorker
 
 sealed class SyncResult {
     data class Success(val message: String, val warning: String? = null) : SyncResult()
@@ -122,6 +125,7 @@ class SyncEngine(
             } else {
                 context.getString(R.string.sync_pull_success)
             }
+            enqueueWidgetUpdate()
             return SyncResult.Success(successMsg, warning = versionWarning)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Pull failed for $saveFolderName", e)
@@ -232,6 +236,7 @@ class SyncEngine(
             }
 
             val dayInfo = localMeta?.let { formatDisplayDate(it) }
+            enqueueWidgetUpdate()
             return if (dayInfo != null) {
                 SyncResult.Success(context.getString(R.string.sync_push_success_with_day, dayInfo))
             } else {
@@ -240,6 +245,15 @@ class SyncEngine(
         } catch (e: Exception) {
             AppLogger.e(TAG, "Push failed for $saveFolderName", e)
             return SyncResult.Error(context.getString(R.string.sync_error_push_failed, e.message ?: "Unknown error"))
+        }
+    }
+
+    private fun enqueueWidgetUpdate() {
+        try {
+            val request = OneTimeWorkRequestBuilder<WidgetUpdateWorker>().build()
+            WorkManager.getInstance(context).enqueue(request)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Widget update failed (non-critical)", e)
         }
     }
 

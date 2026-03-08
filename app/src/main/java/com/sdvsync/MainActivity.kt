@@ -32,6 +32,7 @@ import com.sdvsync.mods.ModDownloadManager
 import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.ui.components.BottomTab
 import com.sdvsync.ui.components.StardewBottomBar
+import com.sdvsync.ui.screens.BackupListScreen
 import com.sdvsync.ui.screens.DashboardScreen
 import com.sdvsync.ui.screens.GameDownloadScreen
 import com.sdvsync.ui.screens.InstalledModDetailScreen
@@ -39,6 +40,7 @@ import com.sdvsync.ui.screens.LoginScreen
 import com.sdvsync.ui.screens.ModBrowseScreen
 import com.sdvsync.ui.screens.ModDetailScreen
 import com.sdvsync.ui.screens.ModManagerScreen
+import com.sdvsync.ui.screens.SaveViewerScreen
 import com.sdvsync.ui.screens.SettingsScreen
 import com.sdvsync.ui.screens.SyncDetailScreen
 import com.sdvsync.ui.screens.SyncLogScreen
@@ -58,20 +60,42 @@ class MainActivity : ComponentActivity() {
     private val nexusSource: NexusModSource by inject()
     private val downloadManager: ModDownloadManager by inject()
 
+    /** URI from an incoming .sdvsync file intent, consumed by the DashboardScreen. */
+    var pendingImportUri: android.net.Uri? = null
+        private set
+
+    fun consumePendingImportUri(): android.net.Uri? {
+        val uri = pendingImportUri
+        pendingImportUri = null
+        return uri
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleIncomingIntent(intent)
         setContent {
             SdvSyncTheme {
                 val navController = rememberNavController()
                 SdvSyncNavGraph(navController)
             }
         }
-        handleNxmIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent == null) return
+        val uri = intent.data
+        if (uri != null && intent.action == Intent.ACTION_VIEW && uri.scheme != "nxm") {
+            // Likely a .sdvsync file opened via share/file manager
+            pendingImportUri = uri
+            intent.data = null
+            return
+        }
         handleNxmIntent(intent)
     }
 
@@ -234,6 +258,36 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 saveFolderName = saveFolderName,
                 hasCloud = hasCloud,
                 hasLocal = hasLocal,
+                onBack = { navController.popBackStack() },
+                onBackupsClick = { navController.navigate("backups/$saveFolderName") },
+                onViewSaveClick = { navController.navigate("save_viewer/$saveFolderName") }
+            )
+        }
+
+        // Backup list screen
+        composable(
+            route = "backups/{saveFolderName}",
+            arguments = listOf(
+                navArgument("saveFolderName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val saveFolderName = backStackEntry.arguments?.getString("saveFolderName") ?: return@composable
+            BackupListScreen(
+                saveFolderName = saveFolderName,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // Save viewer screen
+        composable(
+            route = "save_viewer/{saveFolderName}",
+            arguments = listOf(
+                navArgument("saveFolderName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val saveFolderName = backStackEntry.arguments?.getString("saveFolderName") ?: return@composable
+            SaveViewerScreen(
+                saveFolderName = saveFolderName,
                 onBack = { navController.popBackStack() }
             )
         }
