@@ -19,9 +19,11 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("${rootProject.projectDir}/keystore.jks")
-            storePassword = "cinderbox123"
+            storePassword = providers.gradleProperty("STORE_PASSWORD").orNull
+                ?: System.getenv("STORE_PASSWORD")
             keyAlias = "cinderbox"
-            keyPassword = "cinderbox123"
+            keyPassword = providers.gradleProperty("KEY_PASSWORD").orNull
+                ?: System.getenv("KEY_PASSWORD")
         }
     }
 
