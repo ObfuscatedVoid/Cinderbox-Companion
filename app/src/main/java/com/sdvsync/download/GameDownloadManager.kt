@@ -76,9 +76,9 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
         // or
         // something similar
         const val CINDERBOX_APK_URL =
-            "https://cdn.discordapp.com/attachments/1467922462669803570/1476123951875883091/Cinderbox-v0.2.0.apk?ex=69a4984f&is=69a346cf&hm=e342d7825487964a44a8c057e3e50e3d33c719f9eeaa9be15d60324e3b14962a&"
+            "https://cdn.discordapp.com/attachments/1467922462669803570/1478679147806199892/Cinderbox-v0.2.2.apk?ex=69ae8cc5&is=69ad3b45&hm=31a0c02a2fb22cd089d3cf8bf2c32a2d56b1ad873fb6f6e7cd4c12e0f32b7bd8&"
         const val CINDERBOX_APK_FILENAME =
-            "Cinderbox-v0.2.0.apk" // TODO: deal with this later, hardcode version bad
+            "Cinderbox-v0.2.2.apk" // TODO: deal with this later, hardcode version bad
 
         val CINDERBOX_DLLS =
             listOf(
@@ -101,8 +101,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
 
     val progress: StateFlow<DownloadProgress> = _progress.asStateFlow()
     val smapiProgress: StateFlow<SmapiSetupProgress> = _smapiProgress.asStateFlow()
-    val cinderboxProgress: StateFlow<CinderboxDownloadProgress> =
-        _cinderboxProgress.asStateFlow()
+    val cinderboxProgress: StateFlow<CinderboxDownloadProgress> = _cinderboxProgress.asStateFlow()
 
     fun startDownload(
         branch: String = "public",
@@ -136,9 +135,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
 
                 if (!response.isSuccessful) {
                     _cinderboxProgress.value =
-                        CinderboxDownloadProgress(
-                            errorMessage = "HTTP ${response.code}"
-                        )
+                        CinderboxDownloadProgress(errorMessage = "HTTP ${response.code}")
                     return@withContext
                 }
 
@@ -147,8 +144,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                         ?: run {
                             _cinderboxProgress.value =
                                 CinderboxDownloadProgress(
-                                    errorMessage =
-                                    "Empty response body"
+                                    errorMessage = "Empty response body"
                                 )
                             return@withContext
                         }
@@ -160,9 +156,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                 destFile.outputStream().buffered().use { output ->
                     body.byteStream().use { input ->
                         var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } !=
-                            -1
-                        ) {
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
                             coroutineContext.ensureActive()
                             output.write(buffer, 0, bytesRead)
                             downloadedBytes += bytesRead
@@ -172,24 +166,18 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                                     isDownloading = true,
                                     percent =
                                     if (totalBytes > 0) {
-                                        downloadedBytes
-                                            .toFloat() /
-                                            totalBytes
+                                        downloadedBytes.toFloat() / totalBytes
                                     } else {
                                         0f
                                     },
-                                    downloadedBytes =
-                                    downloadedBytes,
+                                    downloadedBytes = downloadedBytes,
                                     totalBytes = totalBytes
                                 )
                         }
                     }
                 }
 
-                AppLogger.i(
-                    TAG,
-                    "Cinderbox APK downloaded: ${destFile.length()} bytes"
-                )
+                AppLogger.i(TAG, "Cinderbox APK downloaded: ${destFile.length()} bytes")
 
                 _cinderboxProgress.value =
                     CinderboxDownloadProgress(
@@ -204,16 +192,13 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                 AppLogger.e(TAG, "Cinderbox APK download failed", e)
                 destFile.delete()
                 _cinderboxProgress.value =
-                    CinderboxDownloadProgress(
-                        errorMessage = e.message ?: "Unknown error"
-                    )
+                    CinderboxDownloadProgress(errorMessage = e.message ?: "Unknown error")
             }
         }
     }
 
     suspend fun extractSmapiAsset() {
-        _smapiProgress.value =
-            SmapiSetupProgress(isRunning = true, currentFile = "Counting files…")
+        _smapiProgress.value = SmapiSetupProgress(isRunning = true, currentFile = "Counting files…")
 
         val buffer = ByteArray(256 * 1024)
         val smapiDestDir = File(SMAPI_DEST)
@@ -231,17 +216,12 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                 _smapiProgress.value =
                     SmapiSetupProgress(
                         completed = true,
-                        errorMessage =
-                        "Failed to open SMAPI asset: ${e.message}"
+                        errorMessage = "Failed to open SMAPI asset: ${e.message}"
                     )
                 return
             }
 
-        _smapiProgress.value =
-            SmapiSetupProgress(
-                isRunning = true,
-                totalFiles = totalEntries
-            )
+        _smapiProgress.value = SmapiSetupProgress(isRunning = true, totalFiles = totalEntries)
 
         // Extract zip from assets
         try {
@@ -260,9 +240,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                                 extractedFiles = extracted,
                                 percent =
                                 if (totalEntries > 0) {
-                                    extracted
-                                        .toFloat() /
-                                        totalEntries
+                                    extracted.toFloat() / totalEntries
                                 } else {
                                     0f
                                 }
@@ -270,45 +248,21 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
 
                         if (!entry.isDirectory) {
                             try {
-                                val destFile =
-                                    File(
-                                        smapiDestDir,
-                                        entryName
-                                    )
+                                val destFile = File(smapiDestDir, entryName)
                                 destFile.parentFile?.mkdirs()
-                                destFile.outputStream()
-                                    .buffered()
-                                    .use { output ->
-                                        var bytesRead: Int
-                                        while (zip.read(
-                                                buffer
-                                            )
-                                                .also {
-                                                    bytesRead =
-                                                        it
-                                                } != -1
-                                        ) {
-                                            coroutineContext
-                                                .ensureActive()
-                                            output.write(
-                                                buffer,
-                                                0,
-                                                bytesRead
-                                            )
-                                        }
+                                destFile.outputStream().buffered().use { output ->
+                                    var bytesRead: Int
+                                    while (zip.read(buffer).also { bytesRead = it } != -1) {
+                                        coroutineContext.ensureActive()
+                                        output.write(buffer, 0, bytesRead)
                                     }
+                                }
                                 extracted++
                             } catch (e: Exception) {
-                                if (e is
-                                        kotlinx.coroutines.CancellationException
-                                ) {
+                                if (e is kotlinx.coroutines.CancellationException) {
                                     throw e
                                 }
-                                AppLogger.e(
-                                    TAG,
-                                    "Failed to extract $displayName",
-                                    e
-                                )
+                                AppLogger.e(TAG, "Failed to extract $displayName", e)
                                 errors.add(displayName)
                             }
                         }
@@ -399,8 +353,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
             }
         }
 
-        val smapiEntryCount =
-            context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) }
+        val smapiEntryCount = context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) }
         val totalFiles = filesToCopy.size + smapiEntryCount + 1 // +1 for Mods/ dir
 
         AppLogger.i(
@@ -443,9 +396,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                 src.inputStream().buffered().use { input ->
                     dest.outputStream().buffered().use { output ->
                         var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } !=
-                            -1
-                        ) {
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
                             coroutineContext.ensureActive()
                             output.write(buffer, 0, bytesRead)
                         }
@@ -477,8 +428,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
                                 copiedFiles = copied,
                                 overallPercent =
                                 if (totalFiles > 0) {
-                                    copied.toFloat() /
-                                        totalFiles
+                                    copied.toFloat() / totalFiles
                                 } else {
                                     0f
                                 }
@@ -486,45 +436,21 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
 
                         if (!entry.isDirectory) {
                             try {
-                                val destFile =
-                                    File(
-                                        smapiDestDir,
-                                        entryName
-                                    )
+                                val destFile = File(smapiDestDir, entryName)
                                 destFile.parentFile?.mkdirs()
-                                destFile.outputStream()
-                                    .buffered()
-                                    .use { output ->
-                                        var bytesRead: Int
-                                        while (zip.read(
-                                                buffer
-                                            )
-                                                .also {
-                                                    bytesRead =
-                                                        it
-                                                } != -1
-                                        ) {
-                                            coroutineContext
-                                                .ensureActive()
-                                            output.write(
-                                                buffer,
-                                                0,
-                                                bytesRead
-                                            )
-                                        }
+                                destFile.outputStream().buffered().use { output ->
+                                    var bytesRead: Int
+                                    while (zip.read(buffer).also { bytesRead = it } != -1) {
+                                        coroutineContext.ensureActive()
+                                        output.write(buffer, 0, bytesRead)
                                     }
+                                }
                                 copied++
                             } catch (e: Exception) {
-                                if (e is
-                                        kotlinx.coroutines.CancellationException
-                                ) {
+                                if (e is kotlinx.coroutines.CancellationException) {
                                     throw e
                                 }
-                                AppLogger.e(
-                                    TAG,
-                                    "Failed to extract $displayName",
-                                    e
-                                )
+                                AppLogger.e(TAG, "Failed to extract $displayName", e)
                                 errors.add(displayName)
                             }
                         }
@@ -545,8 +471,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
             _progress.value.copy(
                 currentFile = "Mods/",
                 copiedFiles = copied,
-                overallPercent =
-                if (totalFiles > 0) copied.toFloat() / totalFiles else 0f
+                overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f
             )
         try {
             File(MODS_DIR).mkdirs()
