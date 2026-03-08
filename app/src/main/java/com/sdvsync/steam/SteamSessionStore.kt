@@ -1,6 +1,7 @@
 package com.sdvsync.steam
 
 import android.content.Context
+import androidx.security.crypto.EncryptedFile
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.io.File
@@ -49,13 +50,23 @@ class SteamSessionStore(private val context: Context) {
     fun getSentryFile(username: String): File = File(sentryDir, "$username.sentry")
 
     fun saveSentryData(username: String, data: ByteArray) {
-        getSentryFile(username).writeBytes(data)
+        val file = getSentryFile(username)
+        if (file.exists()) file.delete()
+        getEncryptedFile(file).openFileOutput().use { it.write(data) }
     }
 
     fun loadSentryData(username: String): ByteArray? {
         val file = getSentryFile(username)
-        return if (file.exists()) file.readBytes() else null
+        if (!file.exists()) return null
+        return getEncryptedFile(file).openFileInput().use { it.readBytes() }
     }
+
+    private fun getEncryptedFile(file: File): EncryptedFile = EncryptedFile.Builder(
+        context,
+        file,
+        masterKey,
+        EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
+    ).build()
 
     fun hasSession(): Boolean = !username.isNullOrEmpty() && !refreshToken.isNullOrEmpty()
 

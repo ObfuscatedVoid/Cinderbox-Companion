@@ -191,9 +191,11 @@ class SteamAuthenticator(
                     pendingQRLogin = false
                     startQRAuthentication()
                 } else if (pendingUsername != null && pendingPassword != null) {
-                    authenticateWithCredentials(pendingUsername!!, pendingPassword!!)
+                    val username = pendingUsername!!
+                    val password = pendingPassword!!
                     pendingUsername = null
                     pendingPassword = null
+                    authenticateWithCredentials(username, password)
                 } else {
                     _authState.value = AuthState.WaitingForCredentials
                 }

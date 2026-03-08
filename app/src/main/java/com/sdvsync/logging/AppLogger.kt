@@ -89,9 +89,9 @@ object AppLogger {
 
     internal fun sanitize(message: String): String {
         var result = message
-        // Token values: accessToken=..., refreshToken=..., access_token=..., password=...
+        // Token values: accessToken=..., refreshToken=..., access_token=..., password=..., apikey=...
         result = result.replace(
-            Regex("""(access_?[Tt]oken|refresh_?[Tt]oken|password)\s*[=:]\s*["']?[^\s"',}\]]+"""),
+            Regex("""(access_?[Tt]oken|refresh_?[Tt]oken|password|api_?[Kk]ey|apikey)\s*[=:]\s*["']?[^\s"',}\]]+"""),
             "$1=[REDACTED]"
         )
         // Steam IDs (76561... 17-digit numbers)
