@@ -2,7 +2,7 @@
 
 A companion app for Stardew Valley on Android. Syncs save files with Steam Cloud, downloads game files, and manages SMAPI mods — all from your phone.
 
-Works with both the official Android port and [Cinderbox](https://discord.gg/AjstnPVYwS) (the modded Android client).
+Works with both the official Android port and [Cinderbox](https://www.nexusmods.com/stardewvalley/mods/43278) (the modded Android client).
 
 > **This is an independent fan project.** It is not affiliated with, endorsed by, or connected to ConcernedApe, Chucklefish, or the Cinderbox developers. Stardew Valley is a trademark of ConcernedApe.
 
@@ -104,6 +104,8 @@ Requires JDK 17 and Android SDK 35.
 
 ## Links
 
+- [Cinderbox on Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/43278) — "Cinderbox - Play Desktop SDV on Android" — download the APK here
+- [Cinderbox Source Code](https://github.com/Ekyso/Cinderbox) — Official Cinderbox repository
 - [Cinderbox Discord](https://discord.gg/AjstnPVYwS) — Community for the Cinderbox modded Android client
 - [Nexus Mods API Key](https://www.nexusmods.com/users/myaccount?tab=api+access) — Required for mod browsing and downloads
 
