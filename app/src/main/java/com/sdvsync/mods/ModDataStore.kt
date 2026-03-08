@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
+import androidx.security.crypto.MasterKey
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.models.AssociatedMod
 import com.sdvsync.mods.models.ModProfile
@@ -39,11 +39,13 @@ class ModDataStore(private val context: Context) {
 
     private val encryptedPrefs by lazy {
         try {
-            val masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
             EncryptedSharedPreferences.create(
+                context,
                 ENCRYPTED_PREFS_NAME,
                 masterKey,
-                context,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
