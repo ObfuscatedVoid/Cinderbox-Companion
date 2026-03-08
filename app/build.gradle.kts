@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -17,13 +19,14 @@ android {
     }
 
     signingConfigs {
+        val localProps = Properties()
+        rootProject.file("local.properties").takeIf { it.exists() }
+            ?.inputStream()?.use { localProps.load(it) }
         create("release") {
             storeFile = file("${rootProject.projectDir}/keystore.jks")
-            storePassword = providers.gradleProperty("STORE_PASSWORD").orNull
-                ?: System.getenv("STORE_PASSWORD")
+            storePassword = localProps.getProperty("STORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
             keyAlias = "cinderbox"
-            keyPassword = providers.gradleProperty("KEY_PASSWORD").orNull
-                ?: System.getenv("KEY_PASSWORD")
+            keyPassword = localProps.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
         }
     }
 
