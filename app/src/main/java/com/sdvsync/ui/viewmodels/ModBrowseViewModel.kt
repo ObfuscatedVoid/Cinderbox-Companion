@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class BrowseCategory {
@@ -64,28 +65,20 @@ class ModBrowseViewModel(
     private fun loadInstalledIds() {
         viewModelScope.launch(Dispatchers.IO) {
             val mods = fileManager.listInstalledMods()
-            _state.value = _state.value.copy(
-                installedUniqueIds = mods.map { it.manifest.uniqueID.lowercase() }.toSet()
-            )
+            _state.update { it.copy(installedUniqueIds = mods.map { m -> m.manifest.uniqueID.lowercase() }.toSet()) }
         }
     }
 
     fun validateAndSaveApiKey(key: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(isValidatingKey = true, apiKeyError = null)
+            _state.update { it.copy(isValidatingKey = true, apiKeyError = null) }
             val valid = nexusSource.validateApiKey(key)
             if (valid) {
                 dataStore.setNexusApiKey(key)
-                _state.value = _state.value.copy(
-                    hasApiKey = true,
-                    isValidatingKey = false
-                )
+                _state.update { it.copy(hasApiKey = true, isValidatingKey = false) }
                 loadCategory(BrowseCategory.TRENDING)
             } else {
-                _state.value = _state.value.copy(
-                    isValidatingKey = false,
-                    apiKeyError = "Invalid API key"
-                )
+                _state.update { it.copy(isValidatingKey = false, apiKeyError = "Invalid API key") }
             }
         }
     }
@@ -112,13 +105,10 @@ class ModBrowseViewModel(
                     BrowseCategory.LATEST -> nexusSource.getLatestAdded()
                     BrowseCategory.RECENTLY_UPDATED -> nexusSource.getLatestUpdated()
                 }
-                _state.value = _state.value.copy(mods = mods, isLoading = false)
+                _state.update { it.copy(mods = mods, isLoading = false) }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load category", e)
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Failed to load mods"
-                )
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to load mods") }
             }
         }
     }
@@ -132,16 +122,13 @@ class ModBrowseViewModel(
         }
         searchJob = viewModelScope.launch(Dispatchers.IO) {
             delay(300) // Debounce
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val result = nexusSource.search(query)
-                _state.value = _state.value.copy(mods = result.mods, isLoading = false)
+                _state.update { it.copy(mods = result.mods, isLoading = false) }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Search failed", e)
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Search failed"
-                )
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Search failed") }
             }
         }
     }

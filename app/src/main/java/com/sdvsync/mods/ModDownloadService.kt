@@ -18,6 +18,7 @@ import com.sdvsync.mods.models.ModDownloadProgress
 import com.sdvsync.mods.models.ModDownloadState
 import java.io.File
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.update
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.koin.android.ext.android.inject
@@ -190,11 +191,12 @@ class ModDownloadService : Service() {
                         output.write(buffer, 0, bytesRead)
                         downloadedBytes += bytesRead
 
-                        ModDownloadManager._progress.value =
-                            ModDownloadManager._progress.value.copy(
+                        ModDownloadManager._progress.update { current ->
+                            current.copy(
                                 downloadedBytes = downloadedBytes,
                                 totalBytes = totalBytes
                             )
+                        }
                     }
                 }
             }

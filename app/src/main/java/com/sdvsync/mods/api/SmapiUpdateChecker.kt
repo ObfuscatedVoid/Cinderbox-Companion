@@ -59,8 +59,8 @@ class SmapiUpdateChecker(private val httpClient: OkHttpClient) {
             val updates = mutableMapOf<String, ModUpdateInfo>()
 
             for (i in 0 until results.length()) {
-                val result = results.getJSONObject(i)
-                val id = result.getString("id")
+                val result = results.optJSONObject(i) ?: continue
+                val id = result.optString("id", "").takeIf { it.isNotBlank() } ?: continue
                 val suggestedUpdate = result.optJSONObject("suggestedUpdate") ?: continue
 
                 val latestVersion = suggestedUpdate.optString("version", "")

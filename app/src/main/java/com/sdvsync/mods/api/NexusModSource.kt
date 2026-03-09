@@ -115,16 +115,17 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
         }
         val json = JSONObject(bodyString)
 
-        val data = json.getJSONObject("data").getJSONObject("mods")
-        val nodes = data.getJSONArray("nodes")
-        val totalCount = data.getInt("totalCount")
+        val data = json.optJSONObject("data")?.optJSONObject("mods")
+            ?: throw IllegalStateException("Unexpected API response format")
+        val nodes = data.optJSONArray("nodes") ?: JSONArray()
+        val totalCount = data.optInt("totalCount", 0)
 
-        val mods = (0 until nodes.length()).map { i ->
-            val node = nodes.getJSONObject(i)
+        val mods = (0 until nodes.length()).mapNotNull { i ->
+            val node = nodes.optJSONObject(i) ?: return@mapNotNull null
             RemoteMod(
                 sourceId = sourceId,
-                modId = node.getInt("modId").toString(),
-                name = node.getString("name"),
+                modId = node.optInt("modId", 0).toString(),
+                name = node.optString("name", "Unknown"),
                 author = node.optString("author", "Unknown"),
                 summary = node.optString("summary", ""),
                 version = node.optString("version", ""),
@@ -211,13 +212,13 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
             throw IllegalStateException(msg)
         }
         val json = JSONObject(bodyString)
-        val files = json.getJSONArray("files")
+        val files = json.optJSONArray("files") ?: JSONArray()
 
-        (0 until files.length()).map { i ->
-            val file = files.getJSONObject(i)
+        (0 until files.length()).mapNotNull { i ->
+            val file = files.optJSONObject(i) ?: return@mapNotNull null
             RemoteModFile(
-                fileId = file.getInt("file_id").toString(),
-                fileName = file.getString("file_name"),
+                fileId = file.optInt("file_id", 0).toString(),
+                fileName = file.optString("file_name", "unknown"),
                 fileVersion = file.optString("version", "").takeIf { it != "null" }?.trim() ?: "",
                 fileSize = file.optLong("size_in_bytes", 0),
                 isPrimary = file.optBoolean("is_primary", false),
@@ -281,7 +282,8 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
             if (json.length() == 0) throw IllegalStateException("No download links available")
 
             // Return the first (preferred) CDN URL
-            json.getJSONObject(0).getString("URI")
+            json.optJSONObject(0)?.optString("URI")
+                ?: throw IllegalStateException("No download URL in response")
         }
 
     // ── Helpers ──────────────────────────────────────────────────────────
@@ -310,15 +312,16 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
         }
         val json = JSONArray(bodyString)
 
-        (0 until json.length()).map { i ->
-            parseModFromV1(json.getJSONObject(i))
+        (0 until json.length()).mapNotNull { i ->
+            val obj = json.optJSONObject(i) ?: return@mapNotNull null
+            parseModFromV1(obj)
         }
     }
 
     private fun parseModFromV1(json: JSONObject): RemoteMod = RemoteMod(
         sourceId = sourceId,
-        modId = json.getInt("mod_id").toString(),
-        name = json.getString("name"),
+        modId = json.optInt("mod_id", 0).toString(),
+        name = json.optString("name", "Unknown"),
         author = json.optString("author", "Unknown"),
         summary = json.optString("summary", ""),
         description = json.optString("description", "").takeIf { it != "null" && it.isNotBlank() },

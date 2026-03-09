@@ -20,7 +20,11 @@ import `in`.dragonbra.javasteam.depotdownloader.IDownloadListener
 import `in`.dragonbra.javasteam.depotdownloader.data.AppItem
 import `in`.dragonbra.javasteam.depotdownloader.data.DownloadItem
 import java.io.File
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.update
 import org.koin.android.ext.android.inject
 
 class GameDownloadService : Service() {
@@ -67,11 +71,11 @@ class GameDownloadService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var depotDownloader: DepotDownloader? = null
     private var downloadJob: Job? = null
-    private var lastSpeedUpdateMs = 0L
-    private var lastSpeedBytes = 0L
+    private val lastSpeedUpdateMs = AtomicLong(0L)
+    private val lastSpeedBytes = AtomicLong(0L)
 
     // Track cumulative bytes per depot (callback values are cumulative, not deltas)
-    private val depotBytes = mutableMapOf<Int, Long>()
+    private val depotBytes = ConcurrentHashMap<Int, Long>()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -163,20 +167,24 @@ class GameDownloadService : Service() {
             )
             depotDownloader = downloader
 
-            lastSpeedUpdateMs = System.currentTimeMillis()
-            lastSpeedBytes = 0L
+            lastSpeedUpdateMs.set(System.currentTimeMillis())
+            lastSpeedBytes.set(0L)
             depotBytes.clear()
 
             // Track completed files for verification
-            val completedFiles = mutableSetOf<String>()
+            val completedFiles = Collections.synchronizedSet(mutableSetOf<String>())
 
             downloader.addListener(object : IDownloadListener {
                 override fun onDownloadStarted(item: DownloadItem) {
-                    AppLogger.d(TAG, "Download started for item")
-                    GameDownloadManager._progress.value = DownloadProgress(
-                        state = DownloadState.DOWNLOADING
-                    )
-                    updateNotification(getString(R.string.download_downloading))
+                    try {
+                        AppLogger.d(TAG, "Download started for item")
+                        GameDownloadManager._progress.value = DownloadProgress(
+                            state = DownloadState.DOWNLOADING
+                        )
+                        updateNotification(getString(R.string.download_downloading))
+                    } catch (e: Exception) {
+                        AppLogger.e(TAG, "Error in onDownloadStarted", e)
+                    }
                 }
 
                 override fun onChunkCompleted(
@@ -185,53 +193,66 @@ class GameDownloadService : Service() {
                     compressedBytes: Long,
                     uncompressedBytes: Long
                 ) {
-                    // Values are cumulative per-depot, not per-chunk deltas
-                    depotBytes[depotId] = uncompressedBytes
-                    val totalDownloaded = depotBytes.values.sum()
+                    try {
+                        depotBytes[depotId] = uncompressedBytes
+                        val totalDownloaded = depotBytes.values.sum()
 
-                    // Calculate speed every 500ms
-                    val now = System.currentTimeMillis()
-                    val current = GameDownloadManager._progress.value
-                    var speed = current.bytesPerSecond
-                    if (now - lastSpeedUpdateMs >= 500) {
-                        val elapsedMs = now - lastSpeedUpdateMs
-                        val bytesDelta = totalDownloaded - lastSpeedBytes
-                        speed = if (elapsedMs > 0) (bytesDelta * 1000 / elapsedMs) else 0L
-                        lastSpeedUpdateMs = now
-                        lastSpeedBytes = totalDownloaded
+                        // Calculate speed every 500ms
+                        val now = System.currentTimeMillis()
+                        val lastUpdate = lastSpeedUpdateMs.get()
+                        var speed = GameDownloadManager._progress.value.bytesPerSecond
+                        if (now - lastUpdate >= 500) {
+                            if (lastSpeedUpdateMs.compareAndSet(lastUpdate, now)) {
+                                val prevBytes = lastSpeedBytes.getAndSet(totalDownloaded)
+                                val elapsedMs = now - lastUpdate
+                                val bytesDelta = totalDownloaded - prevBytes
+                                speed = if (elapsedMs > 0) (bytesDelta * 1000 / elapsedMs) else 0L
+                            }
+                        }
+
+                        GameDownloadManager._progress.update { current ->
+                            current.copy(
+                                overallPercent = depotPercentComplete,
+                                downloadedBytes = totalDownloaded,
+                                bytesPerSecond = speed
+                            )
+                        }
+                    } catch (e: Exception) {
+                        AppLogger.e(TAG, "Error in onChunkCompleted", e)
                     }
-
-                    GameDownloadManager._progress.value = current.copy(
-                        overallPercent = depotPercentComplete,
-                        downloadedBytes = totalDownloaded,
-                        bytesPerSecond = speed
-                    )
                 }
 
                 override fun onFileCompleted(depotId: Int, fileName: String, depotPercentComplete: Float) {
-                    completedFiles.add(fileName)
-                    val current = GameDownloadManager._progress.value
-                    GameDownloadManager._progress.value = current.copy(
-                        currentFile = fileName,
-                        overallPercent = depotPercentComplete
-                    )
-                    updateNotification(
-                        getString(
-                            R.string.download_notification_progress,
-                            (depotPercentComplete * 100).toInt(),
-                            fileName
+                    try {
+                        completedFiles.add(fileName)
+                        GameDownloadManager._progress.update { current ->
+                            current.copy(
+                                currentFile = fileName,
+                                overallPercent = depotPercentComplete
+                            )
+                        }
+                        updateNotification(
+                            getString(
+                                R.string.download_notification_progress,
+                                (depotPercentComplete * 100).toInt(),
+                                fileName
+                            )
                         )
-                    )
+                    } catch (e: Exception) {
+                        AppLogger.e(TAG, "Error in onFileCompleted", e)
+                    }
                 }
 
                 override fun onDepotCompleted(depotId: Int, compressedBytes: Long, uncompressedBytes: Long) {
-                    AppLogger.d(TAG, "Depot $depotId completed: ${uncompressedBytes / 1024 / 1024} MB")
-                    // uncompressedBytes here is the final cumulative total for this depot
-                    depotBytes[depotId] = uncompressedBytes
-                    val current = GameDownloadManager._progress.value
-                    GameDownloadManager._progress.value = current.copy(
-                        totalBytes = depotBytes.values.sum()
-                    )
+                    try {
+                        AppLogger.d(TAG, "Depot $depotId completed: ${uncompressedBytes / 1024 / 1024} MB")
+                        depotBytes[depotId] = uncompressedBytes
+                        GameDownloadManager._progress.update { current ->
+                            current.copy(totalBytes = depotBytes.values.sum())
+                        }
+                    } catch (e: Exception) {
+                        AppLogger.e(TAG, "Error in onDepotCompleted", e)
+                    }
                 }
 
                 override fun onDownloadCompleted(item: DownloadItem) {
@@ -240,17 +261,21 @@ class GameDownloadService : Service() {
                 }
 
                 override fun onDownloadFailed(item: DownloadItem, error: Throwable) {
-                    AppLogger.e(TAG, "Download failed", error)
-                    GameDownloadManager._progress.value = DownloadProgress(
-                        state = DownloadState.ERROR,
-                        errorMessage = error.message ?: getString(R.string.download_error)
-                    )
-                    updateNotification(
-                        getString(
-                            R.string.download_notification_failed,
-                            error.message ?: getString(R.string.download_error_unknown)
+                    try {
+                        AppLogger.e(TAG, "Download failed", error)
+                        GameDownloadManager._progress.value = DownloadProgress(
+                            state = DownloadState.ERROR,
+                            errorMessage = error.message ?: getString(R.string.download_error)
                         )
-                    )
+                        updateNotification(
+                            getString(
+                                R.string.download_notification_failed,
+                                error.message ?: getString(R.string.download_error_unknown)
+                            )
+                        )
+                    } catch (e: Exception) {
+                        AppLogger.e(TAG, "Error in onDownloadFailed", e)
+                    }
                 }
 
                 override fun onStatusUpdate(message: String) {
