@@ -160,7 +160,7 @@ fun ModManagerScreen(
                                 Text(stringResource(R.string.mods_browse_button))
                             }
                             Spacer(Modifier.height(12.dp))
-                            StardewButton(
+                            StardewOutlinedButton(
                                 onClick = {
                                     importLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed"))
                                 }
