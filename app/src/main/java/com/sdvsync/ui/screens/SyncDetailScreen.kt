@@ -2,6 +2,8 @@ package com.sdvsync.ui.screens
 
 import android.content.Intent
 import android.text.format.DateUtils
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -32,6 +34,7 @@ import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewDialog
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.SyncErrorCard
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -43,11 +46,20 @@ fun SyncDetailScreen(
     onBack: () -> Unit,
     onBackupsClick: () -> Unit = {},
     onViewSaveClick: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: SyncDetailViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     var showPullConfirm by remember { mutableStateOf(false) }
     var showPushConfirm by remember { mutableStateOf(false) }
+
+    val safLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onSafDirectorySelected(uri)
+        }
+    }
 
     LaunchedEffect(saveFolderName) {
         viewModel.loadModAssociation(saveFolderName)
@@ -322,10 +334,15 @@ fun SyncDetailScreen(
                         }
                     }
                     is SyncResult.Error -> {
-                        Text(
-                            result.message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge
+                        SyncErrorCard(
+                            category = result.category,
+                            rawMessage = result.message,
+                            onRetry = { viewModel.retrySync() },
+                            onSwitchToCinderbox = { viewModel.switchToCinderbox() },
+                            onSelectSafFolder = { safLauncher.launch(null) },
+                            onNavigateToSettings = onNavigateToSettings,
+                            onForceSync = { viewModel.forceSync() },
+                            onRunHealthCheck = { viewModel.checkSaveHealth(saveFolderName) }
                         )
                     }
                     is SyncResult.NeedsConflictResolution -> {

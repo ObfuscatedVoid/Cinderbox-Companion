@@ -101,6 +101,37 @@
     <string name="sync_error_backup_failed">Failed to create backup before push: %1$s</string>
     <string name="sync_error_save_in_progress">Save appears to be in progress (temp files found). Wait for the game to finish saving, then try again.</string>
 
+    <!-- Sync error UX -->
+    <string name="sync_error_title_no_cloud">No Cloud Save Found</string>
+    <string name="sync_error_desc_no_cloud">This save doesn\'t exist on Steam Cloud yet. You can push your local save to upload it.</string>
+    <string name="sync_error_title_invalid_download">Invalid Cloud Save</string>
+    <string name="sync_error_desc_invalid_download">The downloaded save data appears to be corrupted. Try again, and if it persists, the cloud save may be damaged.</string>
+    <string name="sync_error_title_write_failed">Can\'t Write Save Files</string>
+    <string name="sync_error_desc_write_failed">The app doesn\'t have permission to write to the save folder. Switch to the Cinderbox save location or select a folder manually.</string>
+    <string name="sync_error_title_network">Connection Error</string>
+    <string name="sync_error_desc_network">Could not reach Steam servers. Check your internet connection and try again.</string>
+    <string name="sync_error_title_no_local">No Local Save Found</string>
+    <string name="sync_error_desc_no_local">This save doesn\'t exist on your device. Pull from Steam Cloud first to download it.</string>
+    <string name="sync_error_title_save_in_progress">Game Is Still Saving</string>
+    <string name="sync_error_desc_save_in_progress">Temporary save files were detected. Close the game or wait for it to finish saving, then try again.</string>
+    <string name="sync_error_title_invalid_local">Local Save Is Invalid</string>
+    <string name="sync_error_desc_invalid_local">The local save data appears to be corrupted. Run a health check for more details.</string>
+    <string name="sync_error_title_backup_failed">Backup Failed</string>
+    <string name="sync_error_desc_backup_failed">A backup could not be created before syncing. This is a safety precaution — try again later.</string>
+    <string name="sync_error_title_local_newer">Local Save Is Newer</string>
+    <string name="sync_error_desc_local_newer">Your local save is more recent than the cloud version. Push your save instead, or force pull to overwrite it.</string>
+    <string name="sync_error_title_cloud_newer">Cloud Save Is Newer</string>
+    <string name="sync_error_desc_cloud_newer">The cloud save is more recent than your local version. Pull from cloud instead, or force push to overwrite it.</string>
+    <string name="sync_error_title_unknown">Sync Failed</string>
+    <string name="sync_error_desc_unknown">An unexpected error occurred. Check the details below and try again.</string>
+    <string name="sync_error_action_retry">Retry</string>
+    <string name="sync_error_action_cinderbox">Use Cinderbox Location</string>
+    <string name="sync_error_action_saf">Select Folder</string>
+    <string name="sync_error_action_settings">Settings</string>
+    <string name="sync_error_action_force_sync">Force Sync</string>
+    <string name="sync_error_action_health_check">Run Health Check</string>
+    <string name="sync_error_details_label">Details</string>
+
     <!-- Sync confirmation -->
     <string name="sync_confirm_pull_title">Replace local save?</string>
     <string name="sync_confirm_pull_message">This save also exists on your device. Pulling will replace the local version with the Steam Cloud version.\n\nA backup of your local save will be created automatically.</string>

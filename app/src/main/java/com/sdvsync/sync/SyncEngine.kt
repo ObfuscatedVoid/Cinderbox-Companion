@@ -13,9 +13,23 @@ import com.sdvsync.saves.SaveValidator
 import com.sdvsync.steam.SteamCloudService
 import com.sdvsync.widget.WidgetUpdateWorker
 
+enum class SyncErrorCategory {
+    NO_CLOUD_FILES,
+    INVALID_DOWNLOAD,
+    WRITE_FAILED,
+    NETWORK_ERROR,
+    NO_LOCAL_FILES,
+    SAVE_IN_PROGRESS,
+    INVALID_LOCAL,
+    BACKUP_FAILED,
+    LOCAL_NEWER,
+    CLOUD_NEWER,
+    UNKNOWN
+}
+
 sealed class SyncResult {
     data class Success(val message: String, val warning: String? = null) : SyncResult()
-    data class Error(val message: String) : SyncResult()
+    data class Error(val message: String, val category: SyncErrorCategory = SyncErrorCategory.UNKNOWN) : SyncResult()
     data class NeedsConflictResolution(val comparison: SyncComparison) : SyncResult()
 }
 
@@ -49,7 +63,10 @@ class SyncEngine(
             }
 
             if (cloudFiles.isEmpty()) {
-                return SyncResult.Error(context.getString(R.string.sync_error_no_cloud_files, saveFolderName))
+                return SyncResult.Error(
+                    context.getString(R.string.sync_error_no_cloud_files, saveFolderName),
+                    SyncErrorCategory.NO_CLOUD_FILES
+                )
             }
 
             AppLogger.d(TAG, "pullSave: downloaded ${cloudFiles.size} files: ${cloudFiles.keys}")
@@ -67,7 +84,8 @@ class SyncEngine(
             AppLogger.d(TAG, "pullSave: validation=${validation.valid}, errors=${validation.errors}")
             if (!validation.valid) {
                 return SyncResult.Error(
-                    context.getString(R.string.sync_error_invalid_download, validation.errors.joinToString(", "))
+                    context.getString(R.string.sync_error_invalid_download, validation.errors.joinToString(", ")),
+                    SyncErrorCategory.INVALID_DOWNLOAD
                 )
             }
 
@@ -83,7 +101,10 @@ class SyncEngine(
                         return SyncResult.NeedsConflictResolution(comparison)
                     }
                     if (comparison.direction == SyncDirection.PUSH) {
-                        return SyncResult.Error(context.getString(R.string.sync_error_local_newer))
+                        return SyncResult.Error(
+                            context.getString(R.string.sync_error_local_newer),
+                            SyncErrorCategory.LOCAL_NEWER
+                        )
                     }
                     if (comparison.direction == SyncDirection.SKIP) {
                         return SyncResult.Success(context.getString(R.string.sync_already_in_sync))
@@ -116,7 +137,10 @@ class SyncEngine(
             onProgress?.invoke(context.getString(R.string.sync_progress_writing))
             val writeSuccess = saveFileManager.writeLocalSave(saveFolderName, cloudFiles)
             if (!writeSuccess) {
-                return SyncResult.Error(context.getString(R.string.sync_error_write_failed))
+                return SyncResult.Error(
+                    context.getString(R.string.sync_error_write_failed),
+                    SyncErrorCategory.WRITE_FAILED
+                )
             }
 
             val dayInfo = cloudMeta?.let { formatDisplayDate(it) }
@@ -129,7 +153,10 @@ class SyncEngine(
             return SyncResult.Success(successMsg, warning = versionWarning)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Pull failed for $saveFolderName", e)
-            return SyncResult.Error(context.getString(R.string.sync_error_pull_failed, e.message ?: "Unknown error"))
+            return SyncResult.Error(
+                context.getString(R.string.sync_error_pull_failed, e.message ?: "Unknown error"),
+                categorizeException(e)
+            )
         }
     }
 
@@ -148,13 +175,19 @@ class SyncEngine(
             // Step 1: Read and validate local save files
             val localFiles = saveFileManager.readLocalSave(saveFolderName)
             if (localFiles.isEmpty()) {
-                return SyncResult.Error(context.getString(R.string.sync_error_no_local_files, saveFolderName))
+                return SyncResult.Error(
+                    context.getString(R.string.sync_error_no_local_files, saveFolderName),
+                    SyncErrorCategory.NO_LOCAL_FILES
+                )
             }
 
             // Check for in-progress saves (temp files from game still writing)
             val tempFiles = localFiles.keys.filter { it.contains("_STARDEWVALLEYSAVETMP") }
             if (tempFiles.isNotEmpty()) {
-                return SyncResult.Error(context.getString(R.string.sync_error_save_in_progress))
+                return SyncResult.Error(
+                    context.getString(R.string.sync_error_save_in_progress),
+                    SyncErrorCategory.SAVE_IN_PROGRESS
+                )
             }
 
             val localInfoData = localFiles["SaveGameInfo"]
@@ -164,7 +197,8 @@ class SyncEngine(
             val validation = saveValidator.validateSaveData(mainSaveData, localInfoData)
             if (!validation.valid) {
                 return SyncResult.Error(
-                    context.getString(R.string.sync_error_invalid_local, validation.errors.joinToString(", "))
+                    context.getString(R.string.sync_error_invalid_local, validation.errors.joinToString(", ")),
+                    SyncErrorCategory.INVALID_LOCAL
                 )
             }
 
@@ -186,7 +220,10 @@ class SyncEngine(
                             return SyncResult.NeedsConflictResolution(comparison)
                         }
                         if (comparison.direction == SyncDirection.PULL) {
-                            return SyncResult.Error(context.getString(R.string.sync_error_cloud_newer))
+                            return SyncResult.Error(
+                                context.getString(R.string.sync_error_cloud_newer),
+                                SyncErrorCategory.CLOUD_NEWER
+                            )
                         }
                         if (comparison.direction == SyncDirection.SKIP) {
                             return SyncResult.Success(context.getString(R.string.sync_already_in_sync))
@@ -218,7 +255,8 @@ class SyncEngine(
                 } catch (e: Exception) {
                     AppLogger.e(TAG, "pushSave: cloud backup failed for $saveFolderName, aborting push", e)
                     return SyncResult.Error(
-                        context.getString(R.string.sync_error_backup_failed, e.message ?: "Unknown error")
+                        context.getString(R.string.sync_error_backup_failed, e.message ?: "Unknown error"),
+                        SyncErrorCategory.BACKUP_FAILED
                     )
                 }
             }
@@ -244,7 +282,24 @@ class SyncEngine(
             }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Push failed for $saveFolderName", e)
-            return SyncResult.Error(context.getString(R.string.sync_error_push_failed, e.message ?: "Unknown error"))
+            return SyncResult.Error(
+                context.getString(R.string.sync_error_push_failed, e.message ?: "Unknown error"),
+                categorizeException(e)
+            )
+        }
+    }
+
+    private fun categorizeException(e: Exception): SyncErrorCategory {
+        val root = e.cause ?: e
+        return when {
+            root is java.net.UnknownHostException -> SyncErrorCategory.NETWORK_ERROR
+            root is java.net.SocketTimeoutException -> SyncErrorCategory.NETWORK_ERROR
+            root is java.net.ConnectException -> SyncErrorCategory.NETWORK_ERROR
+            root is javax.net.ssl.SSLException -> SyncErrorCategory.NETWORK_ERROR
+            root is java.net.ProtocolException -> SyncErrorCategory.NETWORK_ERROR
+            e.message?.contains("Unable to resolve host", ignoreCase = true) == true -> SyncErrorCategory.NETWORK_ERROR
+            e.message?.contains("timeout", ignoreCase = true) == true -> SyncErrorCategory.NETWORK_ERROR
+            else -> SyncErrorCategory.UNKNOWN
         }
     }
 

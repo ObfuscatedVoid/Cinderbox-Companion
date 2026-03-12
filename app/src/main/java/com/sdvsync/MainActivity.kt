@@ -260,7 +260,8 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 hasLocal = hasLocal,
                 onBack = { navController.popBackStack() },
                 onBackupsClick = { navController.navigate("backups/$saveFolderName") },
-                onViewSaveClick = { navController.navigate("save_viewer/$saveFolderName") }
+                onViewSaveClick = { navController.navigate("save_viewer/$saveFolderName") },
+                onNavigateToSettings = { navController.navigate("settings") }
             )
         }
 

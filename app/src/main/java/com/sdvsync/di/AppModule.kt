@@ -97,7 +97,7 @@ val appModule = module {
     // ViewModels
     viewModel { LoginViewModel(get()) }
     viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
-    viewModel { SyncDetailViewModel(androidContext(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SyncDetailViewModel(androidContext(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
     viewModel { GameDownloadViewModel(androidContext(), get(), get(), get()) }
