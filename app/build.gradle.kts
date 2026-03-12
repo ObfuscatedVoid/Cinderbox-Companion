@@ -20,11 +20,13 @@ android {
 
     signingConfigs {
         val localProps = Properties()
-        rootProject.file("local.properties").takeIf { it.exists() }
-            ?.inputStream()?.use { localProps.load(it) }
+        rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use {
+            localProps.load(it)
+        }
         create("release") {
             storeFile = file("${rootProject.projectDir}/keystore.jks")
-            storePassword = localProps.getProperty("STORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
+            storePassword =
+                localProps.getProperty("STORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
             keyAlias = "cinderbox"
             keyPassword = localProps.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
         }
@@ -46,20 +48,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
+    kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
 
     buildFeatures {
         compose = true
         aidl = true
     }
 
-    androidResources {
-        noCompress += "zip"
-    }
+    androidResources { noCompress += "zip" }
 
     packaging {
         resources {
@@ -68,9 +64,7 @@ android {
             excludes += "META-INF/BCKEY.DSA"
             excludes += "META-INF/BCKEY.SF"
         }
-        jniLibs {
-            useLegacyPackaging = true
-        }
+        jniLibs { useLegacyPackaging = true }
     }
 }
 
@@ -128,6 +122,4 @@ dependencies {
     implementation(libs.shizuku.provider)
 }
 
-ktlint {
-    android.set(true)
-}
+ktlint { android.set(true) }
