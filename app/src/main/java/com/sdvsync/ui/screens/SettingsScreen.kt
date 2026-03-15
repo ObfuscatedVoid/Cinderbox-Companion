@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.sdvsync.BuildConfig
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveBackupManager
@@ -359,7 +360,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
             StardewCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        stringResource(R.string.settings_about),
+                        stringResource(R.string.settings_about, BuildConfig.VERSION_NAME),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
