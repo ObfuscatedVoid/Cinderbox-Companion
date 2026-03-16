@@ -1,6 +1,7 @@
 package com.sdvsync.di
 
 import com.sdvsync.download.GameDownloadManager
+import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.FileAccessStrategy
 import com.sdvsync.fileaccess.SAFFileAccess
@@ -58,7 +59,8 @@ val appModule = module {
     single { SteamAuthenticator(androidContext(), get(), get()) }
     single { SteamCloudService(get(), get()) }
     single { SteamContentService(get()) }
-    single { GameDownloadManager(androidContext(), get()) }
+    single { GitHubReleaseChecker(androidContext(), get()) }
+    single { GameDownloadManager(androidContext(), get(), get()) }
 
     // File access
     single { FileAccessDetector(androidContext()) }
@@ -98,9 +100,9 @@ val appModule = module {
     viewModel { LoginViewModel(get()) }
     viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
     viewModel { SyncDetailViewModel(androidContext(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
-    viewModel { GameDownloadViewModel(androidContext(), get(), get(), get()) }
+    viewModel { GameDownloadViewModel(androidContext(), get(), get(), get(), get()) }
     viewModel { ModManagerViewModel(androidContext(), get(), get(), get()) }
     viewModel { ModBrowseViewModel(get(), get(), get()) }
     viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), modId, source) }

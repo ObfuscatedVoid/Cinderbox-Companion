@@ -368,6 +368,50 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    // Cinderbox version
+                    val cinderboxVer = state.installedCinderboxVersion
+                    if (cinderboxVer != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                stringResource(R.string.settings_cinderbox_version, cinderboxVer),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            val latestCinderbox = state.latestCinderboxVersion
+                            if (state.cinderboxUpdateAvailable && latestCinderbox != null) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.github_update_available_short, latestCinderbox),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    // SMAPI version
+                    val smapiVer = state.installedSmapiVersion
+                    if (smapiVer != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                stringResource(R.string.settings_smapi_version, smapiVer),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            val latestSmapi = state.latestSmapiVersion
+                            if (state.smapiUpdateAvailable && latestSmapi != null) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.github_update_available_short, latestSmapi),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

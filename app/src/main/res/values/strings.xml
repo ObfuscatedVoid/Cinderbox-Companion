@@ -183,6 +183,8 @@
     <string name="settings_about_title">About</string>
     <string name="settings_about">Cinderbox Companion v%1$s</string>
     <string name="settings_about_desc">Companion app for Cinderbox \u2014 sync saves, download game files, and manage mods.</string>
+    <string name="settings_cinderbox_version">Cinderbox: v%1$s</string>
+    <string name="settings_smapi_version">SMAPI: v%1$s</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_share_logs">Share Logs</string>
     <string name="settings_share_logs_desc">Export app logs for troubleshooting. Logs are sanitized to remove credentials.</string>
@@ -277,6 +279,7 @@
     <string name="cinderbox_section_title">Cinderbox App</string>
     <string name="cinderbox_section_desc">Download and install the Cinderbox APK to run modded Stardew Valley on Android. This is required before setting up game files or SMAPI.</string>
     <string name="cinderbox_download_button">Download Cinderbox</string>
+    <string name="cinderbox_update_button">Update Cinderbox</string>
     <string name="cinderbox_downloading">Downloading Cinderbox\u2026</string>
     <string name="cinderbox_download_progress">%1$s / %2$s</string>
     <string name="cinderbox_download_complete">Download complete!</string>
@@ -316,8 +319,12 @@
 
     <!-- SMAPI Setup -->
     <string name="smapi_setup_title">SMAPI Setup</string>
-    <string name="smapi_setup_desc">Extract SMAPI internals to your device. Required for running mods with Cinderbox. This works independently of the game download.</string>
+    <string name="smapi_setup_desc">Download and extract SMAPI internals to your device. Required for running mods with Cinderbox.</string>
     <string name="smapi_extract_button">Extract SMAPI Internals</string>
+    <string name="smapi_download_extract_button">Download &amp; Extract SMAPI</string>
+    <string name="smapi_update_button">Update SMAPI</string>
+    <string name="smapi_downloading">Downloading SMAPI\u2026</string>
+    <string name="smapi_download_progress">%1$s / %2$s</string>
     <string name="smapi_extracting">Extracting SMAPI\u2026</string>
     <string name="smapi_extract_progress">%1$d / %2$d files extracted</string>
     <string name="smapi_extract_success">SMAPI setup complete!</string>
@@ -557,6 +564,11 @@
     <string name="mod_mismatch_extra">New since last sync:</string>
     <string name="mod_mismatch_last_synced">Last synced: %1$s</string>
     <string name="mod_mismatch_update">Update Association</string>
+
+    <!-- GitHub release updates -->
+    <string name="github_update_available">Update available: v%1$s</string>
+    <string name="github_update_available_short">\u2192 v%1$s</string>
+    <string name="github_installed_version">Installed: v%1$s</string>
 
     <!-- Auto-sync notification -->
     <string name="notification_channel_sync">Save Sync</string>

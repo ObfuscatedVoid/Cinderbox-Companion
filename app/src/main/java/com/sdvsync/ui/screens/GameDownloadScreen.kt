@@ -570,7 +570,10 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                 smapiProgress = state.smapiSetupProgress,
                 isCopying = downloadState == DownloadState.COPYING,
                 onExtract = { viewModel.extractSmapi() },
-                onReset = { viewModel.resetSmapiSetup() }
+                onReset = { viewModel.resetSmapiSetup() },
+                updateAvailable = state.smapiUpdateAvailable,
+                latestVersion = state.latestSmapiVersion,
+                installedVersion = state.installedSmapiVersion
             )
 
             Spacer(Modifier.height(24.dp))
@@ -580,7 +583,10 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
             CinderboxSection(
                 cinderboxProgress = state.cinderboxDownloadProgress,
                 onDownload = { viewModel.downloadCinderbox() },
-                onReset = { viewModel.resetCinderboxDownload() }
+                onReset = { viewModel.resetCinderboxDownload() },
+                updateAvailable = state.cinderboxUpdateAvailable,
+                latestVersion = state.latestCinderboxVersion,
+                installedVersion = state.installedCinderboxVersion
             )
 
             Spacer(Modifier.height(24.dp))
@@ -593,12 +599,57 @@ private fun SmapiSetupSection(
     smapiProgress: SmapiSetupProgress,
     isCopying: Boolean,
     onExtract: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    updateAvailable: Boolean = false,
+    latestVersion: String? = null,
+    installedVersion: String? = null
 ) {
     SectionHeader(stringResource(R.string.smapi_setup_title))
     Spacer(Modifier.height(8.dp))
 
     when {
+        smapiProgress.isDownloading -> {
+            // Download phase
+            StardewCard {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            stringResource(R.string.smapi_downloading),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        stringResource(
+                            R.string.smapi_download_progress,
+                            formatBytes(smapiProgress.downloadedBytes),
+                            if (smapiProgress.totalDownloadBytes > 0) {
+                                formatBytes(smapiProgress.totalDownloadBytes)
+                            } else {
+                                "?"
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    PixelProgressBar(progress = smapiProgress.downloadPercent)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "${(smapiProgress.downloadPercent * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
         smapiProgress.isRunning -> {
             // Running state
             StardewCard {
@@ -693,6 +744,22 @@ private fun SmapiSetupSection(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (installedVersion != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.github_installed_version, installedVersion),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (updateAvailable && latestVersion != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.github_update_available, latestVersion),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -702,7 +769,15 @@ private fun SmapiSetupSection(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isCopying
             ) {
-                Text(stringResource(R.string.smapi_extract_button))
+                Text(
+                    if (updateAvailable) {
+                        stringResource(R.string.smapi_update_button)
+                    } else if (installedVersion != null) {
+                        stringResource(R.string.smapi_extract_button)
+                    } else {
+                        stringResource(R.string.smapi_download_extract_button)
+                    }
+                )
             }
         }
     }
@@ -790,7 +865,10 @@ private fun DownloadProgressSection(
 private fun CinderboxSection(
     cinderboxProgress: CinderboxDownloadProgress,
     onDownload: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    updateAvailable: Boolean = false,
+    latestVersion: String? = null,
+    installedVersion: String? = null
 ) {
     val context = LocalContext.current
 
@@ -909,6 +987,22 @@ private fun CinderboxSection(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (installedVersion != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.github_installed_version, installedVersion),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (updateAvailable && latestVersion != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.github_update_available, latestVersion),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -917,7 +1011,13 @@ private fun CinderboxSection(
                 variant = StardewButtonVariant.Action,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.cinderbox_download_button))
+                Text(
+                    if (updateAvailable) {
+                        stringResource(R.string.cinderbox_update_button)
+                    } else {
+                        stringResource(R.string.cinderbox_download_button)
+                    }
+                )
             }
         }
     }
