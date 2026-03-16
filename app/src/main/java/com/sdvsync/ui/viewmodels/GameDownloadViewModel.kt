@@ -8,6 +8,7 @@ import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadProgress
 import com.sdvsync.download.GameDownloadManager
+import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.download.SmapiSetupProgress
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.logging.AppLogger
@@ -48,14 +49,21 @@ data class GameDownloadState(
     val downloadProgress: DownloadProgress = DownloadProgress(),
     val smapiSetupProgress: SmapiSetupProgress = SmapiSetupProgress(),
     val cinderboxDownloadProgress: CinderboxDownloadProgress = CinderboxDownloadProgress(),
-    val error: String? = null
+    val error: String? = null,
+    val cinderboxUpdateAvailable: Boolean = false,
+    val latestCinderboxVersion: String? = null,
+    val installedCinderboxVersion: String? = null,
+    val smapiUpdateAvailable: Boolean = false,
+    val latestSmapiVersion: String? = null,
+    val installedSmapiVersion: String? = null
 )
 
 class GameDownloadViewModel(
     private val context: Context,
     private val contentService: SteamContentService,
     private val downloadManager: GameDownloadManager,
-    private val fileAccessDetector: FileAccessDetector
+    private val fileAccessDetector: FileAccessDetector,
+    private val releaseChecker: GitHubReleaseChecker
 ) : ViewModel() {
 
     companion object {
@@ -91,6 +99,42 @@ class GameDownloadViewModel(
         viewModelScope.launch {
             downloadManager.cinderboxProgress.collect { progress ->
                 _state.value = _state.value.copy(cinderboxDownloadProgress = progress)
+            }
+        }
+
+        // Check for updates
+        viewModelScope.launch {
+            try {
+                val cinderboxRelease = releaseChecker.getLatestRelease(
+                    GitHubReleaseChecker.CINDERBOX_REPO,
+                    GitHubReleaseChecker.CINDERBOX_ASSET_PATTERN
+                )
+                val installedCinderbox = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_CINDERBOX_VERSION)
+
+                val smapiRelease = releaseChecker.getLatestRelease(
+                    GitHubReleaseChecker.SMAPI_REPO,
+                    GitHubReleaseChecker.SMAPI_ASSET_PATTERN
+                )
+                val installedSmapi = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_SMAPI_VERSION)
+
+                _state.value = _state.value.copy(
+                    latestCinderboxVersion = cinderboxRelease?.version,
+                    installedCinderboxVersion = installedCinderbox,
+                    cinderboxUpdateAvailable = releaseChecker.isUpdateAvailable(
+                        installedCinderbox,
+                        cinderboxRelease?.version
+                    ),
+                    latestSmapiVersion = smapiRelease?.version,
+                    installedSmapiVersion = installedSmapi,
+                    smapiUpdateAvailable = releaseChecker.isUpdateAvailable(
+                        installedSmapi,
+                        smapiRelease?.version
+                    )
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to check for updates", e)
             }
         }
     }
@@ -194,11 +238,11 @@ class GameDownloadViewModel(
         if (smapiJob?.isActive == true) return
         smapiJob = viewModelScope.launch {
             try {
-                downloadManager.extractSmapiAsset()
+                downloadManager.downloadAndExtractSmapi()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e(TAG, "SMAPI extraction failed", e)
+                AppLogger.e(TAG, "SMAPI download/extraction failed", e)
             }
         }
     }

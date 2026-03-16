@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.autosync.AutoSyncService
+import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.fileaccess.AllFilesAccess
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.RootFileAccess
@@ -44,7 +45,13 @@ data class SettingsState(
     val hasNexusApiKey: Boolean = false,
     val nexusApiKeyMasked: String? = null,
     val isValidatingApiKey: Boolean = false,
-    val apiKeyError: String? = null
+    val apiKeyError: String? = null,
+    val installedCinderboxVersion: String? = null,
+    val installedSmapiVersion: String? = null,
+    val latestCinderboxVersion: String? = null,
+    val latestSmapiVersion: String? = null,
+    val cinderboxUpdateAvailable: Boolean = false,
+    val smapiUpdateAvailable: Boolean = false
 )
 
 class SettingsViewModel(
@@ -53,7 +60,8 @@ class SettingsViewModel(
     private val authenticator: SteamAuthenticator,
     private val backupManager: SaveBackupManager,
     private val modDataStore: ModDataStore,
-    private val nexusSource: NexusModSource
+    private val nexusSource: NexusModSource,
+    private val releaseChecker: GitHubReleaseChecker
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -69,6 +77,9 @@ class SettingsViewModel(
         val maskedKey = apiKey?.let {
             if (it.length > 4) "****${it.takeLast(4)}" else "****"
         }
+
+        val installedCinderbox = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_CINDERBOX_VERSION)
+        val installedSmapi = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_SMAPI_VERSION)
 
         _state.value = SettingsState(
             cinderboxMode = fileAccessDetector.isCinderboxMode(),
@@ -89,8 +100,40 @@ class SettingsViewModel(
             isLoggedIn = authenticator.authState.value is com.sdvsync.steam.AuthState.LoggedIn,
             maxBackups = backupManager.maxBackups,
             hasNexusApiKey = apiKey != null,
-            nexusApiKeyMasked = maskedKey
+            nexusApiKeyMasked = maskedKey,
+            installedCinderboxVersion = installedCinderbox,
+            installedSmapiVersion = installedSmapi
         )
+
+        // Load latest versions in background
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val cinderboxRelease = releaseChecker.getLatestRelease(
+                    GitHubReleaseChecker.CINDERBOX_REPO,
+                    GitHubReleaseChecker.CINDERBOX_ASSET_PATTERN
+                )
+                val smapiRelease = releaseChecker.getLatestRelease(
+                    GitHubReleaseChecker.SMAPI_REPO,
+                    GitHubReleaseChecker.SMAPI_ASSET_PATTERN
+                )
+                _state.update {
+                    it.copy(
+                        latestCinderboxVersion = cinderboxRelease?.version,
+                        latestSmapiVersion = smapiRelease?.version,
+                        cinderboxUpdateAvailable = releaseChecker.isUpdateAvailable(
+                            it.installedCinderboxVersion,
+                            cinderboxRelease?.version
+                        ),
+                        smapiUpdateAvailable = releaseChecker.isUpdateAvailable(
+                            it.installedSmapiVersion,
+                            smapiRelease?.version
+                        )
+                    )
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) { }
+        }
     }
 
     fun onSafDirectorySelected(uri: Uri) {

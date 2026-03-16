@@ -61,24 +61,24 @@ data class SmapiSetupProgress(
     val extractedFiles: Int = 0,
     val totalFiles: Int = 0,
     val completed: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isDownloading: Boolean = false,
+    val downloadPercent: Float = 0f,
+    val downloadedBytes: Long = 0,
+    val totalDownloadBytes: Long = 0
 )
 
-class GameDownloadManager(private val context: Context, private val httpClient: OkHttpClient) {
+class GameDownloadManager(
+    private val context: Context,
+    private val httpClient: OkHttpClient,
+    private val releaseChecker: GitHubReleaseChecker
+) {
     companion object {
         private const val TAG = "GameDownloadManager"
 
         internal val _progress = MutableStateFlow(DownloadProgress())
         internal val _smapiProgress = MutableStateFlow(SmapiSetupProgress())
         internal val _cinderboxProgress = MutableStateFlow(CinderboxDownloadProgress())
-
-        // TODO: replace with a stable URL once Cinderbox is available via GitHub releases
-        // or
-        // something similar
-        const val CINDERBOX_APK_URL =
-            "https://cdn.discordapp.com/attachments/1467922462669803570/1478679147806199892/Cinderbox-v0.2.2.apk?ex=69ae8cc5&is=69ad3b45&hm=31a0c02a2fb22cd089d3cf8bf2c32a2d56b1ad873fb6f6e7cd4c12e0f32b7bd8&"
-        const val CINDERBOX_APK_FILENAME =
-            "Cinderbox-v0.2.2.apk" // TODO: deal with this later, hardcode version bad
 
         val CINDERBOX_DLLS =
             listOf(
@@ -92,9 +92,7 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
         const val CINDERBOX_BASE_DIR = "/storage/emulated/0/StardewValley"
         const val CINDERBOX_DEST = "$CINDERBOX_BASE_DIR/GameFiles"
 
-        // TODO: not sure if distributing SMAPI files as an asset is the best approach or
-        // even legal
-        const val SMAPI_ASSET_NAME = "smapi-internal.zip"
+        const val SMAPI_CACHE_FILENAME = "smapi-internal.zip"
         const val SMAPI_DEST = "/storage/emulated/0/StardewValley/smapi-internal"
         const val MODS_DIR = "/storage/emulated/0/StardewValley/Mods"
     }
@@ -128,26 +126,35 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
         _cinderboxProgress.value = CinderboxDownloadProgress(isDownloading = true)
 
         withContext(Dispatchers.IO) {
-            val destFile = File(context.cacheDir, CINDERBOX_APK_FILENAME)
             try {
-                val request = Request.Builder().url(CINDERBOX_APK_URL).get().build()
+                val releaseInfo = releaseChecker.getLatestRelease(
+                    GitHubReleaseChecker.CINDERBOX_REPO,
+                    GitHubReleaseChecker.CINDERBOX_ASSET_PATTERN
+                )
+                if (releaseInfo == null) {
+                    _cinderboxProgress.value =
+                        CinderboxDownloadProgress(errorMessage = "Could not find Cinderbox release")
+                    return@withContext
+                }
+
+                val destFile = File(context.cacheDir, releaseInfo.assetName)
+                val request = Request.Builder().url(releaseInfo.assetUrl).get().build()
                 val response = httpClient.newCall(request).execute()
 
                 if (!response.isSuccessful) {
+                    response.close()
                     _cinderboxProgress.value =
                         CinderboxDownloadProgress(errorMessage = "HTTP ${response.code}")
                     return@withContext
                 }
 
-                val body =
-                    response.body
-                        ?: run {
-                            _cinderboxProgress.value =
-                                CinderboxDownloadProgress(
-                                    errorMessage = "Empty response body"
-                                )
-                            return@withContext
-                        }
+                val body = response.body
+                    ?: run {
+                        response.close()
+                        _cinderboxProgress.value =
+                            CinderboxDownloadProgress(errorMessage = "Empty response body")
+                        return@withContext
+                    }
 
                 val totalBytes = body.contentLength()
                 var downloadedBytes = 0L
@@ -179,6 +186,11 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
 
                 AppLogger.i(TAG, "Cinderbox APK downloaded: ${destFile.length()} bytes")
 
+                releaseChecker.setInstalledVersion(
+                    GitHubReleaseChecker.KEY_CINDERBOX_VERSION,
+                    releaseInfo.version
+                )
+
                 _cinderboxProgress.value =
                     CinderboxDownloadProgress(
                         completed = true,
@@ -190,14 +202,96 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "Cinderbox APK download failed", e)
-                destFile.delete()
                 _cinderboxProgress.value =
                     CinderboxDownloadProgress(errorMessage = e.message ?: "Unknown error")
             }
         }
     }
 
-    suspend fun extractSmapiAsset() {
+    suspend fun downloadSmapiZip(): File? {
+        return withContext(Dispatchers.IO) {
+            val destFile = File(context.cacheDir, SMAPI_CACHE_FILENAME)
+            try {
+                val releaseInfo = releaseChecker.getLatestRelease(
+                    GitHubReleaseChecker.SMAPI_REPO,
+                    GitHubReleaseChecker.SMAPI_ASSET_PATTERN
+                )
+                if (releaseInfo == null) {
+                    _smapiProgress.value =
+                        SmapiSetupProgress(errorMessage = "Could not find SMAPI release")
+                    return@withContext null
+                }
+
+                _smapiProgress.value = SmapiSetupProgress(
+                    isDownloading = true,
+                    totalDownloadBytes = releaseInfo.assetSize
+                )
+
+                val request = Request.Builder().url(releaseInfo.assetUrl).get().build()
+                val response = httpClient.newCall(request).execute()
+
+                if (!response.isSuccessful) {
+                    response.close()
+                    _smapiProgress.value =
+                        SmapiSetupProgress(errorMessage = "HTTP ${response.code}")
+                    return@withContext null
+                }
+
+                val body = response.body ?: run {
+                    response.close()
+                    _smapiProgress.value =
+                        SmapiSetupProgress(errorMessage = "Empty response body")
+                    return@withContext null
+                }
+
+                val totalBytes = body.contentLength()
+                var downloadedBytes = 0L
+                val buffer = ByteArray(64 * 1024)
+
+                destFile.outputStream().buffered().use { output ->
+                    body.byteStream().use { input ->
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            coroutineContext.ensureActive()
+                            output.write(buffer, 0, bytesRead)
+                            downloadedBytes += bytesRead
+
+                            _smapiProgress.value = SmapiSetupProgress(
+                                isDownloading = true,
+                                downloadPercent = if (totalBytes > 0) {
+                                    downloadedBytes.toFloat() / totalBytes
+                                } else {
+                                    0f
+                                },
+                                downloadedBytes = downloadedBytes,
+                                totalDownloadBytes = totalBytes
+                            )
+                        }
+                    }
+                }
+
+                AppLogger.i(TAG, "SMAPI zip downloaded: ${destFile.length()} bytes")
+
+                destFile
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                AppLogger.e(TAG, "SMAPI zip download failed", e)
+                destFile.delete()
+                _smapiProgress.value =
+                    SmapiSetupProgress(errorMessage = e.message ?: "Download failed")
+                null
+            }
+        }
+    }
+
+    suspend fun extractSmapiFromCache() {
+        val cacheFile = File(context.cacheDir, SMAPI_CACHE_FILENAME)
+        if (!cacheFile.exists()) {
+            _smapiProgress.value =
+                SmapiSetupProgress(errorMessage = "SMAPI zip not found. Download it first.")
+            return
+        }
+
         _smapiProgress.value = SmapiSetupProgress(isRunning = true, currentFile = "Counting files…")
 
         val buffer = ByteArray(256 * 1024)
@@ -205,28 +299,25 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
         val errors = mutableListOf<String>()
         var extracted = 0
 
-        // Count entries first
         val totalEntries =
             try {
-                context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) } +
-                    1 // +1 for Mods/
+                cacheFile.inputStream().use { countZipEntries(it) } + 1 // +1 for Mods/
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "Failed to count SMAPI entries", e)
                 _smapiProgress.value =
                     SmapiSetupProgress(
                         completed = true,
-                        errorMessage = "Failed to open SMAPI asset: ${e.message}"
+                        errorMessage = "Failed to open SMAPI zip: ${e.message}"
                     )
                 return
             }
 
         _smapiProgress.value = SmapiSetupProgress(isRunning = true, totalFiles = totalEntries)
 
-        // Extract zip from assets
         try {
-            context.assets.open(SMAPI_ASSET_NAME).use { assetStream ->
-                ZipInputStream(assetStream).use { zip ->
+            cacheFile.inputStream().use { fileStream ->
+                ZipInputStream(fileStream).use { zip ->
                     var entry = zip.nextEntry
                     while (entry != null) {
                         coroutineContext.ensureActive()
@@ -274,8 +365,8 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            AppLogger.e(TAG, "Failed to open SMAPI asset", e)
-            errors.add(SMAPI_ASSET_NAME)
+            AppLogger.e(TAG, "Failed to open SMAPI zip", e)
+            errors.add(SMAPI_CACHE_FILENAME)
         }
 
         // Create Mods/ directory
@@ -320,6 +411,22 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
             )
     }
 
+    suspend fun downloadAndExtractSmapi() {
+        val file = downloadSmapiZip() ?: return
+        extractSmapiFromCache()
+        // Only record installed version after successful extraction
+        val smapiProgress = _smapiProgress.value
+        if (smapiProgress.completed && smapiProgress.errorMessage == null) {
+            val releaseInfo = releaseChecker.getLatestRelease(
+                GitHubReleaseChecker.SMAPI_REPO,
+                GitHubReleaseChecker.SMAPI_ASSET_PATTERN
+            )
+            releaseInfo?.let {
+                releaseChecker.setInstalledVersion(GitHubReleaseChecker.KEY_SMAPI_VERSION, it.version)
+            }
+        }
+    }
+
     private fun countZipEntries(inputStream: InputStream): Int {
         var count = 0
         ZipInputStream(inputStream).use { zip ->
@@ -353,7 +460,12 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
             }
         }
 
-        val smapiEntryCount = context.assets.open(SMAPI_ASSET_NAME).use { countZipEntries(it) }
+        val smapiCacheFile = File(context.cacheDir, SMAPI_CACHE_FILENAME)
+        val smapiEntryCount = if (smapiCacheFile.exists()) {
+            smapiCacheFile.inputStream().use { countZipEntries(it) }
+        } else {
+            0
+        }
         val totalFiles = filesToCopy.size + smapiEntryCount + 1 // +1 for Mods/ dir
 
         AppLogger.i(
@@ -410,60 +522,64 @@ class GameDownloadManager(private val context: Context, private val httpClient: 
             }
         }
 
-        // Extract SMAPI zip
+        // Extract SMAPI zip from cache
         val smapiDestDir = File(SMAPI_DEST)
-        try {
-            context.assets.open(SMAPI_ASSET_NAME).use { assetStream ->
-                ZipInputStream(assetStream).use { zip ->
-                    var entry = zip.nextEntry
-                    while (entry != null) {
-                        coroutineContext.ensureActive()
+        if (smapiCacheFile.exists()) {
+            try {
+                smapiCacheFile.inputStream().use { fileStream ->
+                    ZipInputStream(fileStream).use { zip ->
+                        var entry = zip.nextEntry
+                        while (entry != null) {
+                            coroutineContext.ensureActive()
 
-                        val entryName = entry.name
-                        val displayName = "smapi-internal/$entryName"
+                            val entryName = entry.name
+                            val displayName = "smapi-internal/$entryName"
 
-                        _progress.value =
-                            _progress.value.copy(
-                                currentFile = displayName,
-                                copiedFiles = copied,
-                                overallPercent =
-                                if (totalFiles > 0) {
-                                    copied.toFloat() / totalFiles
-                                } else {
-                                    0f
-                                }
-                            )
-
-                        if (!entry.isDirectory) {
-                            try {
-                                val destFile = File(smapiDestDir, entryName)
-                                destFile.parentFile?.mkdirs()
-                                destFile.outputStream().buffered().use { output ->
-                                    var bytesRead: Int
-                                    while (zip.read(buffer).also { bytesRead = it } != -1) {
-                                        coroutineContext.ensureActive()
-                                        output.write(buffer, 0, bytesRead)
+                            _progress.value =
+                                _progress.value.copy(
+                                    currentFile = displayName,
+                                    copiedFiles = copied,
+                                    overallPercent =
+                                    if (totalFiles > 0) {
+                                        copied.toFloat() / totalFiles
+                                    } else {
+                                        0f
                                     }
-                                }
-                                copied++
-                            } catch (e: Exception) {
-                                if (e is kotlinx.coroutines.CancellationException) {
-                                    throw e
-                                }
-                                AppLogger.e(TAG, "Failed to extract $displayName", e)
-                                errors.add(displayName)
-                            }
-                        }
+                                )
 
-                        zip.closeEntry()
-                        entry = zip.nextEntry
+                            if (!entry.isDirectory) {
+                                try {
+                                    val destFile = File(smapiDestDir, entryName)
+                                    destFile.parentFile?.mkdirs()
+                                    destFile.outputStream().buffered().use { output ->
+                                        var bytesRead: Int
+                                        while (zip.read(buffer).also { bytesRead = it } != -1) {
+                                            coroutineContext.ensureActive()
+                                            output.write(buffer, 0, bytesRead)
+                                        }
+                                    }
+                                    copied++
+                                } catch (e: Exception) {
+                                    if (e is kotlinx.coroutines.CancellationException) {
+                                        throw e
+                                    }
+                                    AppLogger.e(TAG, "Failed to extract $displayName", e)
+                                    errors.add(displayName)
+                                }
+                            }
+
+                            zip.closeEntry()
+                            entry = zip.nextEntry
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                AppLogger.e(TAG, "Failed to open SMAPI zip", e)
+                errors.add(SMAPI_CACHE_FILENAME)
             }
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            AppLogger.e(TAG, "Failed to open SMAPI asset", e)
-            errors.add(SMAPI_ASSET_NAME)
+        } else {
+            AppLogger.w(TAG, "SMAPI cache file not found, skipping SMAPI extraction in copy")
         }
 
         // Create Mods/ directory
