@@ -14,7 +14,8 @@ data class GitHubReleaseInfo(
     val assetUrl: String,
     val assetSize: Long,
     val assetName: String,
-    val publishedAt: String
+    val publishedAt: String,
+    val body: String = ""
 )
 
 class GitHubReleaseChecker(private val context: Context, private val httpClient: OkHttpClient) {
@@ -26,8 +27,10 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
 
         const val CINDERBOX_REPO = "Ekyso/Cinderbox"
         const val SMAPI_REPO = "Ekyso/SMAPI-for-Cinderbox"
+        const val APP_REPO = "ObfuscatedVoid/Cinderbox-Companion"
         val CINDERBOX_ASSET_PATTERN = Regex("Cinderbox-.*\\.apk")
         val SMAPI_ASSET_PATTERN = Regex("smapi-internal\\.zip")
+        val APP_ASSET_PATTERN = Regex("CinderboxCompanion-.*\\.apk")
 
         const val KEY_CINDERBOX_VERSION = "cinderbox_installed_version"
         const val KEY_SMAPI_VERSION = "smapi_installed_version"
@@ -73,6 +76,7 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
                 val json = JSONObject(body)
                 val tagName = json.getString("tag_name")
                 val publishedAt = json.optString("published_at", "")
+                val releaseBody = json.optString("body", "")
 
                 val assets = json.getJSONArray("assets")
                 var matchedInfo: GitHubReleaseInfo? = null
@@ -87,7 +91,8 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
                             assetUrl = asset.getString("browser_download_url"),
                             assetSize = asset.getLong("size"),
                             assetName = name,
-                            publishedAt = publishedAt
+                            publishedAt = publishedAt,
+                            body = releaseBody
                         )
                         break
                     }
@@ -145,6 +150,7 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
         put("assetSize", info.assetSize)
         put("assetName", info.assetName)
         put("publishedAt", info.publishedAt)
+        put("body", info.body)
     }.toString()
 
     private fun parseReleaseInfoFromCache(json: String): GitHubReleaseInfo? = try {
@@ -155,7 +161,8 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
             assetUrl = obj.getString("assetUrl"),
             assetSize = obj.getLong("assetSize"),
             assetName = obj.getString("assetName"),
-            publishedAt = obj.optString("publishedAt", "")
+            publishedAt = obj.optString("publishedAt", ""),
+            body = obj.optString("body", "")
         )
     } catch (e: Exception) {
         null

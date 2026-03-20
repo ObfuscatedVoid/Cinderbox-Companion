@@ -15,6 +15,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -30,6 +32,7 @@ import androidx.navigation.navArgument
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModDownloadManager
 import com.sdvsync.mods.api.NexusModSource
+import com.sdvsync.ui.components.AppUpdateDialog
 import com.sdvsync.ui.components.BottomTab
 import com.sdvsync.ui.components.StardewBottomBar
 import com.sdvsync.ui.screens.BackupListScreen
@@ -45,6 +48,7 @@ import com.sdvsync.ui.screens.SettingsScreen
 import com.sdvsync.ui.screens.SyncDetailScreen
 import com.sdvsync.ui.screens.SyncLogScreen
 import com.sdvsync.ui.theme.SdvSyncTheme
+import com.sdvsync.ui.viewmodels.AppUpdateViewModel
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import com.sdvsync.ui.viewmodels.ModBrowseViewModel
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
@@ -345,6 +349,11 @@ fun SdvSyncNavGraph(navController: NavHostController) {
 
 @Composable
 fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, selectedTab: BottomTab) {
+    val updateViewModel: AppUpdateViewModel = koinViewModel()
+    val updateState by updateViewModel.state.collectAsState()
+
+    LaunchedEffect(Unit) { updateViewModel.checkForUpdate() }
+
     val mainNavController = rememberNavController()
     val mainBackStackEntry by mainNavController.currentBackStackEntryAsState()
     val mainCurrentRoute by remember(mainBackStackEntry) {
@@ -453,5 +462,23 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
                 )
             }
         }
+    }
+
+    if (updateState.showDialog && updateState.updateInfo != null) {
+        AppUpdateDialog(
+            updateInfo = updateState.updateInfo!!,
+            state = updateState,
+            onDismiss = updateViewModel::dismiss,
+            onCancelDownload = updateViewModel::cancelDownload,
+            onSkipVersion = updateViewModel::skipVersion,
+            onUpdate = if (updateState.downloadError !=
+                null
+            ) {
+                updateViewModel::retryDownload
+            } else {
+                updateViewModel::startDownload
+            },
+            onInstallPermissionGranted = updateViewModel::onInstallPermissionGranted
+        )
     }
 }

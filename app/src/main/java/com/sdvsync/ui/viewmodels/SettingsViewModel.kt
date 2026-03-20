@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.autosync.AutoSyncService
+import com.sdvsync.download.AppUpdateManager
 import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.fileaccess.AllFilesAccess
 import com.sdvsync.fileaccess.FileAccessDetector
@@ -51,7 +52,8 @@ data class SettingsState(
     val latestCinderboxVersion: String? = null,
     val latestSmapiVersion: String? = null,
     val cinderboxUpdateAvailable: Boolean = false,
-    val smapiUpdateAvailable: Boolean = false
+    val smapiUpdateAvailable: Boolean = false,
+    val updateCheckEnabled: Boolean = true
 )
 
 class SettingsViewModel(
@@ -61,7 +63,8 @@ class SettingsViewModel(
     private val backupManager: SaveBackupManager,
     private val modDataStore: ModDataStore,
     private val nexusSource: NexusModSource,
-    private val releaseChecker: GitHubReleaseChecker
+    private val releaseChecker: GitHubReleaseChecker,
+    private val appUpdateManager: AppUpdateManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -102,7 +105,8 @@ class SettingsViewModel(
             hasNexusApiKey = apiKey != null,
             nexusApiKeyMasked = maskedKey,
             installedCinderboxVersion = installedCinderbox,
-            installedSmapiVersion = installedSmapi
+            installedSmapiVersion = installedSmapi,
+            updateCheckEnabled = appUpdateManager.isUpdateCheckEnabled()
         )
 
         // Load latest versions in background
@@ -212,5 +216,10 @@ class SettingsViewModel(
 
     fun clearApiKeyError() {
         _state.update { it.copy(apiKeyError = null) }
+    }
+
+    fun toggleUpdateCheck(enabled: Boolean) {
+        appUpdateManager.setUpdateCheckEnabled(enabled)
+        _state.update { it.copy(updateCheckEnabled = enabled) }
     }
 }

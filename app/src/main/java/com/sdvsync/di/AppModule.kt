@@ -1,5 +1,6 @@
 package com.sdvsync.di
 
+import com.sdvsync.download.AppUpdateManager
 import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.fileaccess.FileAccessDetector
@@ -25,6 +26,7 @@ import com.sdvsync.steam.SteamSessionStore
 import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
+import com.sdvsync.ui.viewmodels.AppUpdateViewModel
 import com.sdvsync.ui.viewmodels.BackupListViewModel
 import com.sdvsync.ui.viewmodels.DashboardViewModel
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
@@ -61,6 +63,7 @@ val appModule = module {
     single { SteamContentService(get()) }
     single { GitHubReleaseChecker(androidContext(), get()) }
     single { GameDownloadManager(androidContext(), get(), get()) }
+    single { AppUpdateManager(androidContext(), get(), get()) }
 
     // File access
     single { FileAccessDetector(androidContext()) }
@@ -100,7 +103,7 @@ val appModule = module {
     viewModel { LoginViewModel(get()) }
     viewModel { DashboardViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
     viewModel { SyncDetailViewModel(androidContext(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SettingsViewModel(androidContext(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SyncLogViewModel(get()) }
     viewModel { GameDownloadViewModel(androidContext(), get(), get(), get(), get()) }
     viewModel { ModManagerViewModel(androidContext(), get(), get(), get()) }
@@ -109,4 +112,5 @@ val appModule = module {
     viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), get(), get(), uniqueId) }
     viewModel { BackupListViewModel(androidContext(), get(), get(), get()) }
     viewModel { SaveViewerViewModel(androidContext(), get(), get()) }
+    viewModel { AppUpdateViewModel(get(), get()) }
 }

@@ -14,8 +14,8 @@ android {
         applicationId = "com.sdvsync"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.0.2"
+        versionCode = 7
+        versionName = "0.0.7"
     }
 
     signingConfigs {
@@ -57,6 +57,13 @@ android {
     }
 
     androidResources { noCompress += "zip" }
+
+    applicationVariants.all {
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
+                .outputFileName = "CinderboxCompanion-v$versionName.apk"
+        }
+    }
 
     packaging {
         resources {
