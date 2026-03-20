@@ -7,6 +7,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.HtmlCompat
 
+fun markdownToHtml(md: String): String {
+    var html = md
+    // Headings: ## Heading → <b>Heading</b>
+    html = html.replace(Regex("^#{1,6}\\s+(.+)$", RegexOption.MULTILINE)) { "<b>${it.groupValues[1]}</b>" }
+    // Bold
+    html = html.replace(Regex("\\*\\*(.+?)\\*\\*")) { "<b>${it.groupValues[1]}</b>" }
+    // Italic
+    html = html.replace(Regex("\\*(.+?)\\*")) { "<i>${it.groupValues[1]}</i>" }
+    // Unordered list items: - item or * item → • item
+    html = html.replace(Regex("^[-*]\\s+(.+)$", RegexOption.MULTILINE)) { "&#8226; ${it.groupValues[1]}" }
+    // Newlines → <br>
+    html = html.replace("\r\n", "<br>").replace("\n", "<br>")
+    return html
+}
+
 val HTML_TAG_REGEX = Regex("<[a-zA-Z/]")
 val BBCODE_TAG_REGEX = Regex(
     "\\[(?:b|i|u|s|url|img|size|color|font|list|quote|code|center|spoiler|line|heading)[=\\]/]",

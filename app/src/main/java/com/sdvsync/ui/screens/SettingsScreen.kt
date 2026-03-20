@@ -412,6 +412,30 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                             }
                         }
                     }
+
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Check for app updates",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                "Show update dialog on login when a new version is available",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(
+                            checked = state.updateCheckEnabled,
+                            onCheckedChange = { viewModel.toggleUpdateCheck(it) },
+                            colors = switchColors
+                        )
+                    }
                 }
             }
 
