@@ -18,7 +18,7 @@ class ModManifestParser {
 
     fun parse(jsonString: String): ModManifest? {
         return try {
-            val obj = JSONObject(jsonString)
+            val obj = JSONObject(sanitizeJson(jsonString))
             ModManifest(
                 name = obj.getStringCI("Name") ?: return null,
                 author = obj.getStringCI("Author") ?: "Unknown",
@@ -52,6 +52,9 @@ class ModManifestParser {
             null
         }
     }
+
+    /** Strip trailing commas before } and ] — common in SMAPI mod manifests. */
+    private fun sanitizeJson(json: String): String = json.replace(Regex(",\\s*([}\\]])"), "$1")
 
     /** Case-insensitive string lookup. */
     private fun JSONObject.getStringCI(key: String): String? {
