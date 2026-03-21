@@ -201,25 +201,25 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
                 animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            ) + fadeIn(tween(NAV_ANIM_DURATION))
+            )
         },
         exitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
                 animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            ) + fadeOut(tween(NAV_ANIM_DURATION))
+            )
         },
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
                 animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            ) + fadeIn(tween(NAV_ANIM_DURATION))
+            )
         },
         popExitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
                 animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            ) + fadeOut(tween(NAV_ANIM_DURATION))
+            )
         }
     ) {
         // Login screen — outside the bottom bar
