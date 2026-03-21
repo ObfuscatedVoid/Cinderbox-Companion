@@ -30,6 +30,7 @@ import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.StoragePermissionDialog
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import kotlin.math.roundToInt
 import org.koin.androidx.compose.koinViewModel
@@ -91,6 +92,13 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
     )
+
+    if (state.showStoragePermissionPrompt) {
+        StoragePermissionDialog(
+            onPermissionResult = { viewModel.onStoragePermissionResult() },
+            onDismiss = { viewModel.dismissStoragePermissionPrompt() }
+        )
+    }
 
     Scaffold(
         topBar = {

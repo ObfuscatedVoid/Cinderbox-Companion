@@ -34,6 +34,7 @@ import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewDialog
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.StoragePermissionDialog
 import com.sdvsync.ui.components.SyncErrorCard
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -59,6 +60,13 @@ fun SyncDetailScreen(
         if (uri != null) {
             viewModel.onSafDirectorySelected(uri)
         }
+    }
+
+    if (state.showStoragePermissionPrompt) {
+        StoragePermissionDialog(
+            onPermissionResult = { viewModel.onStoragePermissionResult() },
+            onDismiss = { viewModel.dismissStoragePermissionPrompt() }
+        )
     }
 
     LaunchedEffect(saveFolderName) {

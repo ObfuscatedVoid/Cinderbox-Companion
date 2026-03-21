@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadProgress
+import com.sdvsync.download.DownloadState
 import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.download.SmapiSetupProgress
@@ -55,7 +56,8 @@ data class GameDownloadState(
     val installedCinderboxVersion: String? = null,
     val smapiUpdateAvailable: Boolean = false,
     val latestSmapiVersion: String? = null,
-    val installedSmapiVersion: String? = null
+    val installedSmapiVersion: String? = null,
+    val isCinderboxSetup: Boolean = false
 )
 
 class GameDownloadViewModel(
@@ -84,7 +86,10 @@ class GameDownloadViewModel(
         val defaultDir = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DOWNLOADS
         ).resolve("StardewValley").absolutePath
-        _state.value = _state.value.copy(installDirectory = defaultDir)
+        _state.value = _state.value.copy(
+            installDirectory = defaultDir,
+            isCinderboxSetup = fileAccessDetector.getSetupType() == SETUP_TYPE_CINDERBOX
+        )
 
         viewModelScope.launch {
             downloadManager.progress.collect { progress ->
@@ -217,6 +222,13 @@ class GameDownloadViewModel(
     }
 
     fun copyCinderbox() {
+        // Clear previous copy state before retrying
+        GameDownloadManager._progress.value =
+            GameDownloadManager._progress.value.copy(
+                copyCompleted = false,
+                copyErrors = emptyList(),
+                copiedFiles = 0
+            )
         viewModelScope.launch {
             try {
                 downloadManager.copyToCinderbox(_state.value.installDirectory)
@@ -224,6 +236,12 @@ class GameDownloadViewModel(
                 throw e
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Cinderbox copy failed", e)
+                GameDownloadManager._progress.value =
+                    GameDownloadManager._progress.value.copy(
+                        state = DownloadState.COMPLETED,
+                        copyCompleted = true,
+                        copyErrors = listOf(e.message ?: "Copy failed unexpectedly")
+                    )
             }
         }
     }
@@ -281,6 +299,7 @@ class GameDownloadViewModel(
         if (File(GameDownloadManager.CINDERBOX_BASE_DIR).isDirectory) {
             fileAccessDetector.setSetupCompleted(SETUP_TYPE_CINDERBOX)
             fileAccessDetector.setCinderboxMode(true)
+            _state.value = _state.value.copy(isCinderboxSetup = true)
             startDownload()
             return
         }
@@ -307,6 +326,7 @@ class GameDownloadViewModel(
 
     fun onWizardChooseOther() {
         pendingSetupType = SETUP_TYPE_OTHER
+        _state.value = _state.value.copy(isCinderboxSetup = false)
         _wizardState.value = CinderboxWizardState()
         startDownload()
     }
@@ -367,6 +387,7 @@ class GameDownloadViewModel(
     fun onWizardStartDownload() {
         fileAccessDetector.setSetupCompleted(SETUP_TYPE_CINDERBOX)
         fileAccessDetector.setCinderboxMode(true)
+        _state.value = _state.value.copy(isCinderboxSetup = true)
         _wizardState.value = CinderboxWizardState()
         startDownload()
     }

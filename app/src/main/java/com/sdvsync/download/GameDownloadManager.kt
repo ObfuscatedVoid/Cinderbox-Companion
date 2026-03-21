@@ -284,12 +284,12 @@ class GameDownloadManager(
         }
     }
 
-    suspend fun extractSmapiFromCache() {
+    suspend fun extractSmapiFromCache() = withContext(Dispatchers.IO) {
         val cacheFile = File(context.cacheDir, SMAPI_CACHE_FILENAME)
         if (!cacheFile.exists()) {
             _smapiProgress.value =
                 SmapiSetupProgress(errorMessage = "SMAPI zip not found. Download it first.")
-            return
+            return@withContext
         }
 
         _smapiProgress.value = SmapiSetupProgress(isRunning = true, currentFile = "Counting files…")
@@ -310,7 +310,7 @@ class GameDownloadManager(
                         completed = true,
                         errorMessage = "Failed to open SMAPI zip: ${e.message}"
                     )
-                return
+                return@withContext
             }
 
         _smapiProgress.value = SmapiSetupProgress(isRunning = true, totalFiles = totalEntries)
@@ -438,7 +438,7 @@ class GameDownloadManager(
         return count
     }
 
-    suspend fun copyToCinderbox(installDir: String) {
+    suspend fun copyToCinderbox(installDir: String) = withContext(Dispatchers.IO) {
         val srcDir = File(installDir)
         val destDir = File(CINDERBOX_DEST)
 

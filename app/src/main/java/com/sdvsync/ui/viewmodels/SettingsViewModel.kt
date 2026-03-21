@@ -53,7 +53,8 @@ data class SettingsState(
     val latestSmapiVersion: String? = null,
     val cinderboxUpdateAvailable: Boolean = false,
     val smapiUpdateAvailable: Boolean = false,
-    val updateCheckEnabled: Boolean = true
+    val updateCheckEnabled: Boolean = true,
+    val showStoragePermissionPrompt: Boolean = false
 )
 
 class SettingsViewModel(
@@ -174,7 +175,24 @@ class SettingsViewModel(
 
     fun toggleCinderboxMode(enabled: Boolean) {
         fileAccessDetector.setCinderboxMode(enabled)
+        if (enabled && fileAccessDetector.needsStoragePermission()) {
+            _state.update { it.copy(cinderboxMode = true, showStoragePermissionPrompt = true) }
+            return
+        }
         load()
+    }
+
+    fun onStoragePermissionResult() {
+        _state.update { it.copy(showStoragePermissionPrompt = false) }
+        load()
+    }
+
+    fun dismissStoragePermissionPrompt() {
+        _state.update { it.copy(showStoragePermissionPrompt = false) }
+        if (fileAccessDetector.needsStoragePermission()) {
+            fileAccessDetector.setCinderboxMode(false)
+            load()
+        }
     }
 
     fun setFileAccessMode(name: String?) {

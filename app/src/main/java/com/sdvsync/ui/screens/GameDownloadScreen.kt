@@ -410,6 +410,11 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                 }
 
                 DownloadState.COMPLETED -> {
+                    val progress = state.downloadProgress
+                    val copyFailed = progress.copyCompleted && progress.copyErrors.isNotEmpty()
+                    val copySucceeded = progress.copyCompleted && progress.copyErrors.isEmpty()
+                    val showCopyButton = state.isCinderboxSetup && !copySucceeded
+
                     StardewCard {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
@@ -424,15 +429,12 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            // Show verification result if verification was performed
-                            if (state.downloadProgress.totalFilesToVerify > 0) {
+                            // Verification results
+                            if (progress.totalFilesToVerify > 0) {
                                 Spacer(Modifier.height(8.dp))
-                                if (state.downloadProgress.verificationPassed) {
+                                if (progress.verificationPassed) {
                                     Text(
-                                        stringResource(
-                                            R.string.download_verify_passed,
-                                            state.downloadProgress.verifiedFiles
-                                        ),
+                                        stringResource(R.string.download_verify_passed, progress.verifiedFiles),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -440,12 +442,12 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                                     Text(
                                         stringResource(
                                             R.string.download_verify_failed,
-                                            state.downloadProgress.verificationErrors.size
+                                            progress.verificationErrors.size
                                         ),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error
                                     )
-                                    state.downloadProgress.verificationErrors.forEach { errorFile ->
+                                    progress.verificationErrors.forEach { errorFile ->
                                         Text(
                                             errorFile,
                                             style = MaterialTheme.typography.bodySmall,
@@ -455,48 +457,44 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                                 }
                             }
 
-                            // Cinderbox copy results
-                            if (state.downloadProgress.copyCompleted) {
+                            // Copy results
+                            if (copySucceeded) {
                                 Spacer(Modifier.height(8.dp))
-                                if (state.downloadProgress.copyErrors.isEmpty()) {
+                                Text(
+                                    stringResource(R.string.cinderbox_copy_success, progress.copiedFiles),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else if (copyFailed) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    stringResource(R.string.cinderbox_copy_failed, progress.copyErrors.size),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                progress.copyErrors.forEach { errorFile ->
                                     Text(
-                                        stringResource(
-                                            R.string.cinderbox_copy_success,
-                                            state.downloadProgress.copiedFiles
-                                        ),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                } else {
-                                    Text(
-                                        stringResource(
-                                            R.string.cinderbox_copy_failed,
-                                            state.downloadProgress.copyErrors.size
-                                        ),
+                                        errorFile,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error
                                     )
-                                    state.downloadProgress.copyErrors.forEach { errorFile ->
-                                        Text(
-                                            errorFile,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    }
                                 }
                             }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
 
-                    // Cinderbox copy button (only before copy has been done)
-                    if (!state.downloadProgress.copyCompleted) {
+                    if (showCopyButton) {
                         StardewButton(
                             onClick = { viewModel.copyCinderbox() },
-                            variant = StardewButtonVariant.Action,
+                            variant = if (copyFailed) StardewButtonVariant.Primary else StardewButtonVariant.Action,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(stringResource(R.string.cinderbox_copy_button))
+                            Text(
+                                stringResource(
+                                    if (copyFailed) R.string.cinderbox_copy_retry else R.string.cinderbox_copy_button
+                                )
+                            )
                         }
                         Spacer(Modifier.height(8.dp))
                     }

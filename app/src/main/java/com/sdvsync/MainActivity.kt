@@ -265,7 +265,11 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 onBack = { navController.popBackStack() },
                 onBackupsClick = { navController.navigate("backups/$saveFolderName") },
                 onViewSaveClick = { navController.navigate("save_viewer/$saveFolderName") },
-                onNavigateToSettings = { navController.navigate("settings") }
+                onNavigateToSettings = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle?.set("switchToTab", "settings")
+                    navController.popBackStack("main", inclusive = false)
+                }
             )
         }
 
@@ -355,6 +359,23 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
     LaunchedEffect(Unit) { updateViewModel.checkForUpdate() }
 
     val mainNavController = rememberNavController()
+
+    // Handle tab switch requests from parent nav (e.g. SyncDetailScreen → Settings)
+    val switchToTab = parentNavController.currentBackStackEntry
+        ?.savedStateHandle?.get<String>("switchToTab")
+    LaunchedEffect(switchToTab) {
+        if (switchToTab != null) {
+            mainNavController.navigate(switchToTab) {
+                popUpTo(mainNavController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+            parentNavController.currentBackStackEntry?.savedStateHandle?.remove<String>("switchToTab")
+        }
+    }
+
     val mainBackStackEntry by mainNavController.currentBackStackEntryAsState()
     val mainCurrentRoute by remember(mainBackStackEntry) {
         derivedStateOf { mainBackStackEntry?.destination?.route }

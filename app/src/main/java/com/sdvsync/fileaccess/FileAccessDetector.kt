@@ -1,6 +1,8 @@
 package com.sdvsync.fileaccess
 
 import android.content.Context
+import android.os.Build
+import android.os.Environment
 import com.sdvsync.logging.AppLogger
 
 class FileAccessDetector(private val context: Context) {
@@ -120,5 +122,18 @@ class FileAccessDetector(private val context: Context) {
             .remove(KEY_SETUP_COMPLETED)
             .remove(KEY_SETUP_TYPE)
             .apply()
+    }
+
+    /**
+     * Whether the current configuration needs MANAGE_EXTERNAL_STORAGE but doesn't have it.
+     * Cinderbox path (/storage/emulated/0/StardewValley/Saves) is external storage
+     * and requires this permission on Android 11+.
+     */
+    fun needsStoragePermission(cinderboxMode: Boolean = isCinderboxMode()): Boolean {
+        if (Build.VERSION.SDK_INT < 30) return false
+        if (!cinderboxMode) return false
+        if (Environment.isExternalStorageManager()) return false
+        if (RootFileAccess.isAvailable() || ShizukuFileAccess.isAvailable()) return false
+        return true
     }
 }

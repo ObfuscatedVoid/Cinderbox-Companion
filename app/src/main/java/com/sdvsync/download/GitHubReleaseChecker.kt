@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONArray
 import org.json.JSONObject
 
 data class GitHubReleaseInfo(
@@ -29,7 +30,7 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
         const val SMAPI_REPO = "Ekyso/SMAPI-for-Cinderbox"
         const val APP_REPO = "ObfuscatedVoid/Cinderbox-Companion"
         val CINDERBOX_ASSET_PATTERN = Regex("Cinderbox-.*\\.apk")
-        val SMAPI_ASSET_PATTERN = Regex("smapi-internal\\.zip")
+        val SMAPI_ASSET_PATTERN = Regex("smapi-internal.*\\.zip")
         val APP_ASSET_PATTERN = Regex("CinderboxCompanion-.*\\.apk")
 
         const val KEY_CINDERBOX_VERSION = "cinderbox_installed_version"
@@ -59,21 +60,15 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
 
         return withContext(Dispatchers.IO) {
             try {
-                val url = "https://api.github.com/repos/$repo/releases/latest"
-                val request = Request.Builder()
-                    .url(url)
-                    .header("Accept", "application/vnd.github+json")
-                    .get()
-                    .build()
-
-                val response = httpClient.newCall(request).execute()
-                if (!response.isSuccessful) {
-                    AppLogger.e(TAG, "GitHub API error: ${response.code} for $repo")
+                var json = fetchLatestRelease(repo)
+                if (json == null) {
+                    // /releases/latest excludes pre-releases; fall back to first release
+                    json = fetchFirstRelease(repo)
+                }
+                if (json == null) {
+                    AppLogger.e(TAG, "No releases found for $repo")
                     return@withContext cachedJson?.let { parseReleaseInfoFromCache(it) }
                 }
-
-                val body = response.body?.string() ?: return@withContext null
-                val json = JSONObject(body)
                 val tagName = json.getString("tag_name")
                 val publishedAt = json.optString("published_at", "")
                 val releaseBody = json.optString("body", "")
@@ -141,6 +136,37 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
             .remove("cache_$repo")
             .remove("cache_time_$repo")
             .apply()
+    }
+
+    private fun fetchLatestRelease(repo: String): JSONObject? {
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$repo/releases/latest")
+            .header("Accept", "application/vnd.github+json")
+            .get()
+            .build()
+        val response = httpClient.newCall(request).execute()
+        if (!response.isSuccessful) {
+            response.close()
+            return null
+        }
+        val body = response.body?.string() ?: return null
+        return JSONObject(body)
+    }
+
+    private fun fetchFirstRelease(repo: String): JSONObject? {
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$repo/releases?per_page=1")
+            .header("Accept", "application/vnd.github+json")
+            .get()
+            .build()
+        val response = httpClient.newCall(request).execute()
+        if (!response.isSuccessful) {
+            response.close()
+            return null
+        }
+        val body = response.body?.string() ?: return null
+        val array = JSONArray(body)
+        return if (array.length() > 0) array.getJSONObject(0) else null
     }
 
     private fun serializeReleaseInfo(info: GitHubReleaseInfo): String = JSONObject().apply {
