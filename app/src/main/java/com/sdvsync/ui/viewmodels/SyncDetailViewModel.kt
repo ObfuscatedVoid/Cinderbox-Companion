@@ -45,7 +45,8 @@ data class SyncDetailState(
     val exportFile: File? = null,
     val exportError: String? = null,
     val lastOperation: SyncOperation? = null,
-    val lastSaveFolderName: String? = null
+    val lastSaveFolderName: String? = null,
+    val showStoragePermissionPrompt: Boolean = false
 )
 
 class SyncDetailViewModel(
@@ -69,6 +70,16 @@ class SyncDetailViewModel(
     val state: StateFlow<SyncDetailState> = _state.asStateFlow()
 
     fun pullSave(saveFolderName: String, force: Boolean = false, engine: SyncEngine = syncEngine) {
+        if (fileAccessDetector.needsStoragePermission()) {
+            _state.update {
+                it.copy(
+                    lastOperation = SyncOperation.PULL,
+                    lastSaveFolderName = saveFolderName,
+                    showStoragePermissionPrompt = true
+                )
+            }
+            return
+        }
         viewModelScope.launch {
             _state.value = SyncDetailState(
                 isSyncing = true,
@@ -102,6 +113,16 @@ class SyncDetailViewModel(
     }
 
     fun pushSave(saveFolderName: String, force: Boolean = false, engine: SyncEngine = syncEngine) {
+        if (fileAccessDetector.needsStoragePermission()) {
+            _state.update {
+                it.copy(
+                    lastOperation = SyncOperation.PUSH,
+                    lastSaveFolderName = saveFolderName,
+                    showStoragePermissionPrompt = true
+                )
+            }
+            return
+        }
         viewModelScope.launch {
             _state.value = SyncDetailState(
                 isSyncing = true,
@@ -156,9 +177,26 @@ class SyncDetailViewModel(
 
     fun switchToCinderbox() {
         if (_state.value.isSyncing) return
+        if (fileAccessDetector.needsStoragePermission(cinderboxMode = true)) {
+            _state.update { it.copy(showStoragePermissionPrompt = true) }
+            return
+        }
         fileAccessDetector.setCinderboxMode(true)
         AppLogger.d(TAG, "Switched to Cinderbox mode, retrying with fresh SyncEngine")
         retrySyncWithFreshEngine()
+    }
+
+    fun onStoragePermissionResult() {
+        _state.update { it.copy(showStoragePermissionPrompt = false) }
+        if (!fileAccessDetector.needsStoragePermission(cinderboxMode = true)) {
+            fileAccessDetector.setCinderboxMode(true)
+            AppLogger.d(TAG, "Storage permission granted, retrying with fresh SyncEngine")
+            retrySyncWithFreshEngine()
+        }
+    }
+
+    fun dismissStoragePermissionPrompt() {
+        _state.update { it.copy(showStoragePermissionPrompt = false) }
     }
 
     fun onSafDirectorySelected(uri: Uri) {

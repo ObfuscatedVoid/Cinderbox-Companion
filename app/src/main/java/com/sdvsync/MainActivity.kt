@@ -201,25 +201,25 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
                 animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            ) + fadeIn(tween(NAV_ANIM_DURATION))
+            )
         },
         exitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
                 animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            ) + fadeOut(tween(NAV_ANIM_DURATION))
+            )
         },
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
                 animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            ) + fadeIn(tween(NAV_ANIM_DURATION))
+            )
         },
         popExitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
                 animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            ) + fadeOut(tween(NAV_ANIM_DURATION))
+            )
         }
     ) {
         // Login screen — outside the bottom bar
@@ -265,7 +265,11 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 onBack = { navController.popBackStack() },
                 onBackupsClick = { navController.navigate("backups/$saveFolderName") },
                 onViewSaveClick = { navController.navigate("save_viewer/$saveFolderName") },
-                onNavigateToSettings = { navController.navigate("settings") }
+                onNavigateToSettings = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle?.set("switchToTab", "settings")
+                    navController.popBackStack("main", inclusive = false)
+                }
             )
         }
 
@@ -355,6 +359,23 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
     LaunchedEffect(Unit) { updateViewModel.checkForUpdate() }
 
     val mainNavController = rememberNavController()
+
+    // Handle tab switch requests from parent nav (e.g. SyncDetailScreen → Settings)
+    val switchToTab = parentNavController.currentBackStackEntry
+        ?.savedStateHandle?.get<String>("switchToTab")
+    LaunchedEffect(switchToTab) {
+        if (switchToTab != null) {
+            mainNavController.navigate(switchToTab) {
+                popUpTo(mainNavController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+            parentNavController.currentBackStackEntry?.savedStateHandle?.remove<String>("switchToTab")
+        }
+    }
+
     val mainBackStackEntry by mainNavController.currentBackStackEntryAsState()
     val mainCurrentRoute by remember(mainBackStackEntry) {
         derivedStateOf { mainBackStackEntry?.destination?.route }

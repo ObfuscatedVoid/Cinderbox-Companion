@@ -115,6 +115,14 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
         }
         val json = JSONObject(bodyString)
 
+        // Check for GraphQL errors (API returns 200 with errors array)
+        val errors = json.optJSONArray("errors")
+        if (errors != null && errors.length() > 0) {
+            val msg = errors.optJSONObject(0)?.optString("message", "Unknown GraphQL error")
+                ?: "Unknown GraphQL error"
+            throw IllegalStateException(msg)
+        }
+
         val data = json.optJSONObject("data")?.optJSONObject("mods")
             ?: throw IllegalStateException("Unexpected API response format")
         val nodes = data.optJSONArray("nodes") ?: JSONArray()
