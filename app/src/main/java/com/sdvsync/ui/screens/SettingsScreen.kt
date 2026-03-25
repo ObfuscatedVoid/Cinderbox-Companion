@@ -428,11 +428,11 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "Check for app updates",
+                                stringResource(R.string.settings_update_check_title),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                "Show update dialog on login when a new version is available",
+                                stringResource(R.string.settings_update_check_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

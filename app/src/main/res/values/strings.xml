@@ -581,4 +581,20 @@
     <string name="storage_permission_title">Storage Permission Required</string>
     <string name="storage_permission_description">To read and write save files, the app needs the \"All Files Access\" permission. You\'ll be taken to system settings to grant it.</string>
     <string name="storage_permission_grant">Grant Permission</string>
+
+    <!-- App update dialog -->
+    <string name="update_title">\u2191 Update Available</string>
+    <string name="update_version_size">v%1$s  \u2022  %2$s</string>
+    <string name="update_whats_new">What\'s New</string>
+    <string name="update_downloading">Downloading\u2026 %1$d%%</string>
+    <string name="update_cancel">Cancel</string>
+    <string name="update_skip_version">Skip version</string>
+    <string name="update_later">Later</string>
+    <string name="update_retry">Retry</string>
+    <string name="update_allow_installs">Allow installs \u2192</string>
+    <string name="update_button">Update \u25B6</string>
+
+    <!-- Settings: app update check -->
+    <string name="settings_update_check_title">Check for app updates</string>
+    <string name="settings_update_check_desc">Show update dialog on login when a new version is available</string>
 </resources>

@@ -26,9 +26,11 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.sdvsync.R
 import com.sdvsync.download.GitHubReleaseInfo
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.AppUpdateState
@@ -76,13 +78,13 @@ fun AppUpdateDialog(
             Column(modifier = Modifier.padding(16.dp)) {
                 // Title row
                 Text(
-                    "↑ Update Available",
+                    stringResource(R.string.update_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.tertiary
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "v${updateInfo.version}  •  ${formatBytes(updateInfo.assetSize)}",
+                    stringResource(R.string.update_version_size, updateInfo.version, formatBytes(updateInfo.assetSize)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -92,7 +94,7 @@ fun AppUpdateDialog(
                 // Changelog
                 if (updateInfo.body.isNotBlank()) {
                     Text(
-                        "What's New",
+                        stringResource(R.string.update_whats_new),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -114,9 +116,8 @@ fun AppUpdateDialog(
 
                 // Progress bar (visible while downloading)
                 if (state.isDownloading) {
-                    val pct = (state.downloadProgress * 100).toInt()
                     Text(
-                        "Downloading… $pct%",
+                        stringResource(R.string.update_downloading, (state.downloadProgress * 100).toInt()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -142,25 +143,25 @@ fun AppUpdateDialog(
                 ) {
                     if (state.isDownloading) {
                         TextButton(onClick = onCancelDownload) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.update_cancel))
                         }
                     } else {
                         TextButton(onClick = onSkipVersion) {
                             Text(
-                                "Skip version",
+                                stringResource(R.string.update_skip_version),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(Modifier.width(4.dp))
                         StardewButton(onClick = onDismiss) {
-                            Text("Later")
+                            Text(stringResource(R.string.update_later))
                         }
                         Spacer(Modifier.width(8.dp))
                         when {
                             state.downloadError != null -> {
                                 StardewButton(onClick = onUpdate, variant = StardewButtonVariant.Action) {
-                                    Text("Retry")
+                                    Text(stringResource(R.string.update_retry))
                                 }
                             }
                             state.showInstallPermissionPrompt -> {
@@ -174,12 +175,12 @@ fun AppUpdateDialog(
                                     },
                                     variant = StardewButtonVariant.Action
                                 ) {
-                                    Text("Allow installs →")
+                                    Text(stringResource(R.string.update_allow_installs))
                                 }
                             }
                             else -> {
                                 StardewButton(onClick = onUpdate, variant = StardewButtonVariant.Action) {
-                                    Text("Update ▶")
+                                    Text(stringResource(R.string.update_button))
                                 }
                             }
                         }
