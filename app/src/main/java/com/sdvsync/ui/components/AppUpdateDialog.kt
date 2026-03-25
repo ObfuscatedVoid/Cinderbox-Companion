@@ -194,7 +194,11 @@ fun AppUpdateDialog(
     val downloadedApk = state.downloadedApk
     if (downloadedApk != null) {
         LaunchedEffect(downloadedApk) {
-            installCinderboxApk(context, downloadedApk)
+            try {
+                installCinderboxApk(context, downloadedApk)
+            } catch (_: Exception) {
+                // Install intent failed — user can retry from system file manager
+            }
             onDismiss()
         }
     }
