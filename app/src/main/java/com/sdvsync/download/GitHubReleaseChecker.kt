@@ -144,29 +144,30 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
             .header("Accept", "application/vnd.github+json")
             .get()
             .build()
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            response.close()
-            return null
+        return httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@use null
+            val body = response.body?.string() ?: return@use null
+            JSONObject(body)
         }
-        val body = response.body?.string() ?: return null
-        return JSONObject(body)
     }
 
     private fun fetchFirstRelease(repo: String): JSONObject? {
         val request = Request.Builder()
-            .url("https://api.github.com/repos/$repo/releases?per_page=1")
+            .url("https://api.github.com/repos/$repo/releases?per_page=5")
             .header("Accept", "application/vnd.github+json")
             .get()
             .build()
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            response.close()
-            return null
+        return httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@use null
+            val body = response.body?.string() ?: return@use null
+            val array = JSONArray(body)
+            // Skip drafts; pre-releases are allowed (some repos only have pre-releases)
+            for (i in 0 until array.length()) {
+                val release = array.getJSONObject(i)
+                if (!release.optBoolean("draft", false)) return@use release
+            }
+            null
         }
-        val body = response.body?.string() ?: return null
-        val array = JSONArray(body)
-        return if (array.length() > 0) array.getJSONObject(0) else null
     }
 
     private fun serializeReleaseInfo(info: GitHubReleaseInfo): String = JSONObject().apply {
