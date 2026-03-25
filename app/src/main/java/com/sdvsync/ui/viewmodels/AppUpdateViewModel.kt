@@ -103,8 +103,8 @@ class AppUpdateViewModel(
     }
 
     fun onInstallPermissionGranted() {
-        _state.update { it.copy(showInstallPermissionPrompt = false) }
         if (updateManager.canInstallPackages()) {
+            _state.update { it.copy(showInstallPermissionPrompt = false) }
             startDownload()
         }
     }
