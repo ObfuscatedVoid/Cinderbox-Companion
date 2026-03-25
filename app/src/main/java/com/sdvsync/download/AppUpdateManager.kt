@@ -50,6 +50,11 @@ class AppUpdateManager(
 
     suspend fun downloadUpdate(assetUrl: String, assetName: String, onProgress: (Float) -> Unit): File? =
         withContext(Dispatchers.IO) {
+            // Clean up old APKs from previous updates
+            context.cacheDir.listFiles()?.filter {
+                it.name.endsWith(".apk") && it.name != assetName
+            }?.forEach { it.delete() }
+
             val destFile = File(context.cacheDir, assetName)
             try {
                 val request = Request.Builder().url(assetUrl).get().build()
