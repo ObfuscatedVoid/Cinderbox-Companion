@@ -60,8 +60,8 @@ android {
 
     applicationVariants.all {
         outputs.all {
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
-                .outputFileName = "CinderboxCompanion-v$versionName.apk"
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
+                "CinderboxCompanion-v$versionName.apk"
         }
     }
 
