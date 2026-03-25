@@ -70,6 +70,7 @@ class AppUpdateViewModel(
     }
 
     fun startDownload() {
+        if (downloadJob?.isActive == true) return
         if (!updateManager.canInstallPackages()) {
             _state.update { it.copy(showInstallPermissionPrompt = true) }
             return
