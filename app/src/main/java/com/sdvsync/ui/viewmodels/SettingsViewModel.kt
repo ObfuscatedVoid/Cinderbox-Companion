@@ -72,46 +72,46 @@ class SettingsViewModel(
     val state: StateFlow<SettingsState> = _state.asStateFlow()
 
     fun load() {
-        val hasRoot = RootFileAccess.isAvailable()
-        val shizukuInstalled = ShizukuFileAccess.isInstalled(context.packageManager)
-        val shizukuRunning = ShizukuFileAccess.isRunning()
-        val shizukuPermission = ShizukuFileAccess.isPermissionGranted()
-
-        val apiKey = modDataStore.getNexusApiKey()
-        val maskedKey = apiKey?.let {
-            if (it.length > 4) "****${it.takeLast(4)}" else "****"
-        }
-
-        val installedCinderbox = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_CINDERBOX_VERSION)
-        val installedSmapi = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_SMAPI_VERSION)
-
-        _state.value = SettingsState(
-            cinderboxMode = fileAccessDetector.isCinderboxMode(),
-            availableModes = fileAccessDetector.availableMethods(),
-            fileAccessMode = fileAccessDetector.resolveStrategy().name,
-            hasRoot = hasRoot,
-            preferredStrategy = fileAccessDetector.getPreferredStrategy(),
-            autoSyncAvailable = hasRoot,
-            shizukuInstalled = shizukuInstalled,
-            shizukuRunning = shizukuRunning,
-            shizukuPermissionGranted = shizukuPermission,
-            allFilesEligible = android.os.Build.VERSION.SDK_INT >= 30,
-            allFilesPermissionGranted = AllFilesAccess.isPermissionGranted(),
-            allFilesAccessWorking = AllFilesAccess.isAvailable(),
-            safEligible = SAFFileAccess.isDeviceEligible(),
-            safConfigured = SAFFileAccess.isAvailable(context),
-            safIsStaging = SAFFileAccess.isStaging(context),
-            isLoggedIn = authenticator.authState.value is com.sdvsync.steam.AuthState.LoggedIn,
-            maxBackups = backupManager.maxBackups,
-            hasNexusApiKey = apiKey != null,
-            nexusApiKeyMasked = maskedKey,
-            installedCinderboxVersion = installedCinderbox,
-            installedSmapiVersion = installedSmapi,
-            updateCheckEnabled = appUpdateManager.isUpdateCheckEnabled()
-        )
-
-        // Load latest versions in background
         viewModelScope.launch(Dispatchers.IO) {
+            val hasRoot = RootFileAccess.isAvailable()
+            val shizukuInstalled = ShizukuFileAccess.isInstalled(context.packageManager)
+            val shizukuRunning = ShizukuFileAccess.isRunning()
+            val shizukuPermission = ShizukuFileAccess.isPermissionGranted()
+
+            val apiKey = modDataStore.getNexusApiKey()
+            val maskedKey = apiKey?.let {
+                if (it.length > 4) "****${it.takeLast(4)}" else "****"
+            }
+
+            val installedCinderbox = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_CINDERBOX_VERSION)
+            val installedSmapi = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_SMAPI_VERSION)
+
+            _state.value = SettingsState(
+                cinderboxMode = fileAccessDetector.isCinderboxMode(),
+                availableModes = fileAccessDetector.availableMethods(),
+                fileAccessMode = fileAccessDetector.resolveStrategy().name,
+                hasRoot = hasRoot,
+                preferredStrategy = fileAccessDetector.getPreferredStrategy(),
+                autoSyncAvailable = hasRoot,
+                shizukuInstalled = shizukuInstalled,
+                shizukuRunning = shizukuRunning,
+                shizukuPermissionGranted = shizukuPermission,
+                allFilesEligible = android.os.Build.VERSION.SDK_INT >= 30,
+                allFilesPermissionGranted = AllFilesAccess.isPermissionGranted(),
+                allFilesAccessWorking = AllFilesAccess.isAvailable(),
+                safEligible = SAFFileAccess.isDeviceEligible(),
+                safConfigured = SAFFileAccess.isAvailable(context),
+                safIsStaging = SAFFileAccess.isStaging(context),
+                isLoggedIn = authenticator.authState.value is com.sdvsync.steam.AuthState.LoggedIn,
+                maxBackups = backupManager.maxBackups,
+                hasNexusApiKey = apiKey != null,
+                nexusApiKeyMasked = maskedKey,
+                installedCinderboxVersion = installedCinderbox,
+                installedSmapiVersion = installedSmapi,
+                updateCheckEnabled = appUpdateManager.isUpdateCheckEnabled()
+            )
+
+            // Load latest versions
             try {
                 val cinderboxRelease = releaseChecker.getLatestRelease(
                     GitHubReleaseChecker.CINDERBOX_REPO,

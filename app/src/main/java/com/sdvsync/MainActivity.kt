@@ -485,16 +485,15 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
         }
     }
 
-    if (updateState.showDialog && updateState.updateInfo != null) {
+    val updateInfo = updateState.updateInfo
+    if (updateState.showDialog && updateInfo != null) {
         AppUpdateDialog(
-            updateInfo = updateState.updateInfo!!,
+            updateInfo = updateInfo,
             state = updateState,
             onDismiss = updateViewModel::dismiss,
             onCancelDownload = updateViewModel::cancelDownload,
             onSkipVersion = updateViewModel::skipVersion,
-            onUpdate = if (updateState.downloadError !=
-                null
-            ) {
+            onUpdate = if (updateState.downloadError != null) {
                 updateViewModel::retryDownload
             } else {
                 updateViewModel::startDownload
