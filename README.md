@@ -6,6 +6,8 @@ Works with both the official Android port and [Cinderbox](https://www.nexusmods.
 
 > **This is an independent fan project.** It is not affiliated with, endorsed by, or connected to ConcernedApe, Chucklefish, or the Cinderbox developers. Stardew Valley is a trademark of ConcernedApe.
 
+![image0](https://github.com/user-attachments/assets/a2a17382-db24-4b00-a940-c8338d809b42)
+
 ---
 
 ## Important Warning
