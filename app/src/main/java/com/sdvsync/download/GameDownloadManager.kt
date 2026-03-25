@@ -101,6 +101,34 @@ class GameDownloadManager(
     val smapiProgress: StateFlow<SmapiSetupProgress> = _smapiProgress.asStateFlow()
     val cinderboxProgress: StateFlow<CinderboxDownloadProgress> = _cinderboxProgress.asStateFlow()
 
+    fun resetProgress() {
+        _progress.value = DownloadProgress()
+    }
+
+    fun resetCopyState() {
+        _progress.value = _progress.value.copy(
+            copyCompleted = false,
+            copyErrors = emptyList(),
+            copiedFiles = 0
+        )
+    }
+
+    fun setCopyError(message: String) {
+        _progress.value = _progress.value.copy(
+            state = DownloadState.COMPLETED,
+            copyCompleted = true,
+            copyErrors = listOf(message)
+        )
+    }
+
+    fun resetSmapiProgress() {
+        _smapiProgress.value = SmapiSetupProgress()
+    }
+
+    fun resetCinderboxProgress() {
+        _cinderboxProgress.value = CinderboxDownloadProgress()
+    }
+
     fun startDownload(
         branch: String = "public",
         branchPassword: String? = null,

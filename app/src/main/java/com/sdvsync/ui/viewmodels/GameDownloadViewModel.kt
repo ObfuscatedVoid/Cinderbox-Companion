@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadProgress
-import com.sdvsync.download.DownloadState
 import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.download.SmapiSetupProgress
@@ -222,13 +221,7 @@ class GameDownloadViewModel(
     }
 
     fun copyCinderbox() {
-        // Clear previous copy state before retrying
-        GameDownloadManager._progress.value =
-            GameDownloadManager._progress.value.copy(
-                copyCompleted = false,
-                copyErrors = emptyList(),
-                copiedFiles = 0
-            )
+        downloadManager.resetCopyState()
         viewModelScope.launch {
             try {
                 downloadManager.copyToCinderbox(_state.value.installDirectory)
@@ -236,20 +229,13 @@ class GameDownloadViewModel(
                 throw e
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Cinderbox copy failed", e)
-                GameDownloadManager._progress.value =
-                    GameDownloadManager._progress.value.copy(
-                        state = DownloadState.COMPLETED,
-                        copyCompleted = true,
-                        copyErrors = listOf(e.message ?: "Copy failed unexpectedly")
-                    )
+                downloadManager.setCopyError(e.message ?: "Copy failed unexpectedly")
             }
         }
     }
 
     fun resetDownload() {
-        _state.value = _state.value.copy(
-            downloadProgress = DownloadProgress()
-        )
+        downloadManager.resetProgress()
     }
 
     fun extractSmapi() {
@@ -266,7 +252,7 @@ class GameDownloadViewModel(
     }
 
     fun resetSmapiSetup() {
-        GameDownloadManager._smapiProgress.value = SmapiSetupProgress()
+        downloadManager.resetSmapiProgress()
     }
 
     fun downloadCinderbox() {
@@ -283,7 +269,7 @@ class GameDownloadViewModel(
     }
 
     fun resetCinderboxDownload() {
-        GameDownloadManager._cinderboxProgress.value = CinderboxDownloadProgress()
+        downloadManager.resetCinderboxProgress()
     }
 
     // ── Cinderbox Wizard ──────────────────────────────────────────────────
