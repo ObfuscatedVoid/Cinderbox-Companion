@@ -56,6 +56,13 @@ class SteamAuthenticator(
     private val _events = MutableSharedFlow<AuthEvent>()
     val events: SharedFlow<AuthEvent> = _events.asSharedFlow()
 
+    private enum class PendingAuthFlow {
+        NONE,
+        RESUME_SESSION,
+        CREDENTIALS,
+        QR
+    }
+
     private var credentialsSession: CredentialsAuthSession? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -63,6 +70,7 @@ class SteamAuthenticator(
     private var pendingUsername: String? = null
     private var pendingPassword: String? = null
     private var pendingQRLogin = false
+    private var pendingAuthFlow = PendingAuthFlow.NONE
     private var qrPollJob: Job? = null
 
     // Track if we were logged in (for auto-reconnect)
@@ -141,6 +149,7 @@ class SteamAuthenticator(
         pendingUsername = username
         pendingPassword = password
         pendingQRLogin = false
+        pendingAuthFlow = PendingAuthFlow.CREDENTIALS
         isUserDisconnect = false
         _authState.value = AuthState.Connecting
         connectOrFail()
@@ -150,6 +159,7 @@ class SteamAuthenticator(
         pendingUsername = null
         pendingPassword = null
         pendingQRLogin = true
+        pendingAuthFlow = PendingAuthFlow.QR
         isUserDisconnect = false
         _authState.value = AuthState.Connecting
         connectOrFail()
@@ -159,6 +169,7 @@ class SteamAuthenticator(
         qrPollJob?.cancel()
         qrPollJob = null
         pendingQRLogin = false
+        pendingAuthFlow = PendingAuthFlow.NONE
         _authState.value = AuthState.Idle
     }
 
@@ -172,6 +183,7 @@ class SteamAuthenticator(
         pendingUsername = null
         pendingPassword = null
         pendingQRLogin = false
+        pendingAuthFlow = PendingAuthFlow.RESUME_SESSION
         isUserDisconnect = false
         _authState.value = AuthState.Connecting
         connectOrFail()
@@ -184,20 +196,44 @@ class SteamAuthenticator(
                 val savedRefreshToken = sessionStore.refreshToken
                 val savedUsername = sessionStore.username
 
-                if (savedRefreshToken != null && savedUsername != null) {
-                    AppLogger.d(TAG, "Resuming session for $savedUsername")
-                    logOnWithToken(savedUsername, savedRefreshToken)
-                } else if (pendingQRLogin) {
-                    pendingQRLogin = false
-                    startQRAuthentication()
-                } else if (pendingUsername != null && pendingPassword != null) {
-                    val username = pendingUsername!!
-                    val password = pendingPassword!!
-                    pendingUsername = null
-                    pendingPassword = null
-                    authenticateWithCredentials(username, password)
-                } else {
-                    _authState.value = AuthState.WaitingForCredentials
+                when (pendingAuthFlow) {
+                    PendingAuthFlow.RESUME_SESSION -> {
+                        pendingAuthFlow = PendingAuthFlow.NONE
+                        if (savedRefreshToken != null && savedUsername != null) {
+                            AppLogger.d(TAG, "Resuming session for $savedUsername")
+                            logOnWithToken(savedUsername, savedRefreshToken)
+                        } else {
+                            _authState.value = AuthState.WaitingForCredentials
+                        }
+                    }
+
+                    PendingAuthFlow.QR -> {
+                        pendingQRLogin = false
+                        pendingAuthFlow = PendingAuthFlow.NONE
+                        startQRAuthentication()
+                    }
+
+                    PendingAuthFlow.CREDENTIALS -> {
+                        pendingAuthFlow = PendingAuthFlow.NONE
+                        pendingQRLogin = false
+                        val username = pendingUsername
+                        val password = pendingPassword
+                        pendingUsername = null
+                        pendingPassword = null
+
+                        if (username != null && password != null) {
+                            authenticateWithCredentials(username, password)
+                        } else {
+                            _authState.value = AuthState.WaitingForCredentials
+                        }
+                    }
+
+                    PendingAuthFlow.NONE -> if (savedRefreshToken != null && savedUsername != null) {
+                        AppLogger.d(TAG, "Resuming session for $savedUsername")
+                        logOnWithToken(savedUsername, savedRefreshToken)
+                    } else {
+                        _authState.value = AuthState.WaitingForCredentials
+                    }
                 }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Error in onConnected", e)
@@ -400,16 +436,19 @@ class SteamAuthenticator(
             scope.launch {
                 delay(2000) // Let the client settle before reconnecting
                 try {
+                    pendingAuthFlow = PendingAuthFlow.RESUME_SESSION
                     connectWithTimeout()
                     AppLogger.d(TAG, "Auto-reconnect succeeded")
                 } catch (_: TimeoutCancellationException) {
                     AppLogger.e(TAG, "Auto-reconnect timed out")
                     wasLoggedIn = false
+                    pendingAuthFlow = PendingAuthFlow.NONE
                     _authState.value = AuthState.Idle
                     _events.emit(AuthEvent.Disconnected)
                 } catch (e: Exception) {
                     AppLogger.e(TAG, "Auto-reconnect failed", e)
                     wasLoggedIn = false
+                    pendingAuthFlow = PendingAuthFlow.NONE
                     _authState.value = AuthState.Idle
                     _events.emit(AuthEvent.Disconnected)
                 }
@@ -423,6 +462,7 @@ class SteamAuthenticator(
     fun logout() {
         isUserDisconnect = true
         wasLoggedIn = false
+        pendingAuthFlow = PendingAuthFlow.NONE
         sessionStore.clear()
         _authState.value = AuthState.Idle
         clientManager.disconnect()
