@@ -12,8 +12,10 @@ import com.sdvsync.saves.SaveBundleManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
+import com.sdvsync.steam.ConnectionState
 import com.sdvsync.steam.SteamClientManager
 import com.sdvsync.steam.SteamCloudService
+import com.sdvsync.steam.SteamSessionStore
 import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncDirection
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +56,8 @@ class DashboardViewModel(
     private val saveFileManager: SaveFileManager,
     private val metadataParser: SaveMetadataParser,
     private val conflictResolver: ConflictResolver,
-    private val bundleManager: SaveBundleManager
+    private val bundleManager: SaveBundleManager,
+    private val sessionStore: SteamSessionStore
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
@@ -70,18 +73,17 @@ class DashboardViewModel(
             )
 
             try {
-                // Wait for Steam connection to be ready
-                if (!clientManager.isLoggedIn) {
-                    AppLogger.d(TAG, "Waiting for Steam login...")
-                    val loggedIn = clientManager.awaitLoggedIn(timeoutMs = 30_000)
-                    if (!loggedIn) {
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            error = context.getString(R.string.error_not_connected)
-                        )
-                        return@launch
-                    }
+                if (!ensureSteamReady()) {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        error = if (sessionStore.hasSession()) {
+                            context.getString(R.string.error_steam_connection)
+                        } else {
+                            context.getString(R.string.error_not_connected)
+                        }
+                    )
+                    return@launch
                 }
 
                 AppLogger.d(TAG, "Fetching cloud saves...")
@@ -159,6 +161,21 @@ class DashboardViewModel(
                 )
             }
         }
+    }
+
+    private suspend fun ensureSteamReady(): Boolean {
+        if (clientManager.isLoggedIn) {
+            return true
+        }
+
+        if (sessionStore.hasSession() && clientManager.connectionState.value == ConnectionState.DISCONNECTED) {
+            AppLogger.d(TAG, "Saved Steam session found while disconnected, reconnecting before refresh...")
+            clientManager.reconnect()
+        } else {
+            AppLogger.d(TAG, "Waiting for Steam login...")
+        }
+
+        return clientManager.awaitLoggedIn(timeoutMs = 30_000)
     }
 
     fun previewImport(uri: Uri) {
