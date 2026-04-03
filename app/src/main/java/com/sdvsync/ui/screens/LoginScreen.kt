@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -26,6 +27,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.sdvsync.R
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.steam.AuthState
 import com.sdvsync.ui.components.BarnData
 import com.sdvsync.ui.components.BarnPalette
@@ -188,6 +190,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
                 }
 
                 is AuthState.Error -> {
+                    val context = LocalContext.current
                     Text(
                         state.message,
                         color = MaterialTheme.colorScheme.error,
@@ -205,6 +208,24 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
                         onLogin = { viewModel.login() },
                         onQRLogin = { viewModel.loginWithQR() }
                     )
+                    Spacer(Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StardewOutlinedButton(
+                            onClick = { AppLogger.copyLogs(context) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.login_copy_logs))
+                        }
+                        StardewOutlinedButton(
+                            onClick = { AppLogger.shareLogs(context) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.login_share_logs))
+                        }
+                    }
                 }
 
                 is AuthState.LoggedIn -> {

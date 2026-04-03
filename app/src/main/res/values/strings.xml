@@ -33,6 +33,8 @@
     <string name="login_qr_title">Scan with Steam Mobile App</string>
     <string name="login_qr_instructions">Open the Steam app on your phone,\ntap the shield icon, then \&quot;Approve a sign-in\&quot;</string>
     <string name="login_qr_content_description">Steam login QR code</string>
+    <string name="login_share_logs">Share Logs</string>
+    <string name="login_copy_logs">Copy Logs</string>
 
     <!-- Dashboard -->
     <string name="dashboard_title">Stardew Saves</string>
