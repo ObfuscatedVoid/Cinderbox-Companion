@@ -151,6 +151,7 @@ class SteamAuthenticator(
         pendingQRLogin = false
         pendingAuthFlow = PendingAuthFlow.CREDENTIALS
         isUserDisconnect = false
+        AppLogger.i(TAG, "Login attempt for user: $username")
         _authState.value = AuthState.Connecting
         connectOrFail()
     }
@@ -161,6 +162,7 @@ class SteamAuthenticator(
         pendingQRLogin = true
         pendingAuthFlow = PendingAuthFlow.QR
         isUserDisconnect = false
+        AppLogger.i(TAG, "QR login attempt")
         _authState.value = AuthState.Connecting
         connectOrFail()
     }
@@ -177,6 +179,7 @@ class SteamAuthenticator(
         val username = sessionStore.username
         val refreshToken = sessionStore.refreshToken
         if (username == null || refreshToken == null) {
+            AppLogger.i(TAG, "No saved session to resume")
             return
         }
 
@@ -185,6 +188,7 @@ class SteamAuthenticator(
         pendingQRLogin = false
         pendingAuthFlow = PendingAuthFlow.RESUME_SESSION
         isUserDisconnect = false
+        AppLogger.i(TAG, "Attempting saved session resume for $username")
         _authState.value = AuthState.Connecting
         connectOrFail()
     }
@@ -195,14 +199,17 @@ class SteamAuthenticator(
             try {
                 val savedRefreshToken = sessionStore.refreshToken
                 val savedUsername = sessionStore.username
+                AppLogger.d(TAG, "Auth state -> onConnected (pendingFlow=$pendingAuthFlow)")
 
                 when (pendingAuthFlow) {
                     PendingAuthFlow.RESUME_SESSION -> {
                         pendingAuthFlow = PendingAuthFlow.NONE
                         if (savedRefreshToken != null && savedUsername != null) {
                             AppLogger.d(TAG, "Resuming session for $savedUsername")
+                            _authState.value = AuthState.LoggingIn
                             logOnWithToken(savedUsername, savedRefreshToken)
                         } else {
+                            AppLogger.w(TAG, "Resume session requested but no credentials stored")
                             _authState.value = AuthState.WaitingForCredentials
                         }
                     }
@@ -210,6 +217,7 @@ class SteamAuthenticator(
                     PendingAuthFlow.QR -> {
                         pendingQRLogin = false
                         pendingAuthFlow = PendingAuthFlow.NONE
+                        AppLogger.d(TAG, "Auth state -> Starting QR authentication")
                         startQRAuthentication()
                     }
 
@@ -224,12 +232,14 @@ class SteamAuthenticator(
                         if (username != null && password != null) {
                             authenticateWithCredentials(username, password)
                         } else {
+                            AppLogger.w(TAG, "Credentials flow but username/password null")
                             _authState.value = AuthState.WaitingForCredentials
                         }
                     }
 
                     PendingAuthFlow.NONE -> if (savedRefreshToken != null && savedUsername != null) {
-                        AppLogger.d(TAG, "Resuming session for $savedUsername")
+                        AppLogger.d(TAG, "Resuming session for $savedUsername (no pending flow)")
+                        _authState.value = AuthState.LoggingIn
                         logOnWithToken(savedUsername, savedRefreshToken)
                     } else {
                         _authState.value = AuthState.WaitingForCredentials
@@ -243,6 +253,7 @@ class SteamAuthenticator(
     }
 
     private suspend fun authenticateWithCredentials(username: String, password: String) {
+        AppLogger.d(TAG, "Authenticating with credentials for $username")
         _authState.value = AuthState.Authenticating
 
         try {
@@ -257,6 +268,7 @@ class SteamAuthenticator(
                     override fun getDeviceCode(previousCodeWasIncorrect: Boolean): CompletableFuture<String> {
                         val future = CompletableFuture<String>()
                         scope.launch {
+                            AppLogger.i(TAG, "2FA required: device code (incorrect=$previousCodeWasIncorrect)")
                             _authState.value = AuthState.WaitingFor2FA(is2FACode = true)
                             pending2FAFuture = future
                         }
@@ -269,6 +281,7 @@ class SteamAuthenticator(
                     ): CompletableFuture<String> {
                         val future = CompletableFuture<String>()
                         scope.launch {
+                            AppLogger.i(TAG, "2FA required: email code (incorrect=$previousCodeWasIncorrect)")
                             _authState.value = AuthState.WaitingFor2FA(is2FACode = false)
                             pending2FAFuture = future
                         }
@@ -308,6 +321,7 @@ class SteamAuthenticator(
     }
 
     private suspend fun startQRAuthentication() {
+        AppLogger.i(TAG, "Starting QR authentication")
         try {
             val authDetails = AuthSessionDetails().apply {
                 deviceFriendlyName = "SDV-Sync Android"
@@ -357,6 +371,7 @@ class SteamAuthenticator(
     }
 
     private fun logOnWithToken(username: String, refreshToken: String) {
+        AppLogger.d(TAG, "Auth state -> LoggingIn (user=${username.take(2)}***)")
         _authState.value = AuthState.LoggingIn
 
         val details = LogOnDetails().apply {
@@ -370,7 +385,7 @@ class SteamAuthenticator(
 
     private fun onLoggedOn(callback: LoggedOnCallback) {
         if (callback.result == EResult.OK) {
-            AppLogger.d(TAG, "Logged on successfully")
+            AppLogger.i(TAG, "Logon OK (cellId=${callback.cellID})")
             callback.clientSteamID?.let { steamId ->
                 sessionStore.steamId = steamId.convertToUInt64()
             }

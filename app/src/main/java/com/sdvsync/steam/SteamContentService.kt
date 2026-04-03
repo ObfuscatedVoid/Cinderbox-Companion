@@ -31,7 +31,7 @@ class SteamContentService(private val clientManager: SteamClientManager) {
             AppLogger.w(TAG, "Access token denied for AppID $STARDEW_APP_ID")
         }
 
-        AppLogger.d(TAG, "Got access token: $accessToken")
+        AppLogger.d(TAG, "Got PICS access token (len=${accessToken.toString().length})")
 
         // 2. Get product info using callback subscription (AsyncJobMultiple)
         val deferred = CompletableDeferred<PICSProductInfoCallback>()
