@@ -1,18 +1,33 @@
 package com.sdvsync.steam
 
+import android.content.Context
 import com.sdvsync.logging.AppLogger
+import `in`.dragonbra.javasteam.networking.steam3.ProtocolTypes
+import `in`.dragonbra.javasteam.steam.discovery.FileServerListProvider
+import `in`.dragonbra.javasteam.steam.discovery.ServerRecord
+import `in`.dragonbra.javasteam.steam.discovery.SmartCMServerList
 import `in`.dragonbra.javasteam.steam.handlers.steamapps.License
 import `in`.dragonbra.javasteam.steam.handlers.steamapps.SteamApps
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.SteamCloud
+import `in`.dragonbra.javasteam.steam.handlers.steamgameserver.SteamGameServer
+import `in`.dragonbra.javasteam.steam.handlers.steammasterserver.SteamMasterServer
+import `in`.dragonbra.javasteam.steam.handlers.steamscreenshots.SteamScreenshots
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.SteamUser
+import `in`.dragonbra.javasteam.steam.handlers.steamworkshop.SteamWorkshop
 import `in`.dragonbra.javasteam.steam.steamclient.SteamClient
 import `in`.dragonbra.javasteam.steam.steamclient.callbackmgr.CallbackManager
+import `in`.dragonbra.javasteam.steam.steamclient.configuration.SteamConfiguration
+import java.io.File
+import java.time.Instant
+import java.util.EnumSet
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import okhttp3.OkHttpClient
 
 enum class ConnectionState {
     DISCONNECTED,
@@ -22,14 +37,16 @@ enum class ConnectionState {
     DISCONNECTING
 }
 
-class SteamClientManager {
+class SteamClientManager(context: Context, sessionStore: SteamSessionStore) {
 
     companion object {
         private const val TAG = "SteamClientManager"
+        private val PROTOCOL_TYPES = EnumSet.of(ProtocolTypes.WEB_SOCKET)
     }
 
-    val client: SteamClient = SteamClient()
-    val callbackMgr: CallbackManager = CallbackManager(client)
+    private val configuration: SteamConfiguration
+    val client: SteamClient
+    val callbackMgr: CallbackManager
     private var callbackJob: Job? = null
     private val callbackScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -37,6 +54,7 @@ class SteamClientManager {
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     private val isRunning = AtomicBoolean(false)
+    private var fallbackServersPopulated = false
 
     val user: SteamUser
         get() = client.getHandler(SteamUser::class.java)
@@ -60,11 +78,44 @@ class SteamClientManager {
     val isLoggedIn: Boolean
         get() = _connectionState.value == ConnectionState.LOGGED_IN
 
-    /**
-     * Ensure the callback loop is running. Safe to call multiple times.
-     */
+    init {
+        val serverListFile = File(context.filesDir, "steam_server_list.bin")
+        val savedCellId = sessionStore.cellId
+
+        configuration = SteamConfiguration.create { builder ->
+            builder.withProtocolTypes(PROTOCOL_TYPES)
+            builder.withServerListProvider(FileServerListProvider(serverListFile))
+            builder.withConnectionTimeout(30_000L)
+            if (savedCellId > 0) {
+                builder.withCellID(savedCellId)
+            }
+            builder.withHttpClient(
+                OkHttpClient.Builder()
+                    .connectTimeout(10, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(15, TimeUnit.SECONDS)
+                    .pingInterval(15, TimeUnit.SECONDS)
+                    .build()
+            )
+        }
+
+        client = SteamClient(configuration).apply {
+            removeHandler(SteamGameServer::class.java)
+            removeHandler(SteamMasterServer::class.java)
+            removeHandler(SteamWorkshop::class.java)
+            removeHandler(SteamScreenshots::class.java)
+        }
+
+        callbackMgr = CallbackManager(client)
+
+        AppLogger.d(
+            TAG,
+            "Initialized with WebSocket-only, FileServerListProvider, " +
+                "cellId=$savedCellId"
+        )
+    }
+
     private fun ensureCallbackLoop() {
-        // If the previous callback job exited unexpectedly, reset so we can start a new one
         if (callbackJob?.isCompleted == true) {
             AppLogger.w(TAG, "Callback loop had stopped, will restart")
             isRunning.set(false)
@@ -78,11 +129,6 @@ class SteamClientManager {
                 try {
                     callbackMgr.runWaitCallbacks(1000)
                 } catch (e: Exception) {
-                    // Catch ALL exceptions including CancellationException.
-                    // Steam's disconnect cancels pending async jobs, throwing
-                    // j.u.c.CancellationException (which IS kotlinx.coroutines.CancellationException
-                    // via typealias). Rethrowing would kill this coroutine and prevent reconnection.
-                    // This follows the same pattern used by Pluvia (proven JavaSteam Android app).
                     if (!isRunning.get()) break
                     AppLogger.w(TAG, "Callback loop caught ${e::class.simpleName}: ${e.message}")
                 }
@@ -101,29 +147,43 @@ class SteamClientManager {
 
         _connectionState.value = ConnectionState.CONNECTING
 
-        // Always ensure callback loop is running before connecting
         ensureCallbackLoop()
 
         withContext(Dispatchers.IO) {
+            ensureFallbackServers()
             AppLogger.d(TAG, "Connecting to Steam CM servers...")
             client.connect()
             AppLogger.d(TAG, "client.connect() returned")
         }
     }
 
-    /**
-     * Force reconnect — resets connection state so connect() won't skip
-     * due to the CONNECTING guard.
-     */
+    private fun ensureFallbackServers() {
+        if (fallbackServersPopulated) return
+
+        val endpoints = configuration.serverList.getAllEndPoints()
+        if (endpoints.isNotEmpty()) {
+            AppLogger.d(TAG, "Server list has ${endpoints.size} servers from provider")
+            fallbackServersPopulated = true
+            return
+        }
+
+        AppLogger.d(TAG, "Server list empty, pre-populating with fallback servers")
+        configuration.serverList.replaceList(
+            listOfNotNull(
+                ServerRecord.createWebSocketServer(SmartCMServerList.defaultServerWebSocket),
+                ServerRecord.tryCreateSocketServer(SmartCMServerList.defaultServerNetFilter)
+            ),
+            writeProvider = false,
+            Instant.now()
+        )
+        fallbackServersPopulated = true
+    }
+
     suspend fun reconnect() {
         _connectionState.value = ConnectionState.DISCONNECTED
         connect()
     }
 
-    /**
-     * Wait until the client is logged in, with a timeout.
-     * Returns true if logged in, false if timed out.
-     */
     suspend fun awaitLoggedIn(timeoutMs: Long = 30_000): Boolean = try {
         withTimeout(timeoutMs) {
             connectionState.first { it == ConnectionState.LOGGED_IN }
@@ -148,23 +208,16 @@ class SteamClientManager {
             TAG,
             "Disconnected from Steam (userInitiated=$userInitiated, currentState=${_connectionState.value})"
         )
-        // Don't reset state if we're currently CONNECTING — JavaSteam's client.connect()
-        // internally calls disconnect() which triggers this callback, and resetting to
-        // DISCONNECTED would cause a reconnection cascade.
         if (_connectionState.value != ConnectionState.CONNECTING) {
             _connectionState.value = ConnectionState.DISCONNECTED
         }
     }
 
-    /**
-     * User-initiated disconnect (logout).
-     */
     fun disconnect() {
         _connectionState.value = ConnectionState.DISCONNECTING
         try {
             client.disconnect()
         } catch (_: Exception) {
-            // Ignore disconnect errors
         }
         _connectionState.value = ConnectionState.DISCONNECTED
     }

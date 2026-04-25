@@ -57,7 +57,7 @@ val appModule = module {
 
     // Steam
     single { SteamSessionStore(androidContext()) }
-    single { SteamClientManager() }
+    single { SteamClientManager(androidContext(), get()) }
     single { SteamAuthenticator(androidContext(), get(), get()) }
     single { SteamCloudService(get(), get()) }
     single { SteamContentService(get()) }

@@ -139,30 +139,37 @@ class GameDownloadService : Service() {
                 throw IllegalStateException(getString(R.string.download_error_no_licenses))
             }
 
-            // Scale concurrency based on available heap to avoid OOM on low-end devices
+            // VZipUtil allocates an 8MB ThreadLocal per decompress thread, plus ~2MB chunk data.
             val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            val heapMb = am.largeMemoryClass
-            data class ConcurrencyProfile(val downloads: Int, val decompress: Int, val writes: Int)
-            val profile = when {
-                heapMb >= 1024 -> ConcurrencyProfile(16, 8, 8)
-                heapMb >= 768 -> ConcurrencyProfile(12, 6, 6)
-                heapMb >= 512 -> ConcurrencyProfile(8, 4, 4)
-                heapMb >= 384 -> ConcurrencyProfile(6, 3, 2)
-                heapMb >= 256 -> ConcurrencyProfile(4, 2, 1)
-                else -> ConcurrencyProfile(2, 2, 1)
+            val cpuCores = Runtime.getRuntime().availableProcessors()
+            val heapBytes = am.largeMemoryClass.toLong() * 1024 * 1024
+            val decompressCostBytes = 10L * 1024 * 1024
+
+            // Tighter budget on low-heap devices where fragmentation limits contiguous allocation.
+            val heapBudgetRatio = when {
+                heapBytes >= 1024L * 1024 * 1024 -> 0.25 // 1GB+ heap: 25% budget
+                heapBytes >= 768L * 1024 * 1024 -> 0.15 // 768MB heap: 15% budget
+                else -> 0.08 // <=512MB heap: 8% budget (~41MB, ~4 threads max)
             }
+            val maxDecompressByMem = (heapBytes * heapBudgetRatio / decompressCostBytes).toInt().coerceAtLeast(1)
+            val maxDecompressByCpu = (cpuCores * 0.5).toInt().coerceIn(1, 4)
+            val maxDecompress = minOf(maxDecompressByMem, maxDecompressByCpu)
+            val maxDownloads = (cpuCores * 1.0).toInt().coerceIn(2, 8)
+            val maxFileWrites = maxDecompress.coerceIn(1, 4)
+
             AppLogger.d(
                 TAG,
-                "Heap: ${heapMb}MB → downloads=${profile.downloads}, decompress=${profile.decompress}, writes=${profile.writes}"
+                "Heap: ${am.largeMemoryClass}MB, CPU: $cpuCores cores → " +
+                    "downloads=$maxDownloads, decompress=$maxDecompress, writes=$maxFileWrites"
             )
 
             val downloader = DepotDownloader(
                 steamClient = clientManager.client,
                 licenses = licenses,
                 debug = false,
-                maxDownloads = profile.downloads,
-                maxDecompress = profile.decompress,
-                maxFileWrites = profile.writes,
+                maxDownloads = maxDownloads,
+                maxDecompress = maxDecompress,
+                maxFileWrites = maxFileWrites,
                 parentJob = currentCoroutineContext()[Job]
             )
             depotDownloader = downloader
@@ -170,8 +177,6 @@ class GameDownloadService : Service() {
             lastSpeedUpdateMs.set(System.currentTimeMillis())
             lastSpeedBytes.set(0L)
             depotBytes.clear()
-
-            // Track completed files for verification
             val completedFiles = Collections.synchronizedSet(mutableSetOf<String>())
 
             downloader.addListener(object : IDownloadListener {
@@ -197,7 +202,6 @@ class GameDownloadService : Service() {
                         depotBytes[depotId] = uncompressedBytes
                         val totalDownloaded = depotBytes.values.sum()
 
-                        // Calculate speed every 500ms
                         val now = System.currentTimeMillis()
                         val lastUpdate = lastSpeedUpdateMs.get()
                         var speed = GameDownloadManager._progress.value.bytesPerSecond
@@ -257,7 +261,6 @@ class GameDownloadService : Service() {
 
                 override fun onDownloadCompleted(item: DownloadItem) {
                     AppLogger.d(TAG, "Download completed! (${completedFiles.size} files)")
-                    // Don't set COMPLETED here — verification may follow after awaitCompletion()
                 }
 
                 override fun onDownloadFailed(item: DownloadItem, error: Throwable) {
@@ -362,23 +365,18 @@ class GameDownloadService : Service() {
         updateNotification(getString(R.string.download_notification_verifying, 0))
 
         val errors = mutableListOf<String>()
-        val buffer = ByteArray(64 * 1024) // 64KB read buffer
+        val buffer = ByteArray(64 * 1024)
 
         for ((index, file) in allFiles.withIndex()) {
-            // Yield to allow cancellation
             yield()
 
             val relativePath = file.relativeTo(installRoot).path
             try {
                 if (file.length() == 0L) {
-                    // Zero-byte files are valid in some depots, just log
                     AppLogger.d(TAG, "Verify: $relativePath is 0 bytes (ok)")
                 } else {
-                    // Read every byte to confirm disk integrity
                     file.inputStream().use { input ->
-                        while (input.read(buffer) != -1) {
-                            // Just reading to verify readability
-                        }
+                        while (input.read(buffer) != -1) { }
                     }
                 }
             } catch (e: Exception) {
@@ -396,7 +394,6 @@ class GameDownloadService : Service() {
                 currentFile = relativePath
             )
 
-            // Throttle notification updates to every ~5%
             if (verified % maxOf(1, totalFiles / 20) == 0 || verified == totalFiles) {
                 updateNotification(getString(R.string.download_notification_verifying, (percent * 100).toInt()))
             }
