@@ -3,6 +3,7 @@ package com.sdvsync.steam
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.authentication.*
@@ -66,14 +67,12 @@ class SteamAuthenticator(
     private var credentialsSession: CredentialsAuthSession? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Pending credentials stored between connect() and onConnected()
     private var pendingUsername: String? = null
     private var pendingPassword: String? = null
     private var pendingQRLogin = false
     private var pendingAuthFlow = PendingAuthFlow.NONE
     private var qrPollJob: Job? = null
 
-    // Track if we were logged in (for auto-reconnect)
     private var wasLoggedIn = false
     private var isUserDisconnect = false
 
@@ -101,12 +100,8 @@ class SteamAuthenticator(
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    /**
-     * Connect to a CM server with timeout and one retry.
-     * Throws TimeoutCancellationException if both attempts fail.
-     */
     private suspend fun connectWithTimeout() {
-        clientManager.reconnect() // Always force fresh — avoids stuck CONNECTING state
+        clientManager.reconnect()
         try {
             withTimeout(15_000) {
                 clientManager.connectionState.first { state ->
@@ -118,7 +113,6 @@ class SteamAuthenticator(
         } catch (_: TimeoutCancellationException) {
             AppLogger.w(TAG, "Connection timed out after 15s, retrying with new CM server...")
             clientManager.reconnect()
-            // Let this throw TimeoutCancellationException to caller
             withTimeout(15_000) {
                 clientManager.connectionState.first { state ->
                     state == ConnectionState.CONNECTED ||
@@ -129,19 +123,36 @@ class SteamAuthenticator(
         }
     }
 
+    private fun isClockValid(): Boolean {
+        val now = System.currentTimeMillis()
+        val minValid = java.util.Calendar.getInstance().apply {
+            set(2025, java.util.Calendar.JANUARY, 1, 0, 0, 0)
+        }.timeInMillis
+        return now > minValid
+    }
+
     private suspend fun connectOrFail() {
         if (!isNetworkAvailable()) {
             AppLogger.w(TAG, "No network available")
-            _authState.value = AuthState.Error("No internet connection")
-            _events.emit(AuthEvent.LoginFailed("No internet connection"))
+            val msg = context.getString(R.string.error_no_internet)
+            _authState.value = AuthState.Error(msg)
+            _events.emit(AuthEvent.LoginFailed(msg))
+            return
+        }
+        if (!isClockValid()) {
+            AppLogger.w(TAG, "Device clock appears incorrect")
+            val msg = context.getString(R.string.error_clock_invalid)
+            _authState.value = AuthState.Error(msg)
+            _events.emit(AuthEvent.LoginFailed(context.getString(R.string.error_clock_invalid_short)))
             return
         }
         try {
             connectWithTimeout()
         } catch (_: TimeoutCancellationException) {
             AppLogger.e(TAG, "Connection timed out after retry")
-            _authState.value = AuthState.Error("Could not connect to Steam. Please try again.")
-            _events.emit(AuthEvent.LoginFailed("Connection timed out"))
+            val msg = context.getString(R.string.error_steam_connection)
+            _authState.value = AuthState.Error(msg)
+            _events.emit(AuthEvent.LoginFailed(context.getString(R.string.error_steam_connection_timeout)))
         }
     }
 
@@ -151,7 +162,7 @@ class SteamAuthenticator(
         pendingQRLogin = false
         pendingAuthFlow = PendingAuthFlow.CREDENTIALS
         isUserDisconnect = false
-        AppLogger.i(TAG, "Login attempt for user: $username")
+        AppLogger.i(TAG, "Login attempt for user: ${username.take(2)}***")
         _authState.value = AuthState.Connecting
         connectOrFail()
     }
@@ -188,7 +199,7 @@ class SteamAuthenticator(
         pendingQRLogin = false
         pendingAuthFlow = PendingAuthFlow.RESUME_SESSION
         isUserDisconnect = false
-        AppLogger.i(TAG, "Attempting saved session resume for $username")
+        AppLogger.i(TAG, "Attempting saved session resume for ${username.take(2)}***")
         _authState.value = AuthState.Connecting
         connectOrFail()
     }
@@ -205,7 +216,7 @@ class SteamAuthenticator(
                     PendingAuthFlow.RESUME_SESSION -> {
                         pendingAuthFlow = PendingAuthFlow.NONE
                         if (savedRefreshToken != null && savedUsername != null) {
-                            AppLogger.d(TAG, "Resuming session for $savedUsername")
+                            AppLogger.d(TAG, "Resuming session for ${savedUsername.take(2)}***")
                             _authState.value = AuthState.LoggingIn
                             logOnWithToken(savedUsername, savedRefreshToken)
                         } else {
@@ -238,7 +249,7 @@ class SteamAuthenticator(
                     }
 
                     PendingAuthFlow.NONE -> if (savedRefreshToken != null && savedUsername != null) {
-                        AppLogger.d(TAG, "Resuming session for $savedUsername (no pending flow)")
+                        AppLogger.d(TAG, "Resuming session for ${savedUsername.take(2)}*** (no pending flow)")
                         _authState.value = AuthState.LoggingIn
                         logOnWithToken(savedUsername, savedRefreshToken)
                     } else {
@@ -247,13 +258,13 @@ class SteamAuthenticator(
                 }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Error in onConnected", e)
-                _authState.value = AuthState.Error("Connection error: ${e.message}")
+                _authState.value = AuthState.Error(context.getString(R.string.error_connection, e.message ?: ""))
             }
         }
     }
 
     private suspend fun authenticateWithCredentials(username: String, password: String) {
-        AppLogger.d(TAG, "Authenticating with credentials for $username")
+        AppLogger.d(TAG, "Authenticating with credentials for ${username.take(2)}***")
         _authState.value = AuthState.Authenticating
 
         try {
@@ -304,11 +315,27 @@ class SteamAuthenticator(
 
             logOnWithToken(username, pollResponse.refreshToken)
         } catch (e: AuthenticationException) {
-            _authState.value = AuthState.Error("Authentication failed: ${e.message}")
-            scope.launch { _events.emit(AuthEvent.LoginFailed(e.message ?: "Unknown error")) }
+            _authState.value = AuthState.Error(
+                context.getString(R.string.error_auth_failed, e.message ?: "")
+            )
+            scope.launch {
+                _events.emit(
+                    AuthEvent.LoginFailed(
+                        e.message ?: context.getString(R.string.error_auth_failed, "")
+                    )
+                )
+            }
         } catch (e: Exception) {
-            _authState.value = AuthState.Error("Error: ${e.message}")
-            scope.launch { _events.emit(AuthEvent.LoginFailed(e.message ?: "Unknown error")) }
+            _authState.value = AuthState.Error(
+                context.getString(R.string.error_connection, e.message ?: "")
+            )
+            scope.launch {
+                _events.emit(
+                    AuthEvent.LoginFailed(
+                        e.message ?: context.getString(R.string.error_connection, "")
+                    )
+                )
+            }
         }
     }
 
@@ -346,8 +373,8 @@ class SteamAuthenticator(
                     try {
                         pollResult = qrSession.pollAuthSessionStatus().await()
                     } catch (e: AuthenticationException) {
-                        _authState.value = AuthState.Error("QR login expired. Try again.")
-                        _events.emit(AuthEvent.LoginFailed("QR session expired"))
+                        _authState.value = AuthState.Error(context.getString(R.string.error_qr_expired))
+                        _events.emit(AuthEvent.LoginFailed(context.getString(R.string.error_qr_expired_short)))
                         return@launch
                     }
 
@@ -365,8 +392,16 @@ class SteamAuthenticator(
                 }
             }
         } catch (e: Exception) {
-            _authState.value = AuthState.Error("QR login failed: ${e.message}")
-            scope.launch { _events.emit(AuthEvent.LoginFailed(e.message ?: "Unknown error")) }
+            _authState.value = AuthState.Error(
+                context.getString(R.string.error_qr_failed, e.message ?: "")
+            )
+            scope.launch {
+                _events.emit(
+                    AuthEvent.LoginFailed(
+                        e.message ?: context.getString(R.string.error_qr_failed, "")
+                    )
+                )
+            }
         }
     }
 
@@ -397,12 +432,12 @@ class SteamAuthenticator(
             scope.launch { _events.emit(AuthEvent.LoginSuccess) }
         } else {
             val msg = when (callback.result) {
-                EResult.AccountLogonDenied -> "Steam Guard email code required"
-                EResult.AccountLoginDeniedNeedTwoFactor -> "Steam Guard mobile code required"
-                EResult.InvalidPassword -> "Invalid password or expired token"
-                EResult.TwoFactorCodeMismatch -> "Invalid 2FA code"
-                EResult.Expired -> "Session expired, please log in again"
-                else -> "Login failed: ${callback.result}"
+                EResult.AccountLogonDenied -> context.getString(R.string.error_steamguard_email)
+                EResult.AccountLoginDeniedNeedTwoFactor -> context.getString(R.string.error_steamguard_mobile)
+                EResult.InvalidPassword -> context.getString(R.string.error_invalid_password)
+                EResult.TwoFactorCodeMismatch -> context.getString(R.string.error_2fa_mismatch)
+                EResult.Expired -> context.getString(R.string.error_session_expired)
+                else -> context.getString(R.string.error_login_failed, callback.result.toString())
             }
             AppLogger.w(TAG, "Logon failed: $msg")
             _authState.value = AuthState.Error(msg)
@@ -435,9 +470,7 @@ class SteamAuthenticator(
         clientManager.onDisconnected(userInitiated = userInitiated)
 
         if (!userInitiated && wasLoggedIn && sessionStore.hasSession()) {
-            // Don't auto-reconnect if we're already in a connecting/authenticating state.
-            // JavaSteam's client.connect() internally calls disconnect(), which fires this
-            // callback again — without this guard we'd get an infinite reconnection cascade.
+            // client.connect() calls disconnect() internally, which fires this callback again.
             if (currentAuthState is AuthState.Connecting ||
                 currentAuthState is AuthState.Authenticating ||
                 currentAuthState is AuthState.LoggingIn
@@ -449,7 +482,7 @@ class SteamAuthenticator(
             AppLogger.d(TAG, "Auto-reconnecting in 2s...")
             _authState.value = AuthState.Connecting
             scope.launch {
-                delay(2000) // Let the client settle before reconnecting
+                delay(2000)
                 try {
                     pendingAuthFlow = PendingAuthFlow.RESUME_SESSION
                     connectWithTimeout()

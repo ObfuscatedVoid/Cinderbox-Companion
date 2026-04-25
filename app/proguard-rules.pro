@@ -17,3 +17,8 @@
 
 # JavaSteam — optional Zstd dependency not bundled
 -dontwarn com.github.luben.zstd.**
+
+# Keep sealed class names for readable ::class.simpleName in logs
+-keepnames class com.sdvsync.steam.AuthState*
+-keepnames class com.sdvsync.steam.AuthEvent*
+-keepnames class com.sdvsync.steam.ConnectionState*

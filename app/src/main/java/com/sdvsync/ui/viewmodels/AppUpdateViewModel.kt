@@ -92,6 +92,7 @@ class AppUpdateViewModel(
             if (apk != null) {
                 _state.update { it.copy(isDownloading = false, downloadedApk = apk) }
             } else {
+                // TODO: Replace download error message with Resource string and handle different error cases (network, storage, etc.)
                 _state.update { it.copy(isDownloading = false, downloadError = "Download failed. Tap to retry.") }
             }
         }
