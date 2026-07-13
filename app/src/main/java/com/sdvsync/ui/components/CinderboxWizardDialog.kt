@@ -2,8 +2,7 @@ package com.sdvsync.ui.components
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Environment
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,9 +43,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
+import com.sdvsync.fileaccess.AllFilesAccess
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.theme.GoldAmber
 import com.sdvsync.ui.theme.SuccessGreen
@@ -111,7 +112,7 @@ fun CinderboxWizardDialog(
     if (wizardState.currentStep == CinderboxWizardStep.PERMISSIONS) {
         LifecycleResumeEffect(Unit) {
             onRefreshPermissions(
-                Environment.isExternalStorageManager(),
+                AllFilesAccess.isPermissionGranted(),
                 context.packageManager.canRequestPackageInstalls()
             )
             onPauseOrDispose {}
@@ -170,13 +171,15 @@ fun CinderboxWizardDialog(
                             hasStorage = wizardState.hasStoragePermission,
                             hasInstall = wizardState.hasInstallPermission,
                             onGrantStorage = {
-                                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                storageLauncher.launch(intent)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    storageLauncher.launch(intent)
+                                }
                             },
                             onGrantInstall = {
                                 val intent = Intent(
                                     Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                    Uri.parse("package:${context.packageName}")
+                                    "package:${context.packageName}".toUri()
                                 )
                                 installLauncher.launch(intent)
                             }

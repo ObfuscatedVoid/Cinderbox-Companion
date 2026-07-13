@@ -1,7 +1,7 @@
 package com.sdvsync.ui.screens
 
 import android.content.Intent
-import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.sdvsync.BuildConfig
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
@@ -227,11 +228,13 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                     permissionGranted = state.allFilesPermissionGranted,
                     accessWorking = state.allFilesAccessWorking,
                     onGrantPermission = {
-                        val intent = Intent(
-                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                            Uri.parse("package:${context.packageName}")
-                        )
-                        allFilesLauncher.launch(intent)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            val intent = Intent(
+                                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                "package:${context.packageName}".toUri()
+                            )
+                            allFilesLauncher.launch(intent)
+                        }
                     }
                 )
             }
