@@ -92,12 +92,12 @@ class ModDataStore(private val context: Context) {
     // ── Mod Metadata (install source, timestamps) ───────────────────────
 
     suspend fun getModMetadata(uniqueId: String): ModMetadata? {
-        val all = getAllMetadata()
+        val all = getAllModMetadata()
         return all[uniqueId]
     }
 
     suspend fun setModMetadata(uniqueId: String, metadata: ModMetadata) {
-        val all = getAllMetadata().toMutableMap()
+        val all = getAllModMetadata().toMutableMap()
         all[uniqueId] = metadata
         context.modDataStore.edit { prefs ->
             prefs[MOD_METADATA_KEY] = serializeMetadata(all)
@@ -105,14 +105,14 @@ class ModDataStore(private val context: Context) {
     }
 
     suspend fun removeModMetadata(uniqueId: String) {
-        val all = getAllMetadata().toMutableMap()
+        val all = getAllModMetadata().toMutableMap()
         all.remove(uniqueId)
         context.modDataStore.edit { prefs ->
             prefs[MOD_METADATA_KEY] = serializeMetadata(all)
         }
     }
 
-    private suspend fun getAllMetadata(): Map<String, ModMetadata> = context.modDataStore.data
+    suspend fun getAllModMetadata(): Map<String, ModMetadata> = context.modDataStore.data
         .map { prefs ->
             prefs[MOD_METADATA_KEY]?.let { parseMetadata(it) } ?: emptyMap()
         }

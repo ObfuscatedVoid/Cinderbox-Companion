@@ -424,10 +424,12 @@
     <!-- Mod Browse -->
     <string name="mods_browse_title">Browse Mods</string>
     <string name="mods_search_hint">Search mods\u2026</string>
+    <string name="mods_search_minimum_characters">Enter at least 2 characters to search</string>
     <string name="mods_trending">Trending</string>
     <string name="mods_latest">Latest</string>
     <string name="mods_recently_updated">Recently Updated</string>
     <string name="mods_no_results">No mods found</string>
+    <string name="mods_load_more">Load More</string>
     <string name="mods_downloads">%1$s downloads</string>
     <string name="mods_endorsements">%1$s endorsements</string>
 
@@ -439,7 +441,9 @@
     <string name="mods_api_key_get">Get your free API key →</string>
     <string name="mods_api_key_valid">API key validated</string>
     <string name="mods_api_key_invalid">Invalid API key</string>
+    <string name="mods_api_key_validation_failed">Could not validate the API key. Please try again.</string>
     <string name="mods_api_key_remove">Remove API Key</string>
+    <string name="mods_api_key_replace">Replace API Key</string>
 
     <!-- Settings - Mods -->
     <string name="settings_mods_title">Mods</string>
@@ -480,8 +484,14 @@
     <string name="mods_error_copy_failed">Failed to copy mod files: %1$s</string>
     <string name="mods_error_mods_dir_inaccessible">Cannot access Mods directory</string>
     <string name="mods_error_api_key_required">A Nexus API key is required to browse mods</string>
+    <string name="mods_error_api_key_rejected">Nexus rejected this API key. Replace it with a valid key.</string>
+    <string name="mods_error_load_failed">Failed to load mods</string>
+    <string name="mods_error_load_more_failed">Could not load more mods</string>
     <string name="mods_error_rate_limited">Nexus API rate limit reached. Please try again later.</string>
     <string name="mods_error_network">Network error. Check your connection.</string>
+    <string name="mods_error_search_failed">Search failed</string>
+    <string name="mods_error_service_unavailable">Nexus Mods is temporarily unavailable. Please try again later.</string>
+    <string name="mods_error_incompatible_response">Nexus Mods returned an unsupported response. Check for an app update and try again later.</string>
 
     <!-- Health Check -->
     <string name="health_check_title">Save Health</string>
