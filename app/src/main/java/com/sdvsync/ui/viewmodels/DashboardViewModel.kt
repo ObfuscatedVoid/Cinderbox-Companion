@@ -12,7 +12,8 @@ import com.sdvsync.saves.SaveBundleManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
-import com.sdvsync.steam.ConnectionState
+import com.sdvsync.steam.AuthState
+import com.sdvsync.steam.SteamAuthenticator
 import com.sdvsync.steam.SteamClientManager
 import com.sdvsync.steam.SteamCloudService
 import com.sdvsync.steam.SteamSessionStore
@@ -52,6 +53,7 @@ data class DashboardState(
 class DashboardViewModel(
     private val context: Context,
     private val clientManager: SteamClientManager,
+    private val authenticator: SteamAuthenticator,
     private val cloudService: SteamCloudService,
     private val saveFileManager: SaveFileManager,
     private val metadataParser: SaveMetadataParser,
@@ -152,7 +154,16 @@ class DashboardViewModel(
                     isStagingMode = saveFileManager.isStaging
                 )
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is kotlinx.coroutines.CancellationException) {
+                    if (currentCoroutineContext().isActive) {
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            error = context.getString(R.string.error_steam_connection)
+                        )
+                    }
+                    throw e
+                }
                 AppLogger.e(TAG, "Failed to load saves", e)
                 _state.value = _state.value.copy(
                     isLoading = false,
@@ -168,9 +179,18 @@ class DashboardViewModel(
             return true
         }
 
-        if (sessionStore.hasSession() && clientManager.connectionState.value == ConnectionState.DISCONNECTED) {
-            AppLogger.d(TAG, "Saved Steam session found while disconnected, reconnecting before refresh...")
-            clientManager.reconnect()
+        if (sessionStore.hasSession()) {
+            AppLogger.d(TAG, "Saved Steam session found, resuming before refresh...")
+            authenticator.loginWithSavedSession()
+            if (clientManager.isLoggedIn) {
+                return true
+            }
+            if (authenticator.authState.value is AuthState.Error) {
+                return false
+            }
+            if (!sessionStore.hasSession()) {
+                return false
+            }
         } else {
             AppLogger.d(TAG, "Waiting for Steam login...")
         }
