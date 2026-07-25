@@ -1,6 +1,10 @@
 package com.sdvsync.steam
 
+import java.util.concurrent.Executors
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -103,5 +107,37 @@ class AuthAttemptCoordinatorTest {
         assertFalse(shouldIgnoreTransportDisconnect(callbackIsUserInitiated = true, appDisconnect = true))
         assertFalse(shouldIgnoreTransportDisconnect(callbackIsUserInitiated = false, appDisconnect = false))
         assertFalse(shouldIgnoreTransportDisconnect(callbackIsUserInitiated = false, appDisconnect = true))
+    }
+
+    @Test
+    fun `attempt owned blocking work runs on the requested dispatcher`() = runBlocking {
+        val coordinator = AuthAttemptCoordinator()
+        val attempt = requireNotNull(coordinator.tryBegin(AuthAttemptKind.CREDENTIALS, Job()))
+        val executor = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "steam-logon-io")
+        }
+
+        executor.asCoroutineDispatcher().use { dispatcher ->
+            var executionThread = ""
+
+            assertTrue(
+                coordinator.runIfActiveOn(attempt.id, dispatcher) {
+                    executionThread = Thread.currentThread().name
+                }
+            )
+            assertTrue(executionThread.startsWith("steam-logon-io"))
+        }
+    }
+
+    @Test
+    fun `cancelled attempt cannot start dispatched blocking work`() = runBlocking {
+        val coordinator = AuthAttemptCoordinator()
+        val job = Job()
+        val attempt = requireNotNull(coordinator.tryBegin(AuthAttemptKind.CREDENTIALS, job))
+        job.cancel()
+        var ran = false
+
+        assertFalse(coordinator.runIfActiveOn(attempt.id, Dispatchers.Unconfined) { ran = true })
+        assertFalse(ran)
     }
 }

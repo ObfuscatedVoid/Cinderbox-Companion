@@ -67,6 +67,7 @@ class SteamAuthenticator(
 ) {
     companion object {
         private const val TAG = "SteamAuth"
+        private const val CONNECT_TIMEOUT_MS = 30_000L
     }
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
@@ -110,26 +111,14 @@ class SteamAuthenticator(
     }
 
     private suspend fun connectWithTimeout() {
-        clientManager.reconnect()
-        try {
-            withTimeout(15_000) {
-                clientManager.connectionState.first { state ->
-                    state == ConnectionState.CONNECTED ||
-                        state == ConnectionState.LOGGED_IN
-                }
+        clientManager.connect()
+        withTimeout(CONNECT_TIMEOUT_MS) {
+            clientManager.connectionState.first { state ->
+                state == ConnectionState.CONNECTED ||
+                    state == ConnectionState.LOGGED_IN
             }
-            AppLogger.d(TAG, "Connected to CM server")
-        } catch (_: TimeoutCancellationException) {
-            AppLogger.w(TAG, "Connection timed out after 15s, retrying with new CM server...")
-            clientManager.reconnect()
-            withTimeout(15_000) {
-                clientManager.connectionState.first { state ->
-                    state == ConnectionState.CONNECTED ||
-                        state == ConnectionState.LOGGED_IN
-                }
-            }
-            AppLogger.d(TAG, "Connected to CM server on retry")
         }
+        AppLogger.d(TAG, "Connected to CM server")
     }
 
     private fun isClockValid(): Boolean {
@@ -188,6 +177,9 @@ class SteamAuthenticator(
             cancelPendingInput(attempt.id)
             clearPendingLogOn(attempt.id)
             authAttempts.finish(attempt) {
+                if (job.isCancelled) {
+                    clientManager.cancelConnectingAttempt()
+                }
                 if (job.isCancelled && _authState.value.isTransientAttemptState()) {
                     _authState.value = AuthState.Idle
                 }
@@ -519,7 +511,7 @@ class SteamAuthenticator(
         }
 
         try {
-            val initiated = authAttempts.runIfActive(attempt.id) {
+            val initiated = authAttempts.runIfActiveOn(attempt.id, Dispatchers.IO) {
                 check(pendingLogOn.compareAndSet(null, pending)) {
                     "Another Steam logon callback is already pending"
                 }
@@ -593,7 +585,7 @@ class SteamAuthenticator(
     private fun onLoggedOff(callback: LoggedOffCallback) {
         AppLogger.d(TAG, "Logged off: ${callback.result}")
         wasLoggedIn = false
-        clientManager.onDisconnected(userInitiated = false)
+        clientManager.onLoggedOff()
         if (handleActiveConnectionLoss(_authState.value)) {
             return
         }
@@ -602,19 +594,34 @@ class SteamAuthenticator(
 
     private fun onDisconnected(callback: DisconnectedCallback) {
         val appDisconnect = isUserDisconnect
+        val userInitiated = appDisconnect || callback.isUserInitiated
+        val currentAuthState = _authState.value
+        val disposition = clientManager.onDisconnected(userInitiated = userInitiated)
+        if (disposition == DisconnectDisposition.RETRY_PENDING) {
+            val attempt = authAttempts.activeAttempt()
+            var fallbackStarted = false
+            if (attempt != null && currentAuthState is AuthState.Connecting) {
+                authAttempts.runIfActive(attempt.id) {
+                    if (_authState.value is AuthState.Connecting) {
+                        fallbackStarted = clientManager.retryPendingConnection()
+                    }
+                }
+            }
+            if (fallbackStarted) {
+                AppLogger.d(TAG, "Initial CM connection failed; continuing with the fallback transport")
+                return
+            }
+            clientManager.abandonPendingRetry()
+        }
         if (shouldIgnoreTransportDisconnect(callback.isUserInitiated, appDisconnect)) {
             AppLogger.d(TAG, "Ignoring intentional disconnect used to replace the Steam transport")
             return
         }
 
-        val userInitiated = appDisconnect || callback.isUserInitiated
-        val currentAuthState = _authState.value
         AppLogger.d(
             TAG,
             "Disconnected (userInitiated=$userInitiated, wasLoggedIn=$wasLoggedIn, authState=${currentAuthState::class.simpleName})"
         )
-        clientManager.onDisconnected(userInitiated = userInitiated)
-
         if (handleActiveConnectionLoss(currentAuthState)) {
             return
         }
@@ -642,7 +649,7 @@ class SteamAuthenticator(
         if (authAttempts.activeAttempt() == null) {
             return false
         }
-        if (currentAuthState is AuthState.Connecting || currentAuthState is AuthState.Error) {
+        if (currentAuthState is AuthState.Error) {
             return true
         }
         if (currentAuthState is AuthState.LoggedIn) {
@@ -652,7 +659,12 @@ class SteamAuthenticator(
         val cancelled = authAttempts.cancelActive() ?: return true
         cancelPendingInput(cancelled.id)
         clearPendingLogOn(cancelled.id)
-        _authState.value = AuthState.Error(context.getString(R.string.error_steam_disconnected_login))
+        val message = if (currentAuthState is AuthState.Connecting) {
+            context.getString(R.string.error_steam_connection)
+        } else {
+            context.getString(R.string.error_steam_disconnected_login)
+        }
+        _authState.value = AuthState.Error(message)
         return true
     }
 

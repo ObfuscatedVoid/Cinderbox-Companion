@@ -5,7 +5,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToLong
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 
 internal enum class AuthAttemptKind {
     RESUME_SESSION,
@@ -40,6 +42,11 @@ internal class AuthAttemptCoordinator {
         action()
         true
     }
+
+    suspend fun runIfActiveOn(attemptId: Long, dispatcher: CoroutineDispatcher, action: () -> Unit): Boolean =
+        withContext(dispatcher) {
+            runIfActive(attemptId, action)
+        }
 
     fun finish(attempt: AuthAttemptToken, beforeFinish: () -> Unit = {}): Boolean = synchronized(lock) {
         if (active != attempt) {
