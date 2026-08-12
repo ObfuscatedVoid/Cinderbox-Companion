@@ -2,6 +2,7 @@
 agp = "8.10.1"
 kotlin = "2.1.0"
 ktlint = "14.0.1"
+junit = "4.13.2"
 
 # AndroidX
 coreKtx = "1.15.0"
@@ -15,10 +16,12 @@ documentfile = "1.0.1"
 
 # Steam
 javasteam = "1.8.0"
+protobuf = "4.31.1"
 spongycastle = "1.58.0.0"
 
 # Networking
 okhttp = "4.12.0"
+ktor = "3.3.3"
 
 # DI
 koin = "3.5.6"
@@ -67,10 +70,14 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 # Steam
 javasteam = { group = "in.dragonbra", name = "javasteam", version.ref = "javasteam" }
 javasteam-depotdownloader = { group = "in.dragonbra", name = "javasteam-depotdownloader", version.ref = "javasteam" }
+protobuf-java = { group = "com.google.protobuf", name = "protobuf-java", version.ref = "protobuf" }
 spongycastle = { group = "com.madgag.spongycastle", name = "prov", version.ref = "spongycastle" }
 
 # Networking
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor" }
+ktor-client-websockets = { group = "io.ktor", name = "ktor-client-websockets", version.ref = "ktor" }
 
 # DI
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
@@ -97,6 +104,9 @@ androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", ve
 # Shizuku
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
 shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
+
+# Testing
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

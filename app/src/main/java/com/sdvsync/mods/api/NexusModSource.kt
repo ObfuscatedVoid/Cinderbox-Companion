@@ -1,6 +1,6 @@
 package com.sdvsync.mods.api
 
-import com.sdvsync.logging.AppLogger
+import com.sdvsync.BuildConfig
 import com.sdvsync.mods.ModDataStore
 import com.sdvsync.mods.models.ModSearchResult
 import com.sdvsync.mods.models.RemoteMod
@@ -23,110 +23,87 @@ import org.json.JSONObject
 class NexusModSource(private val httpClient: OkHttpClient, private val dataStore: ModDataStore) : ModSource {
 
     companion object {
-        private const val TAG = "NexusModSource"
         private const val BASE_URL = "https://api.nexusmods.com/v1"
         private const val GRAPHQL_URL = "https://api.nexusmods.com/v2/graphql"
         private const val GAME_DOMAIN = "stardewvalley"
-        private const val GAME_ID = 1303 // Nexus GraphQL gameId for SDV
-        private const val CACHE_DURATION_MS = 60 * 60 * 1000L // 1 hour
+        private const val APPLICATION_NAME = "Cinderbox Companion"
+        private const val CACHE_DURATION_MS = 60 * 60 * 1000L
     }
 
     override val sourceId = "nexus"
     override val displayName = "Nexus Mods"
 
-    // In-memory cache for list endpoints
     private val cacheMutex = Mutex()
     private var trendingCache: Pair<Long, List<RemoteMod>>? = null
     private var latestAddedCache: Pair<Long, List<RemoteMod>>? = null
     private var latestUpdatedCache: Pair<Long, List<RemoteMod>>? = null
 
-    private fun getApiKey(): String? = dataStore.getNexusApiKey()
+    private fun getApiKey(): String? = dataStore.getNexusApiKey()?.trim()?.takeIf(String::isNotEmpty)
 
     override suspend fun validateApiKey(apiKey: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url("$BASE_URL/users/validate.json")
-                .header("apikey", apiKey)
-                .get()
-                .build()
-            val response = httpClient.newCall(request).execute()
-            response.use { it.isSuccessful }
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "API key validation failed", e)
-            false
+        val normalizedApiKey = apiKey.trim()
+        if (normalizedApiKey.isEmpty()) {
+            throw NexusApiException(
+                NexusApiFailure.API_KEY_REQUIRED,
+                message = "A Nexus API key is required for validation"
+            )
+        }
+
+        val request = nexusRequest("$BASE_URL/users/validate.json", normalizedApiKey)
+            .get()
+            .build()
+        httpClient.newCall(request).execute().use { response ->
+            handleApiKeyValidationResponse(response.code, response.body?.string().orEmpty())
         }
     }
 
     override suspend fun search(query: String, page: Int): ModSearchResult = withContext(Dispatchers.IO) {
-        val apiKey = getApiKey() ?: throw IllegalStateException("No API key configured")
+        val apiKey = getApiKey() ?: throw missingApiKeyException()
 
-        val graphqlQuery = """
-            query SearchMods(${'$'}search: String!, ${'$'}gameId: Int!) {
-              mods(
-                filter: { gameId: { value: ${'$'}gameId, op: EQUALS } }
-                searchQuery: ${'$'}search
-                sort: { endorsements: DESC }
-              ) {
-                nodes {
-                  modId
-                  name
-                  summary
-                  author
-                  pictureUrl
-                  endorsementCount
-                  modDownloadCount
-                  updatedAt
-                  version
-                  categoryName
-                }
-                totalCount
-              }
-            }
-        """.trimIndent()
-
-        val variables = JSONObject().apply {
-            put("search", query)
-            put("gameId", GAME_ID)
+        val normalizedQuery = query.trim()
+        require(normalizedQuery.length >= NEXUS_MIN_SEARCH_QUERY_LENGTH) {
+            "Nexus search requires at least $NEXUS_MIN_SEARCH_QUERY_LENGTH characters"
         }
+        val operation = createNexusSearchOperation(normalizedQuery, page)
+        val variables = JSONObject(operation.variables)
 
         val body = JSONObject().apply {
-            put("query", graphqlQuery)
+            put("query", operation.document)
             put("variables", variables)
         }
 
-        val request = Request.Builder()
-            .url(GRAPHQL_URL)
-            .header("apikey", apiKey)
+        val request = nexusRequest(GRAPHQL_URL, apiKey)
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
-        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
-            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
-        }
-        if (!isSuccessful) {
-            val msg = try {
-                JSONObject(bodyString).optString("message", "HTTP $code")
-            } catch (
-                _: Exception
-            ) {
-                "HTTP $code"
-            }
-            throw IllegalStateException(msg)
-        }
-        val json = JSONObject(bodyString)
+        val bodyString = executeRequest(request)
+        val json = parseJsonObject(bodyString, "GraphQL")
 
-        // Check for GraphQL errors (API returns 200 with errors array)
         val errors = json.optJSONArray("errors")
         if (errors != null && errors.length() > 0) {
             val msg = errors.optJSONObject(0)?.optString("message", "Unknown GraphQL error")
                 ?: "Unknown GraphQL error"
-            throw IllegalStateException(msg)
+            throw NexusApiException(NexusApiFailure.GRAPHQL, message = msg)
         }
 
         val data = json.optJSONObject("data")?.optJSONObject("mods")
-            ?: throw IllegalStateException("Unexpected API response format")
-        val nodes = data.optJSONArray("nodes") ?: JSONArray()
+            ?: throw NexusApiException(
+                NexusApiFailure.INVALID_RESPONSE,
+                message = "Unexpected Nexus GraphQL response format"
+            )
+        val nodes = data.optJSONArray("nodes")
+            ?: throw NexusApiException(
+                NexusApiFailure.INVALID_RESPONSE,
+                message = "Nexus GraphQL response did not contain mod nodes"
+            )
+        if (!data.has("totalCount")) {
+            throw NexusApiException(
+                NexusApiFailure.INVALID_RESPONSE,
+                message = "Nexus GraphQL response did not contain a total count"
+            )
+        }
         val totalCount = data.optInt("totalCount", 0)
+        val offset = operation.variables.getValue("offset") as Int
 
         val mods = (0 until nodes.length()).mapNotNull { i ->
             val node = nodes.optJSONObject(i) ?: return@mapNotNull null
@@ -138,7 +115,7 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
                 summary = node.optString("summary", ""),
                 version = node.optString("version", ""),
                 categoryName = node.optString("categoryName", "")
-                    .takeIf { it.isNotBlank() },
+                    .takeIf { it != "null" && it.isNotBlank() },
                 pictureUrl = node.optString("pictureUrl", "")
                     .takeIf { it != "null" && it.isNotBlank() },
                 endorsements = node.optInt("endorsementCount", 0),
@@ -150,7 +127,7 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
         ModSearchResult(
             mods = mods,
             totalResults = totalCount,
-            hasMore = nodes.length() < totalCount
+            hasMore = offset + nodes.length() < totalCount
         )
     }
 
@@ -171,55 +148,25 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
     }
 
     override suspend fun getModDetails(modId: String): RemoteMod = withContext(Dispatchers.IO) {
-        val apiKey = getApiKey() ?: throw IllegalStateException("No API key configured")
+        val apiKey = getApiKey() ?: throw missingApiKeyException()
 
-        val request = Request.Builder()
-            .url("$BASE_URL/games/$GAME_DOMAIN/mods/$modId.json")
-            .header("apikey", apiKey)
+        val request = nexusRequest("$BASE_URL/games/$GAME_DOMAIN/mods/$modId.json", apiKey)
             .get()
             .build()
 
-        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
-            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
-        }
-        if (!isSuccessful) {
-            val msg = try {
-                JSONObject(bodyString).optString("message", "HTTP $code")
-            } catch (
-                _: Exception
-            ) {
-                "HTTP $code"
-            }
-            throw IllegalStateException(msg)
-        }
-        val json = JSONObject(bodyString)
+        val json = parseJsonObject(executeRequest(request), "mod details")
 
         parseModFromV1(json)
     }
 
     override suspend fun getModFiles(modId: String): List<RemoteModFile> = withContext(Dispatchers.IO) {
-        val apiKey = getApiKey() ?: throw IllegalStateException("No API key configured")
+        val apiKey = getApiKey() ?: throw missingApiKeyException()
 
-        val request = Request.Builder()
-            .url("$BASE_URL/games/$GAME_DOMAIN/mods/$modId/files.json")
-            .header("apikey", apiKey)
+        val request = nexusRequest("$BASE_URL/games/$GAME_DOMAIN/mods/$modId/files.json", apiKey)
             .get()
             .build()
 
-        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
-            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
-        }
-        if (!isSuccessful) {
-            val msg = try {
-                JSONObject(bodyString).optString("message", "HTTP $code")
-            } catch (
-                _: Exception
-            ) {
-                "HTTP $code"
-            }
-            throw IllegalStateException(msg)
-        }
-        val json = JSONObject(bodyString)
+        val json = parseJsonObject(executeRequest(request), "mod files")
         val files = json.optJSONArray("files") ?: JSONArray()
 
         (0 until files.length()).mapNotNull { i ->
@@ -257,7 +204,7 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
      */
     suspend fun getDownloadUrl(modId: String, fileId: String, nxmKey: String?, nxmExpires: String?): String =
         withContext(Dispatchers.IO) {
-            val apiKey = getApiKey() ?: throw IllegalStateException("No API key configured")
+            val apiKey = getApiKey() ?: throw missingApiKeyException()
 
             val baseUrl = "$BASE_URL/games/$GAME_DOMAIN/mods/$modId/files/$fileId/download_link.json"
             val url = if (nxmKey != null && nxmExpires != null) {
@@ -266,26 +213,11 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
                 baseUrl
             }
 
-            val request = Request.Builder()
-                .url(url)
-                .header("apikey", apiKey)
+            val request = nexusRequest(url, apiKey)
                 .get()
                 .build()
 
-            val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
-                Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
-            }
-            if (!isSuccessful) {
-                val msg = try {
-                    JSONObject(bodyString).optString("message", "HTTP $code")
-                } catch (
-                    _: Exception
-                ) {
-                    "HTTP $code"
-                }
-                throw IllegalStateException(msg)
-            }
-            val json = JSONArray(bodyString)
+            val json = parseJsonArray(executeRequest(request), "download links")
 
             if (json.length() == 0) throw IllegalStateException("No download links available")
 
@@ -294,31 +226,14 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
                 ?: throw IllegalStateException("No download URL in response")
         }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
-
     private suspend fun fetchModList(url: String): List<RemoteMod> = withContext(Dispatchers.IO) {
-        val apiKey = getApiKey() ?: throw IllegalStateException("No API key configured")
+        val apiKey = getApiKey() ?: throw missingApiKeyException()
 
-        val request = Request.Builder()
-            .url(url)
-            .header("apikey", apiKey)
+        val request = nexusRequest(url, apiKey)
             .get()
             .build()
 
-        val (bodyString, code, isSuccessful) = httpClient.newCall(request).execute().use {
-            Triple(it.body?.string() ?: "", it.code, it.isSuccessful)
-        }
-        if (!isSuccessful) {
-            val msg = try {
-                JSONObject(bodyString).optString("message", "HTTP $code")
-            } catch (
-                _: Exception
-            ) {
-                "HTTP $code"
-            }
-            throw IllegalStateException(msg)
-        }
-        val json = JSONArray(bodyString)
+        val json = parseJsonArray(executeRequest(request), "mod list")
 
         (0 until json.length()).mapNotNull { i ->
             val obj = json.optJSONObject(i) ?: return@mapNotNull null
@@ -340,6 +255,43 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
         downloads = json.optInt("mod_downloads", 0),
         lastUpdated = json.optLong("updated_timestamp", 0) * 1000
     )
+
+    private fun missingApiKeyException() = NexusApiException(
+        NexusApiFailure.API_KEY_REQUIRED,
+        message = "No Nexus API key configured"
+    )
+
+    private fun nexusRequest(url: String, apiKey: String): Request.Builder = Request.Builder()
+        .url(url)
+        .header("apikey", apiKey)
+        .header("Application-Name", APPLICATION_NAME)
+        .header("Application-Version", BuildConfig.VERSION_NAME)
+
+    private fun executeRequest(request: Request): String = httpClient.newCall(request).execute().use { response ->
+        val body = response.body?.string().orEmpty()
+        if (!response.isSuccessful) throw nexusHttpException(response.code, body)
+        body
+    }
+
+    private fun parseJsonObject(body: String, endpoint: String): JSONObject = try {
+        JSONObject(body)
+    } catch (e: Exception) {
+        throw NexusApiException(
+            NexusApiFailure.INVALID_RESPONSE,
+            message = "Nexus $endpoint response was not a JSON object",
+            cause = e
+        )
+    }
+
+    private fun parseJsonArray(body: String, endpoint: String): JSONArray = try {
+        JSONArray(body)
+    } catch (e: Exception) {
+        throw NexusApiException(
+            NexusApiFailure.INVALID_RESPONSE,
+            message = "Nexus $endpoint response was not a JSON array",
+            cause = e
+        )
+    }
 
     private suspend fun getCachedOrFetch(
         cache: Pair<Long, List<RemoteMod>>?,

@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sdvsync.sync.SyncDirection
@@ -481,8 +483,6 @@ val ImportData = arrayOf(
     intArrayOf(0, 1, 1, 1, 1, 1, 0, 0, 0, 0)
 )
 
-// ── Convenience composables ─────────────────────────────────────────────
-
 /**
  * Pixel art icon button for toolbars.
  * Uses a single-color palette (color index 1).
@@ -496,7 +496,10 @@ fun PixelIconButton(
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     size: Dp = 20.dp
 ) {
-    IconButton(onClick = onClick, modifier = modifier) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.semantics { this.contentDescription = contentDescription }
+    ) {
         PixelIcon(
             pixelData = pixelData,
             palette = listOf(Color.Transparent, tint),

@@ -2,7 +2,7 @@ package com.sdvsync.ui.components
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,8 +24,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.sdvsync.R
+import com.sdvsync.fileaccess.AllFilesAccess
 
 @Composable
 fun StoragePermissionDialog(onPermissionResult: () -> Unit, onDismiss: () -> Unit) {
@@ -35,7 +37,7 @@ fun StoragePermissionDialog(onPermissionResult: () -> Unit, onDismiss: () -> Uni
     ) { /* handled by LifecycleResumeEffect below */ }
 
     LifecycleResumeEffect(Unit) {
-        if (android.os.Environment.isExternalStorageManager()) onPermissionResult()
+        if (AllFilesAccess.isPermissionGranted()) onPermissionResult()
         onPauseOrDispose {}
     }
 
@@ -65,15 +67,17 @@ fun StoragePermissionDialog(onPermissionResult: () -> Unit, onDismiss: () -> Uni
                     Spacer(Modifier.width(8.dp))
                     StardewButton(
                         onClick = {
-                            try {
-                                val intent = Intent(
-                                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                    Uri.parse("package:${context.packageName}")
-                                )
-                                launcher.launch(intent)
-                            } catch (_: ActivityNotFoundException) {
-                                val fallback = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                launcher.launch(fallback)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                try {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                        "package:${context.packageName}".toUri()
+                                    )
+                                    launcher.launch(intent)
+                                } catch (_: ActivityNotFoundException) {
+                                    val fallback = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    launcher.launch(fallback)
+                                }
                             }
                         },
                         variant = StardewButtonVariant.Action

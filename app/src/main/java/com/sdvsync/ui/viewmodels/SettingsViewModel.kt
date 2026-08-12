@@ -2,8 +2,10 @@ package com.sdvsync.ui.viewmodels
 
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sdvsync.R
 import com.sdvsync.autosync.AutoSyncService
 import com.sdvsync.download.AppUpdateManager
 import com.sdvsync.download.GitHubReleaseChecker
@@ -12,10 +14,12 @@ import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.fileaccess.RootFileAccess
 import com.sdvsync.fileaccess.SAFFileAccess
 import com.sdvsync.fileaccess.ShizukuFileAccess
+import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModDataStore
 import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.steam.SteamAuthenticator
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,7 +50,7 @@ data class SettingsState(
     val hasNexusApiKey: Boolean = false,
     val nexusApiKeyMasked: String? = null,
     val isValidatingApiKey: Boolean = false,
-    val apiKeyError: String? = null,
+    @StringRes val apiKeyErrorRes: Int? = null,
     val installedCinderboxVersion: String? = null,
     val installedSmapiVersion: String? = null,
     val latestCinderboxVersion: String? = null,
@@ -68,6 +72,10 @@ class SettingsViewModel(
     private val appUpdateManager: AppUpdateManager
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "SettingsVM"
+    }
+
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
 
@@ -78,7 +86,7 @@ class SettingsViewModel(
             val shizukuRunning = ShizukuFileAccess.isRunning()
             val shizukuPermission = ShizukuFileAccess.isPermissionGranted()
 
-            val apiKey = modDataStore.getNexusApiKey()
+            val apiKey = modDataStore.getNexusApiKey()?.trim()?.takeIf(String::isNotEmpty)
             val maskedKey = apiKey?.let {
                 if (it.length > 4) "****${it.takeLast(4)}" else "****"
             }
@@ -135,7 +143,7 @@ class SettingsViewModel(
                         )
                     )
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) { }
         }
@@ -205,21 +213,36 @@ class SettingsViewModel(
     }
 
     fun validateAndSaveApiKey(key: String) {
+        val normalizedKey = key.trim()
+        if (normalizedKey.isEmpty()) return
+
         viewModelScope.launch(Dispatchers.IO) {
-            _state.update { it.copy(isValidatingApiKey = true, apiKeyError = null) }
+            _state.update { it.copy(isValidatingApiKey = true, apiKeyErrorRes = null) }
             try {
-                val valid = nexusSource.validateApiKey(key.trim())
+                val valid = nexusSource.validateApiKey(normalizedKey)
                 if (valid) {
-                    modDataStore.setNexusApiKey(key.trim())
+                    modDataStore.setNexusApiKey(normalizedKey)
                     load()
                 } else {
                     _state.update {
-                        it.copy(isValidatingApiKey = false, apiKeyError = "Invalid API key")
+                        it.copy(
+                            isValidatingApiKey = false,
+                            apiKeyErrorRes = R.string.mods_api_key_invalid
+                        )
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Nexus API key validation failed", e)
                 _state.update {
-                    it.copy(isValidatingApiKey = false, apiKeyError = "Validation failed. Check your connection.")
+                    it.copy(
+                        isValidatingApiKey = false,
+                        apiKeyErrorRes = classifyNexusError(
+                            e,
+                            R.string.mods_api_key_validation_failed
+                        ).messageRes
+                    )
                 }
             }
         }
@@ -233,7 +256,7 @@ class SettingsViewModel(
     }
 
     fun clearApiKeyError() {
-        _state.update { it.copy(apiKeyError = null) }
+        _state.update { it.copy(apiKeyErrorRes = null) }
     }
 
     fun toggleUpdateCheck(enabled: Boolean) {

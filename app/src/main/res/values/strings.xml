@@ -11,25 +11,28 @@
     <string name="action_push">Push</string>
 
     <!-- Login -->
+    <string name="login_brand_tagline">Stardew Valley Save Sync</string>
+    <string name="steam_device_name">Cinderbox Companion for Android</string>
     <string name="login_title">Cinderbox Companion \u2014 Steam Login</string>
     <string name="login_username_hint">Steam Username</string>
     <string name="login_password_hint">Password</string>
     <string name="login_button">Log In</string>
-    <string name="login_remember_me">Remember me</string>
-    <string name="login_2fa_title">Steam Guard Code</string>
-    <string name="login_2fa_hint">Enter code</string>
-    <string name="login_2fa_email_hint">Enter code from email</string>
-    <string name="login_2fa_mobile_hint">Enter code from Steam app</string>
     <string name="login_2fa_steam_guard">Enter your Steam Guard code</string>
     <string name="login_2fa_email_prompt">Enter the code sent to your email</string>
     <string name="login_2fa_label">Code</string>
     <string name="login_2fa_submit">Submit Code</string>
+    <string name="login_2fa_incorrect">That code was not accepted. Enter a new Steam Guard code.</string>
+    <string name="login_device_confirmation_title">Approve the sign-in in Steam</string>
+    <string name="login_device_confirmation_prompt">Open the Steam mobile app and approve this sign-in. Then return here and continue.</string>
+    <string name="login_device_confirmation_continue">I’ve Approved It</string>
+    <string name="login_device_confirmation_use_code">Use a Steam Guard Code</string>
     <string name="login_connecting">Connecting to Steam\u2026</string>
     <string name="login_authenticating">Authenticating\u2026</string>
     <string name="login_logging_in">Logging in\u2026</string>
     <string name="login_qr_button">Sign in with QR Code</string>
     <string name="login_or_divider">or</string>
-    <string name="login_toggle_password">Toggle password visibility</string>
+    <string name="login_show_password">Show password</string>
+    <string name="login_hide_password">Hide password</string>
     <string name="login_qr_title">Scan with Steam Mobile App</string>
     <string name="login_qr_instructions">Open the Steam app on your phone,\ntap the shield icon, then \&quot;Approve a sign-in\&quot;</string>
     <string name="login_qr_content_description">Steam login QR code</string>
@@ -227,22 +230,16 @@
     <string name="error_load_saves_failed">Failed to load saves: %1$s</string>
     <string name="error_no_internet">No internet connection</string>
     <string name="error_steam_connection">Could not connect to Steam. Please try again.</string>
-    <string name="error_steam_connection_timeout">Connection timed out</string>
+    <string name="error_steam_disconnected_login">Steam disconnected during login. Please try again.</string>
     <string name="error_clock_invalid">Your device date and time are incorrect. Please enable automatic date/time in Settings.</string>
-    <string name="error_clock_invalid_short">Incorrect device clock</string>
-    <string name="error_connection">Connection error: %1$s</string>
-    <string name="error_auth_failed">Authentication failed: %1$s</string>
+    <string name="error_auth_failed_generic">Steam authentication failed. Check your credentials and try again.</string>
     <string name="error_qr_expired">QR login expired. Try again.</string>
-    <string name="error_qr_expired_short">QR session expired</string>
-    <string name="error_qr_failed">QR login failed: %1$s</string>
-    <string name="error_login_failed">Login failed: %1$s</string>
+    <string name="error_qr_failed_generic">QR login failed. Please try again.</string>
     <string name="error_steamguard_email">Steam Guard email code required</string>
     <string name="error_steamguard_mobile">Steam Guard mobile code required</string>
     <string name="error_invalid_password">Invalid password or expired token</string>
     <string name="error_2fa_mismatch">Invalid 2FA code</string>
     <string name="error_session_expired">Session expired, please log in again</string>
-    <string name="error_invalid_credentials">Invalid username or password</string>
-    <string name="error_2fa_required">Steam Guard code required</string>
     <string name="error_file_access">Cannot access save files. Check file access settings.</string>
     <string name="error_sdv_not_installed">Stardew Valley is not installed</string>
     <string name="error_save_corrupt">Save file appears corrupt</string>
@@ -427,10 +424,12 @@
     <!-- Mod Browse -->
     <string name="mods_browse_title">Browse Mods</string>
     <string name="mods_search_hint">Search mods\u2026</string>
+    <string name="mods_search_minimum_characters">Enter at least 2 characters to search</string>
     <string name="mods_trending">Trending</string>
     <string name="mods_latest">Latest</string>
     <string name="mods_recently_updated">Recently Updated</string>
     <string name="mods_no_results">No mods found</string>
+    <string name="mods_load_more">Load More</string>
     <string name="mods_downloads">%1$s downloads</string>
     <string name="mods_endorsements">%1$s endorsements</string>
 
@@ -442,7 +441,9 @@
     <string name="mods_api_key_get">Get your free API key →</string>
     <string name="mods_api_key_valid">API key validated</string>
     <string name="mods_api_key_invalid">Invalid API key</string>
+    <string name="mods_api_key_validation_failed">Could not validate the API key. Please try again.</string>
     <string name="mods_api_key_remove">Remove API Key</string>
+    <string name="mods_api_key_replace">Replace API Key</string>
 
     <!-- Settings - Mods -->
     <string name="settings_mods_title">Mods</string>
@@ -483,8 +484,14 @@
     <string name="mods_error_copy_failed">Failed to copy mod files: %1$s</string>
     <string name="mods_error_mods_dir_inaccessible">Cannot access Mods directory</string>
     <string name="mods_error_api_key_required">A Nexus API key is required to browse mods</string>
+    <string name="mods_error_api_key_rejected">Nexus rejected this API key. Replace it with a valid key.</string>
+    <string name="mods_error_load_failed">Failed to load mods</string>
+    <string name="mods_error_load_more_failed">Could not load more mods</string>
     <string name="mods_error_rate_limited">Nexus API rate limit reached. Please try again later.</string>
     <string name="mods_error_network">Network error. Check your connection.</string>
+    <string name="mods_error_search_failed">Search failed</string>
+    <string name="mods_error_service_unavailable">Nexus Mods is temporarily unavailable. Please try again later.</string>
+    <string name="mods_error_incompatible_response">Nexus Mods returned an unsupported response. Check for an app update and try again later.</string>
 
     <!-- Health Check -->
     <string name="health_check_title">Save Health</string>

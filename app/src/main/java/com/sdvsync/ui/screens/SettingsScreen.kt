@@ -1,7 +1,7 @@
 package com.sdvsync.ui.screens
 
 import android.content.Intent
-import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.sdvsync.BuildConfig
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
@@ -227,11 +228,13 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                     permissionGranted = state.allFilesPermissionGranted,
                     accessWorking = state.allFilesAccessWorking,
                     onGrantPermission = {
-                        val intent = Intent(
-                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                            Uri.parse("package:${context.packageName}")
-                        )
-                        allFilesLauncher.launch(intent)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            val intent = Intent(
+                                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                "package:${context.packageName}".toUri()
+                            )
+                            allFilesLauncher.launch(intent)
+                        }
                     }
                 )
             }
@@ -335,7 +338,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                 hasKey = state.hasNexusApiKey,
                 maskedKey = state.nexusApiKeyMasked,
                 isValidating = state.isValidatingApiKey,
-                error = state.apiKeyError,
+                errorRes = state.apiKeyErrorRes,
                 onSaveKey = { viewModel.validateAndSaveApiKey(it) },
                 onRemoveKey = { viewModel.removeNexusApiKey() },
                 onClearError = { viewModel.clearApiKeyError() }
@@ -583,7 +586,7 @@ private fun NexusApiKeySection(
     hasKey: Boolean,
     maskedKey: String?,
     isValidating: Boolean,
-    error: String?,
+    errorRes: Int?,
     onSaveKey: (String) -> Unit,
     onRemoveKey: () -> Unit,
     onClearError: () -> Unit
@@ -608,18 +611,34 @@ private fun NexusApiKeySection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                if (isValidating) {
+                    Spacer(Modifier.height(8.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                }
+                errorRes?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(it),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StardewOutlinedButton(onClick = {
-                        keyInput = ""
-                        onClearError()
-                        showChangeDialog = true
-                    }) {
+                    StardewOutlinedButton(
+                        onClick = {
+                            keyInput = ""
+                            onClearError()
+                            showChangeDialog = true
+                        },
+                        enabled = !isValidating
+                    ) {
                         Text(stringResource(R.string.settings_nexus_key_change))
                     }
                     StardewButton(
                         onClick = onRemoveKey,
-                        variant = StardewButtonVariant.Danger
+                        variant = StardewButtonVariant.Danger,
+                        enabled = !isValidating
                     ) {
                         Text(stringResource(R.string.settings_nexus_key_remove))
                     }
@@ -641,9 +660,9 @@ private fun NexusApiKeySection(
                     singleLine = true,
                     shape = RectangleShape,
                     modifier = Modifier.fillMaxWidth(),
-                    isError = error != null,
-                    supportingText = if (error != null) {
-                        { Text(error) }
+                    isError = errorRes != null,
+                    supportingText = if (errorRes != null) {
+                        { Text(stringResource(errorRes)) }
                     } else {
                         null
                     }
@@ -677,7 +696,6 @@ private fun NexusApiKeySection(
         }
     }
 
-    // Change key dialog
     if (showChangeDialog) {
         AlertDialog(
             onDismissRequest = { showChangeDialog = false },
@@ -694,9 +712,9 @@ private fun NexusApiKeySection(
                         singleLine = true,
                         shape = RectangleShape,
                         modifier = Modifier.fillMaxWidth(),
-                        isError = error != null,
-                        supportingText = if (error != null) {
-                            { Text(error) }
+                        isError = errorRes != null,
+                        supportingText = if (errorRes != null) {
+                            { Text(stringResource(errorRes)) }
                         } else {
                             null
                         }

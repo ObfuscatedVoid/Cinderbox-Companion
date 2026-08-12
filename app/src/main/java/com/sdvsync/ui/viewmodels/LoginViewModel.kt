@@ -2,7 +2,6 @@ package com.sdvsync.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sdvsync.steam.AuthEvent
 import com.sdvsync.steam.AuthState
 import com.sdvsync.steam.SteamAuthenticator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,24 +22,14 @@ class LoginViewModel(private val authenticator: SteamAuthenticator) : ViewModel(
     private val _twoFactorCode = MutableStateFlow("")
     val twoFactorCode: StateFlow<String> = _twoFactorCode.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            authenticator.events.collect { event ->
-                when (event) {
-                    is AuthEvent.LoginSuccess -> { /* Navigation handled by UI */ }
-                    is AuthEvent.LoginFailed -> { /* Error shown via authState */ }
-                    is AuthEvent.Disconnected -> { /* Shown via authState */ }
-                }
-            }
-        }
-    }
-
     fun updateUsername(value: String) {
         _username.value = value
     }
+
     fun updatePassword(value: String) {
         _password.value = value
     }
+
     fun updateTwoFactorCode(value: String) {
         _twoFactorCode.value = value
     }
@@ -61,9 +50,20 @@ class LoginViewModel(private val authenticator: SteamAuthenticator) : ViewModel(
         authenticator.cancelQRLogin()
     }
 
-    fun submit2FA() {
-        authenticator.submit2FACode(_twoFactorCode.value)
-        _twoFactorCode.value = ""
+    fun confirmDeviceApproval() {
+        authenticator.submitDeviceConfirmation(useMobileApproval = true)
+    }
+
+    fun useSteamGuardCode() {
+        authenticator.submitDeviceConfirmation(useMobileApproval = false)
+    }
+
+    fun submit2FA(): Boolean {
+        val submitted = authenticator.submit2FACode(_twoFactorCode.value)
+        if (submitted) {
+            _twoFactorCode.value = ""
+        }
+        return submitted
     }
 
     fun tryResumeSession() {

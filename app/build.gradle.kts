@@ -100,11 +100,15 @@ dependencies {
     // Steam
     implementation(libs.javasteam)
     implementation(libs.javasteam.depotdownloader)
+    implementation(libs.protobuf.java)
     implementation(libs.spongycastle)
     implementation(libs.xz)
 
     // Networking
     implementation(libs.okhttp)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.websockets)
 
     // DI
     implementation(libs.koin.android)
@@ -128,6 +132,9 @@ dependencies {
     // Shizuku
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
+
+    // Testing
+    testImplementation(libs.junit)
 }
 
 ktlint { android.set(true) }

@@ -6,29 +6,46 @@ import android.net.NetworkCapabilities
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import `in`.dragonbra.javasteam.enums.EResult
-import `in`.dragonbra.javasteam.steam.authentication.*
+import `in`.dragonbra.javasteam.protobufs.steamclient.SteammessagesAuthSteamclient.EAuthSessionGuardType
+import `in`.dragonbra.javasteam.steam.authentication.AuthPollResult
+import `in`.dragonbra.javasteam.steam.authentication.AuthSession
+import `in`.dragonbra.javasteam.steam.authentication.AuthSessionDetails
+import `in`.dragonbra.javasteam.steam.authentication.AuthenticationException
+import `in`.dragonbra.javasteam.steam.authentication.CredentialsAuthSession
+import `in`.dragonbra.javasteam.steam.authentication.IChallengeUrlChanged
+import `in`.dragonbra.javasteam.steam.authentication.QrAuthSession
+import `in`.dragonbra.javasteam.steam.authentication.SteamAuthentication
 import `in`.dragonbra.javasteam.steam.handlers.steamapps.callback.LicenseListCallback
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.LogOnDetails
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.callback.LoggedOffCallback
 import `in`.dragonbra.javasteam.steam.handlers.steamuser.callback.LoggedOnCallback
 import `in`.dragonbra.javasteam.steam.steamclient.callbacks.ConnectedCallback
 import `in`.dragonbra.javasteam.steam.steamclient.callbacks.DisconnectedCallback
-import java.util.concurrent.CompletableFuture
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
+import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 sealed class AuthState {
     data object Idle : AuthState()
     data object Connecting : AuthState()
-    data object WaitingForCredentials : AuthState()
-    data class WaitingFor2FA(val is2FACode: Boolean) : AuthState()
+    data class WaitingForDeviceConfirmation(val canUseCode: Boolean) : AuthState()
+    data class WaitingFor2FA(val is2FACode: Boolean, val previousCodeWasIncorrect: Boolean = false) : AuthState()
     data class WaitingForQRScan(val challengeUrl: String) : AuthState()
     data object Authenticating : AuthState()
     data object LoggingIn : AuthState()
@@ -36,11 +53,12 @@ sealed class AuthState {
     data class Error(val message: String) : AuthState()
 }
 
-sealed class AuthEvent {
-    data object LoginSuccess : AuthEvent()
-    data class LoginFailed(val message: String) : AuthEvent()
-    data object Disconnected : AuthEvent()
-}
+private fun AuthState.isTransientAttemptState(): Boolean = this is AuthState.Connecting ||
+    this is AuthState.WaitingForDeviceConfirmation ||
+    this is AuthState.WaitingFor2FA ||
+    this is AuthState.WaitingForQRScan ||
+    this is AuthState.Authenticating ||
+    this is AuthState.LoggingIn
 
 class SteamAuthenticator(
     private val context: Context,
@@ -49,31 +67,23 @@ class SteamAuthenticator(
 ) {
     companion object {
         private const val TAG = "SteamAuth"
+        private const val CONNECT_TIMEOUT_MS = 30_000L
     }
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-    private val _events = MutableSharedFlow<AuthEvent>()
-    val events: SharedFlow<AuthEvent> = _events.asSharedFlow()
-
-    private enum class PendingAuthFlow {
-        NONE,
-        RESUME_SESSION,
-        CREDENTIALS,
-        QR
-    }
-
-    private var credentialsSession: CredentialsAuthSession? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val authAttempts = AuthAttemptCoordinator()
+    private val deviceConfirmationChoice = PendingDeviceConfirmationChoice()
+    private val twoFactorChallenge = PendingTwoFactorChallenge()
+    private val pendingLogOn = AtomicReference<PendingLogOn?>(null)
+    private var autoReconnectJob: Job? = null
 
-    private var pendingUsername: String? = null
-    private var pendingPassword: String? = null
-    private var pendingQRLogin = false
-    private var pendingAuthFlow = PendingAuthFlow.NONE
-    private var qrPollJob: Job? = null
-
+    @Volatile
     private var wasLoggedIn = false
+
+    @Volatile
     private var isUserDisconnect = false
 
     init {
@@ -101,26 +111,14 @@ class SteamAuthenticator(
     }
 
     private suspend fun connectWithTimeout() {
-        clientManager.reconnect()
-        try {
-            withTimeout(15_000) {
-                clientManager.connectionState.first { state ->
-                    state == ConnectionState.CONNECTED ||
-                        state == ConnectionState.LOGGED_IN
-                }
+        clientManager.connect()
+        withTimeout(CONNECT_TIMEOUT_MS) {
+            clientManager.connectionState.first { state ->
+                state == ConnectionState.CONNECTED ||
+                    state == ConnectionState.LOGGED_IN
             }
-            AppLogger.d(TAG, "Connected to CM server")
-        } catch (_: TimeoutCancellationException) {
-            AppLogger.w(TAG, "Connection timed out after 15s, retrying with new CM server...")
-            clientManager.reconnect()
-            withTimeout(15_000) {
-                clientManager.connectionState.first { state ->
-                    state == ConnectionState.CONNECTED ||
-                        state == ConnectionState.LOGGED_IN
-                }
-            }
-            AppLogger.d(TAG, "Connected to CM server on retry")
         }
+        AppLogger.d(TAG, "Connected to CM server")
     }
 
     private fun isClockValid(): Boolean {
@@ -131,323 +129,455 @@ class SteamAuthenticator(
         return now > minValid
     }
 
-    private suspend fun connectOrFail() {
+    private suspend fun connectOrFail(attempt: AuthAttemptToken): Boolean {
         if (!isNetworkAvailable()) {
             AppLogger.w(TAG, "No network available")
-            val msg = context.getString(R.string.error_no_internet)
-            _authState.value = AuthState.Error(msg)
-            _events.emit(AuthEvent.LoginFailed(msg))
-            return
+            setState(attempt, AuthState.Error(context.getString(R.string.error_no_internet)))
+            return false
         }
         if (!isClockValid()) {
             AppLogger.w(TAG, "Device clock appears incorrect")
-            val msg = context.getString(R.string.error_clock_invalid)
-            _authState.value = AuthState.Error(msg)
-            _events.emit(AuthEvent.LoginFailed(context.getString(R.string.error_clock_invalid_short)))
-            return
+            setState(attempt, AuthState.Error(context.getString(R.string.error_clock_invalid)))
+            return false
         }
-        try {
+
+        return try {
             connectWithTimeout()
+            ensureActive(attempt)
+            true
         } catch (_: TimeoutCancellationException) {
             AppLogger.e(TAG, "Connection timed out after retry")
-            val msg = context.getString(R.string.error_steam_connection)
-            _authState.value = AuthState.Error(msg)
-            _events.emit(AuthEvent.LoginFailed(context.getString(R.string.error_steam_connection_timeout)))
+            setState(attempt, AuthState.Error(context.getString(R.string.error_steam_connection)))
+            clientManager.disconnect()
+            false
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Connection failed", e)
+            setState(attempt, AuthState.Error(context.getString(R.string.error_steam_connection)))
+            clientManager.disconnect()
+            false
         }
     }
 
-    suspend fun login(username: String, password: String) {
-        pendingUsername = username
-        pendingPassword = password
-        pendingQRLogin = false
-        pendingAuthFlow = PendingAuthFlow.CREDENTIALS
-        isUserDisconnect = false
-        AppLogger.i(TAG, "Login attempt for user: ${username.take(2)}***")
-        _authState.value = AuthState.Connecting
-        connectOrFail()
-    }
-
-    suspend fun loginWithQR() {
-        pendingUsername = null
-        pendingPassword = null
-        pendingQRLogin = true
-        pendingAuthFlow = PendingAuthFlow.QR
-        isUserDisconnect = false
-        AppLogger.i(TAG, "QR login attempt")
-        _authState.value = AuthState.Connecting
-        connectOrFail()
-    }
-
-    fun cancelQRLogin() {
-        qrPollJob?.cancel()
-        qrPollJob = null
-        pendingQRLogin = false
-        pendingAuthFlow = PendingAuthFlow.NONE
-        _authState.value = AuthState.Idle
-    }
-
-    suspend fun loginWithSavedSession() {
-        val username = sessionStore.username
-        val refreshToken = sessionStore.refreshToken
-        if (username == null || refreshToken == null) {
-            AppLogger.i(TAG, "No saved session to resume")
+    private suspend fun runAuthAttempt(kind: AuthAttemptKind, action: suspend (AuthAttemptToken) -> Unit) {
+        val job = currentCoroutineContext()[Job]
+            ?: throw IllegalStateException("Authentication requires a coroutine job")
+        val attempt = authAttempts.tryBegin(kind, job)
+        if (attempt == null) {
+            AppLogger.w(TAG, "Ignored inactive or overlapping ${kind.name.lowercase()} authentication attempt")
             return
         }
 
-        pendingUsername = null
-        pendingPassword = null
-        pendingQRLogin = false
-        pendingAuthFlow = PendingAuthFlow.RESUME_SESSION
         isUserDisconnect = false
-        AppLogger.i(TAG, "Attempting saved session resume for ${username.take(2)}***")
-        _authState.value = AuthState.Connecting
-        connectOrFail()
-    }
-
-    private fun onConnected() {
-        clientManager.onConnected()
-        scope.launch {
-            try {
-                val savedRefreshToken = sessionStore.refreshToken
-                val savedUsername = sessionStore.username
-                AppLogger.d(TAG, "Auth state -> onConnected (pendingFlow=$pendingAuthFlow)")
-
-                when (pendingAuthFlow) {
-                    PendingAuthFlow.RESUME_SESSION -> {
-                        pendingAuthFlow = PendingAuthFlow.NONE
-                        if (savedRefreshToken != null && savedUsername != null) {
-                            AppLogger.d(TAG, "Resuming session for ${savedUsername.take(2)}***")
-                            _authState.value = AuthState.LoggingIn
-                            logOnWithToken(savedUsername, savedRefreshToken)
-                        } else {
-                            AppLogger.w(TAG, "Resume session requested but no credentials stored")
-                            _authState.value = AuthState.WaitingForCredentials
-                        }
-                    }
-
-                    PendingAuthFlow.QR -> {
-                        pendingQRLogin = false
-                        pendingAuthFlow = PendingAuthFlow.NONE
-                        AppLogger.d(TAG, "Auth state -> Starting QR authentication")
-                        startQRAuthentication()
-                    }
-
-                    PendingAuthFlow.CREDENTIALS -> {
-                        pendingAuthFlow = PendingAuthFlow.NONE
-                        pendingQRLogin = false
-                        val username = pendingUsername
-                        val password = pendingPassword
-                        pendingUsername = null
-                        pendingPassword = null
-
-                        if (username != null && password != null) {
-                            authenticateWithCredentials(username, password)
-                        } else {
-                            AppLogger.w(TAG, "Credentials flow but username/password null")
-                            _authState.value = AuthState.WaitingForCredentials
-                        }
-                    }
-
-                    PendingAuthFlow.NONE -> if (savedRefreshToken != null && savedUsername != null) {
-                        AppLogger.d(TAG, "Resuming session for ${savedUsername.take(2)}*** (no pending flow)")
-                        _authState.value = AuthState.LoggingIn
-                        logOnWithToken(savedUsername, savedRefreshToken)
-                    } else {
-                        _authState.value = AuthState.WaitingForCredentials
-                    }
+        try {
+            ensureActive(attempt)
+            action(attempt)
+        } finally {
+            cancelPendingInput(attempt.id)
+            clearPendingLogOn(attempt.id)
+            authAttempts.finish(attempt) {
+                if (job.isCancelled) {
+                    clientManager.cancelConnectingAttempt()
                 }
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Error in onConnected", e)
-                _authState.value = AuthState.Error(context.getString(R.string.error_connection, e.message ?: ""))
+                if (job.isCancelled && _authState.value.isTransientAttemptState()) {
+                    _authState.value = AuthState.Idle
+                }
             }
         }
     }
 
-    private suspend fun authenticateWithCredentials(username: String, password: String) {
+    private fun setState(attempt: AuthAttemptToken, state: AuthState): Boolean = authAttempts.runIfActive(attempt.id) {
+        _authState.value = state
+    }
+
+    private suspend fun ensureActive(attempt: AuthAttemptToken) {
+        currentCoroutineContext().ensureActive()
+        if (!authAttempts.isActive(attempt.id)) {
+            throw CancellationException("Authentication attempt is no longer active")
+        }
+    }
+
+    suspend fun login(username: String, password: String) {
+        runAuthAttempt(AuthAttemptKind.CREDENTIALS) { attempt ->
+            AppLogger.i(TAG, "Login attempt for user: ${username.take(2)}***")
+            setState(attempt, AuthState.Connecting)
+            if (connectOrFail(attempt)) {
+                authenticateWithCredentials(attempt, username, password)
+            }
+        }
+    }
+
+    suspend fun loginWithQR() {
+        runAuthAttempt(AuthAttemptKind.QR) { attempt ->
+            AppLogger.i(TAG, "QR login attempt")
+            setState(attempt, AuthState.Connecting)
+            if (connectOrFail(attempt)) {
+                startQRAuthentication(attempt)
+            }
+        }
+    }
+
+    fun cancelQRLogin() {
+        val cancelled = authAttempts.cancelActive(AuthAttemptKind.QR) {
+            _authState.value is AuthState.WaitingForQRScan
+        } ?: return
+        cancelPendingInput(cancelled.id)
+        clearPendingLogOn(cancelled.id)
+        _authState.value = AuthState.Idle
+    }
+
+    suspend fun loginWithSavedSession() {
+        if (clientManager.isLoggedIn) {
+            AppLogger.d(TAG, "Saved session resume skipped because Steam is already logged in")
+            return
+        }
+
+        runAuthAttempt(AuthAttemptKind.RESUME_SESSION) { attempt ->
+            val username = sessionStore.username
+            val refreshToken = sessionStore.refreshToken
+            if (username == null || refreshToken == null) {
+                AppLogger.i(TAG, "No saved session to resume")
+                setState(attempt, AuthState.Idle)
+                return@runAuthAttempt
+            }
+
+            AppLogger.i(TAG, "Attempting saved session resume for ${username.take(2)}***")
+            setState(attempt, AuthState.Connecting)
+            if (connectOrFail(attempt)) {
+                try {
+                    logOnWithToken(attempt, username, refreshToken)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e(TAG, "Saved session resume failed", e)
+                    setState(attempt, AuthState.Error(context.getString(R.string.error_steam_connection)))
+                }
+            }
+        }
+    }
+
+    private fun onConnected() {
+        clientManager.onConnected()
+        AppLogger.d(TAG, "Connected callback received")
+    }
+
+    private suspend fun authenticateWithCredentials(attempt: AuthAttemptToken, username: String, password: String) {
         AppLogger.d(TAG, "Authenticating with credentials for ${username.take(2)}***")
-        _authState.value = AuthState.Authenticating
+        setState(attempt, AuthState.Authenticating)
 
         try {
             val authDetails = AuthSessionDetails().apply {
                 this.username = username
                 this.password = password
+                this.deviceFriendlyName = context.getString(R.string.steam_device_name)
                 this.persistentSession = true
-                this.authenticator = object : IAuthenticator {
-                    override fun acceptDeviceConfirmation(): CompletableFuture<Boolean> =
-                        CompletableFuture.completedFuture(false)
-
-                    override fun getDeviceCode(previousCodeWasIncorrect: Boolean): CompletableFuture<String> {
-                        val future = CompletableFuture<String>()
-                        scope.launch {
-                            AppLogger.i(TAG, "2FA required: device code (incorrect=$previousCodeWasIncorrect)")
-                            _authState.value = AuthState.WaitingFor2FA(is2FACode = true)
-                            pending2FAFuture = future
-                        }
-                        return future
-                    }
-
-                    override fun getEmailCode(
-                        email: String?,
-                        previousCodeWasIncorrect: Boolean
-                    ): CompletableFuture<String> {
-                        val future = CompletableFuture<String>()
-                        scope.launch {
-                            AppLogger.i(TAG, "2FA required: email code (incorrect=$previousCodeWasIncorrect)")
-                            _authState.value = AuthState.WaitingFor2FA(is2FACode = false)
-                            pending2FAFuture = future
-                        }
-                        return future
-                    }
-                }
             }
+            val attemptScope = CoroutineScope(currentCoroutineContext() + Dispatchers.IO)
 
             val session = SteamAuthentication(clientManager.client)
-                .beginAuthSessionViaCredentials(authDetails)
+                .beginAuthSessionViaCredentials(authDetails, attemptScope)
                 .await()
+            ensureActive(attempt)
 
-            credentialsSession = session
+            val pollResponse = completeCredentialsAuthentication(attempt, session, attemptScope)
+            ensureActive(attempt)
 
-            val pollResponse = session.pollingWaitForResult().await()
-
-            sessionStore.username = username
-            sessionStore.accessToken = pollResponse.accessToken
-            sessionStore.refreshToken = pollResponse.refreshToken
-
-            logOnWithToken(username, pollResponse.refreshToken)
+            logOnWithToken(attempt, username, pollResponse.refreshToken, pollResponse)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: AuthenticationException) {
-            _authState.value = AuthState.Error(
-                context.getString(R.string.error_auth_failed, e.message ?: "")
-            )
-            scope.launch {
-                _events.emit(
-                    AuthEvent.LoginFailed(
-                        e.message ?: context.getString(R.string.error_auth_failed, "")
-                    )
+            AppLogger.e(TAG, "Credential authentication failed", e)
+            val message = when (e.result) {
+                EResult.InvalidPassword -> context.getString(R.string.error_invalid_password)
+                EResult.Expired -> context.getString(R.string.error_session_expired)
+                else -> context.getString(R.string.error_auth_failed_generic)
+            }
+            setState(attempt, AuthState.Error(message))
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Credential authentication connection failure", e)
+            setState(attempt, AuthState.Error(context.getString(R.string.error_steam_connection)))
+        }
+    }
+
+    private suspend fun completeCredentialsAuthentication(
+        attempt: AuthAttemptToken,
+        session: CredentialsAuthSession,
+        attemptScope: CoroutineScope
+    ): AuthPollResult {
+        var confirmation = session.allowedConfirmations.firstOrNull()
+            ?: throw AuthenticationException("There are no allowed confirmations")
+
+        if (confirmation.confirmationType == EAuthSessionGuardType.k_EAuthSessionGuardType_DeviceConfirmation) {
+            val fallback = session.allowedConfirmations.getOrNull(1)?.takeIf {
+                it.confirmationType.isCodeConfirmation()
+            }
+            val choice = deviceConfirmationChoice.awaitChoice(attempt.id)
+            AppLogger.i(TAG, "Steam Guard requires device confirmation")
+            setState(attempt, AuthState.WaitingForDeviceConfirmation(canUseCode = fallback != null))
+
+            val useMobileApproval = choice.await()
+            ensureActive(attempt)
+            if (useMobileApproval) {
+                setState(attempt, AuthState.Authenticating)
+                return pollUntilResult(
+                    attempt = attempt,
+                    session = session,
+                    attemptScope = attemptScope,
+                    delayBeforeFirstPoll = true
                 )
             }
-        } catch (e: Exception) {
-            _authState.value = AuthState.Error(
-                context.getString(R.string.error_connection, e.message ?: "")
+
+            confirmation = fallback
+                ?: throw AuthenticationException("No Steam Guard code fallback is available")
+        }
+
+        return when (val confirmationType = confirmation.confirmationType) {
+            EAuthSessionGuardType.k_EAuthSessionGuardType_None -> {
+                pollUntilResult(attempt, session, attemptScope, delayBeforeFirstPoll = false)
+            }
+
+            EAuthSessionGuardType.k_EAuthSessionGuardType_DeviceCode,
+            EAuthSessionGuardType.k_EAuthSessionGuardType_EmailCode -> {
+                submitSteamGuardCode(attempt, session, confirmationType, attemptScope)
+                pollUntilResult(attempt, session, attemptScope, delayBeforeFirstPoll = false)
+            }
+
+            EAuthSessionGuardType.k_EAuthSessionGuardType_Unknown -> {
+                throw AuthenticationException("There are no allowed confirmations")
+            }
+
+            else -> throw AuthenticationException("Unsupported confirmation type $confirmationType")
+        }
+    }
+
+    private suspend fun submitSteamGuardCode(
+        attempt: AuthAttemptToken,
+        session: CredentialsAuthSession,
+        confirmationType: EAuthSessionGuardType,
+        attemptScope: CoroutineScope
+    ) {
+        val isDeviceCode = confirmationType == EAuthSessionGuardType.k_EAuthSessionGuardType_DeviceCode
+        val invalidCodeResult = if (isDeviceCode) {
+            EResult.TwoFactorCodeMismatch
+        } else {
+            EResult.InvalidLoginAuthCode
+        }
+        var previousCodeWasIncorrect = false
+
+        while (true) {
+            val challenge = twoFactorChallenge.awaitCode(attempt.id)
+            AppLogger.i(
+                TAG,
+                "Steam Guard requires ${if (isDeviceCode) "device" else "email"} code " +
+                    "(incorrect=$previousCodeWasIncorrect)"
             )
-            scope.launch {
-                _events.emit(
-                    AuthEvent.LoginFailed(
-                        e.message ?: context.getString(R.string.error_connection, "")
-                    )
+            setState(
+                attempt,
+                AuthState.WaitingFor2FA(
+                    is2FACode = isDeviceCode,
+                    previousCodeWasIncorrect = previousCodeWasIncorrect
                 )
+            )
+
+            val code = challenge.await()
+            ensureActive(attempt)
+            setState(attempt, AuthState.Authenticating)
+
+            try {
+                session.sendSteamGuardCode(code, confirmationType, attemptScope).await()
+                return
+            } catch (e: AuthenticationException) {
+                if (e.result != invalidCodeResult) {
+                    throw e
+                }
+                previousCodeWasIncorrect = true
             }
         }
     }
 
-    @Volatile
-    private var pending2FAFuture: CompletableFuture<String>? = null
+    private suspend fun pollUntilResult(
+        attempt: AuthAttemptToken,
+        session: AuthSession,
+        attemptScope: CoroutineScope,
+        delayBeforeFirstPoll: Boolean
+    ): AuthPollResult {
+        var shouldDelay = delayBeforeFirstPoll
+        while (true) {
+            ensureActive(attempt)
+            if (shouldDelay) {
+                delay(pollingIntervalMillis(session.pollingInterval))
+            }
+            shouldDelay = true
 
-    fun submit2FACode(code: String) {
-        pending2FAFuture?.complete(code)
-        pending2FAFuture = null
+            val result = session.pollAuthSessionStatus(attemptScope).await()
+            ensureActive(attempt)
+            if (result != null) {
+                return result
+            }
+        }
     }
 
-    private suspend fun startQRAuthentication() {
+    fun submit2FACode(code: String): Boolean {
+        val attempt = authAttempts.activeAttempt()
+        if (attempt == null || _authState.value !is AuthState.WaitingFor2FA) {
+            AppLogger.w(TAG, "Ignored unexpected 2FA code submission")
+            return false
+        }
+
+        val submitted = twoFactorChallenge.submit(attempt.id, code) {
+            setState(attempt, AuthState.Authenticating)
+        }
+        if (!submitted) {
+            AppLogger.w(TAG, "Ignored empty or duplicate 2FA code submission")
+        }
+        return submitted
+    }
+
+    fun submitDeviceConfirmation(useMobileApproval: Boolean): Boolean {
+        val attempt = authAttempts.activeAttempt()
+        val state = _authState.value as? AuthState.WaitingForDeviceConfirmation
+        if (attempt == null || state == null || (!useMobileApproval && !state.canUseCode)) {
+            AppLogger.w(TAG, "Ignored unexpected device confirmation choice")
+            return false
+        }
+
+        val submitted = deviceConfirmationChoice.submit(attempt.id, useMobileApproval) {
+            setState(attempt, AuthState.Authenticating)
+        }
+        if (!submitted) {
+            AppLogger.w(TAG, "Ignored duplicate device confirmation choice")
+        }
+        return submitted
+    }
+
+    private suspend fun startQRAuthentication(attempt: AuthAttemptToken) {
         AppLogger.i(TAG, "Starting QR authentication")
+        var qrSession: QrAuthSession? = null
         try {
             val authDetails = AuthSessionDetails().apply {
-                deviceFriendlyName = "SDV-Sync Android"
+                deviceFriendlyName = context.getString(R.string.steam_device_name)
                 persistentSession = true
             }
+            val attemptScope = CoroutineScope(currentCoroutineContext() + Dispatchers.IO)
 
-            val qrSession = SteamAuthentication(clientManager.client)
-                .beginAuthSessionViaQR(authDetails)
+            qrSession = SteamAuthentication(clientManager.client)
+                .beginAuthSessionViaQR(authDetails, attemptScope)
                 .await()
-
-            _authState.value = AuthState.WaitingForQRScan(qrSession.challengeUrl)
+            ensureActive(attempt)
 
             qrSession.challengeUrlChanged = IChallengeUrlChanged { session ->
-                session?.let {
-                    _authState.value = AuthState.WaitingForQRScan(it.challengeUrl)
+                if (session != null && authAttempts.isActive(attempt.id)) {
+                    setState(attempt, AuthState.WaitingForQRScan(session.challengeUrl))
                 }
             }
+            setState(attempt, AuthState.WaitingForQRScan(qrSession.challengeUrl))
 
-            qrPollJob = scope.launch {
-                var pollResult: AuthPollResult? = null
-                while (isActive && pollResult == null) {
-                    try {
-                        pollResult = qrSession.pollAuthSessionStatus().await()
-                    } catch (e: AuthenticationException) {
-                        _authState.value = AuthState.Error(context.getString(R.string.error_qr_expired))
-                        _events.emit(AuthEvent.LoginFailed(context.getString(R.string.error_qr_expired_short)))
-                        return@launch
-                    }
-
-                    if (pollResult == null) {
-                        delay((qrSession.pollingInterval * 1000).toLong())
-                    }
-                }
-
-                if (pollResult != null) {
-                    sessionStore.username = pollResult.accountName
-                    sessionStore.accessToken = pollResult.accessToken
-                    sessionStore.refreshToken = pollResult.refreshToken
-
-                    logOnWithToken(pollResult.accountName, pollResult.refreshToken)
-                }
-            }
-        } catch (e: Exception) {
-            _authState.value = AuthState.Error(
-                context.getString(R.string.error_qr_failed, e.message ?: "")
+            val pollResult = pollUntilResult(
+                attempt = attempt,
+                session = qrSession,
+                attemptScope = attemptScope,
+                delayBeforeFirstPoll = false
             )
-            scope.launch {
-                _events.emit(
-                    AuthEvent.LoginFailed(
-                        e.message ?: context.getString(R.string.error_qr_failed, "")
-                    )
-                )
-            }
+            ensureActive(attempt)
+
+            logOnWithToken(attempt, pollResult.accountName, pollResult.refreshToken, pollResult)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: AuthenticationException) {
+            AppLogger.e(TAG, "QR authentication expired or was rejected", e)
+            setState(attempt, AuthState.Error(context.getString(R.string.error_qr_expired)))
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "QR authentication failed", e)
+            setState(attempt, AuthState.Error(context.getString(R.string.error_qr_failed_generic)))
+        } finally {
+            qrSession?.challengeUrlChanged = null
         }
     }
 
-    private fun logOnWithToken(username: String, refreshToken: String) {
-        AppLogger.d(TAG, "Auth state -> LoggingIn (user=${username.take(2)}***)")
-        _authState.value = AuthState.LoggingIn
-
+    private suspend fun logOnWithToken(
+        attempt: AuthAttemptToken,
+        username: String,
+        refreshToken: String,
+        newAuthResult: AuthPollResult? = null
+    ) {
+        ensureActive(attempt)
+        val callbackResult = CompletableDeferred<LoggedOnCallback>()
+        val pending = PendingLogOn(attempt.id, callbackResult)
         val details = LogOnDetails().apply {
             this.username = username
             this.accessToken = refreshToken
             this.shouldRememberPassword = true
         }
 
-        clientManager.user.logOn(details)
+        try {
+            val initiated = authAttempts.runIfActiveOn(attempt.id, Dispatchers.IO) {
+                check(pendingLogOn.compareAndSet(null, pending)) {
+                    "Another Steam logon callback is already pending"
+                }
+                AppLogger.d(TAG, "Auth state -> LoggingIn (user=${username.take(2)}***)")
+                _authState.value = AuthState.LoggingIn
+                clientManager.user.logOn(details)
+            }
+            if (!initiated) {
+                throw CancellationException("Authentication ended before Steam logon started")
+            }
+
+            val callback = callbackResult.await()
+            ensureActive(attempt)
+            handleLoggedOn(attempt, username, newAuthResult, callback)
+        } finally {
+            pendingLogOn.compareAndSet(pending, null)
+        }
     }
 
     private fun onLoggedOn(callback: LoggedOnCallback) {
-        if (callback.result == EResult.OK) {
-            AppLogger.i(TAG, "Logon OK (cellId=${callback.cellID})")
-            callback.clientSteamID?.let { steamId ->
-                sessionStore.steamId = steamId.convertToUInt64()
-            }
-            sessionStore.cellId = callback.cellID
+        val pending = pendingLogOn.get()
+        if (pending == null || !authAttempts.isActive(pending.attemptId)) {
+            AppLogger.w(TAG, "Ignoring logon callback without an active authentication attempt")
+            return
+        }
+        pending.result.complete(callback)
+    }
 
-            wasLoggedIn = true
-            clientManager.onLoggedIn()
-            _authState.value = AuthState.LoggedIn
-            scope.launch { _events.emit(AuthEvent.LoginSuccess) }
-        } else {
-            val msg = when (callback.result) {
-                EResult.AccountLogonDenied -> context.getString(R.string.error_steamguard_email)
-                EResult.AccountLoginDeniedNeedTwoFactor -> context.getString(R.string.error_steamguard_mobile)
-                EResult.InvalidPassword -> context.getString(R.string.error_invalid_password)
-                EResult.TwoFactorCodeMismatch -> context.getString(R.string.error_2fa_mismatch)
-                EResult.Expired -> context.getString(R.string.error_session_expired)
-                else -> context.getString(R.string.error_login_failed, callback.result.toString())
-            }
-            AppLogger.w(TAG, "Logon failed: $msg")
-            _authState.value = AuthState.Error(msg)
-            scope.launch { _events.emit(AuthEvent.LoginFailed(msg)) }
+    private fun handleLoggedOn(
+        attempt: AuthAttemptToken,
+        username: String,
+        newAuthResult: AuthPollResult?,
+        callback: LoggedOnCallback
+    ) {
+        authAttempts.runIfActive(attempt.id) {
+            if (callback.result == EResult.OK) {
+                AppLogger.i(TAG, "Logon OK (cellId=${callback.cellID})")
+                if (newAuthResult != null) {
+                    sessionStore.username = username
+                    sessionStore.accessToken = newAuthResult.accessToken
+                    sessionStore.refreshToken = newAuthResult.refreshToken
+                }
+                callback.clientSteamID?.let { steamId ->
+                    sessionStore.steamId = steamId.convertToUInt64()
+                }
+                sessionStore.cellId = callback.cellID
 
-            if (callback.result == EResult.InvalidPassword ||
-                callback.result == EResult.Expired
-            ) {
-                sessionStore.accessToken = null
-                sessionStore.refreshToken = null
+                wasLoggedIn = true
+                clientManager.onLoggedIn()
+                _authState.value = AuthState.LoggedIn
+            } else {
+                val msg = when (callback.result) {
+                    EResult.AccountLogonDenied -> context.getString(R.string.error_steamguard_email)
+                    EResult.AccountLoginDeniedNeedTwoFactor -> context.getString(R.string.error_steamguard_mobile)
+                    EResult.InvalidPassword -> context.getString(R.string.error_invalid_password)
+                    EResult.TwoFactorCodeMismatch -> context.getString(R.string.error_2fa_mismatch)
+                    EResult.Expired -> context.getString(R.string.error_session_expired)
+                    else -> context.getString(R.string.error_auth_failed_generic)
+                }
+                AppLogger.w(TAG, "Logon failed (${callback.result}): $msg")
+                _authState.value = AuthState.Error(msg)
+
+                if (callback.result == EResult.InvalidPassword || callback.result == EResult.Expired) {
+                    sessionStore.accessToken = null
+                    sessionStore.refreshToken = null
+                }
             }
         }
     }
@@ -455,69 +585,129 @@ class SteamAuthenticator(
     private fun onLoggedOff(callback: LoggedOffCallback) {
         AppLogger.d(TAG, "Logged off: ${callback.result}")
         wasLoggedIn = false
+        clientManager.onLoggedOff()
+        if (handleActiveConnectionLoss(_authState.value)) {
+            return
+        }
         _authState.value = AuthState.Idle
-        clientManager.onDisconnected(userInitiated = false)
-        scope.launch { _events.emit(AuthEvent.Disconnected) }
     }
 
     private fun onDisconnected(callback: DisconnectedCallback) {
-        val userInitiated = isUserDisconnect
+        val appDisconnect = isUserDisconnect
+        val userInitiated = appDisconnect || callback.isUserInitiated
         val currentAuthState = _authState.value
+        val disposition = clientManager.onDisconnected(userInitiated = userInitiated)
+        if (disposition == DisconnectDisposition.RETRY_PENDING) {
+            val attempt = authAttempts.activeAttempt()
+            var fallbackStarted = false
+            if (attempt != null && currentAuthState is AuthState.Connecting) {
+                authAttempts.runIfActive(attempt.id) {
+                    if (_authState.value is AuthState.Connecting) {
+                        fallbackStarted = clientManager.retryPendingConnection()
+                    }
+                }
+            }
+            if (fallbackStarted) {
+                AppLogger.d(TAG, "Initial CM connection failed; continuing with the fallback transport")
+                return
+            }
+            clientManager.abandonPendingRetry()
+        }
+        if (shouldIgnoreTransportDisconnect(callback.isUserInitiated, appDisconnect)) {
+            AppLogger.d(TAG, "Ignoring intentional disconnect used to replace the Steam transport")
+            return
+        }
+
         AppLogger.d(
             TAG,
             "Disconnected (userInitiated=$userInitiated, wasLoggedIn=$wasLoggedIn, authState=${currentAuthState::class.simpleName})"
         )
-        clientManager.onDisconnected(userInitiated = userInitiated)
+        if (handleActiveConnectionLoss(currentAuthState)) {
+            return
+        }
 
         if (!userInitiated && wasLoggedIn && sessionStore.hasSession()) {
-            // client.connect() calls disconnect() internally, which fires this callback again.
-            if (currentAuthState is AuthState.Connecting ||
-                currentAuthState is AuthState.Authenticating ||
-                currentAuthState is AuthState.LoggingIn
-            ) {
-                AppLogger.d(TAG, "Already connecting/authenticating, ignoring disconnect for auto-reconnect")
-                return
-            }
-
             AppLogger.d(TAG, "Auto-reconnecting in 2s...")
             _authState.value = AuthState.Connecting
-            scope.launch {
+            autoReconnectJob?.cancel()
+            autoReconnectJob = scope.launch {
                 delay(2000)
-                try {
-                    pendingAuthFlow = PendingAuthFlow.RESUME_SESSION
-                    connectWithTimeout()
-                    AppLogger.d(TAG, "Auto-reconnect succeeded")
-                } catch (_: TimeoutCancellationException) {
-                    AppLogger.e(TAG, "Auto-reconnect timed out")
+                if (clientManager.isLoggedIn) {
+                    return@launch
+                }
+                loginWithSavedSession()
+                if (_authState.value is AuthState.Error) {
                     wasLoggedIn = false
-                    pendingAuthFlow = PendingAuthFlow.NONE
-                    _authState.value = AuthState.Idle
-                    _events.emit(AuthEvent.Disconnected)
-                } catch (e: Exception) {
-                    AppLogger.e(TAG, "Auto-reconnect failed", e)
-                    wasLoggedIn = false
-                    pendingAuthFlow = PendingAuthFlow.NONE
-                    _authState.value = AuthState.Idle
-                    _events.emit(AuthEvent.Disconnected)
                 }
             }
         } else if (!userInitiated && currentAuthState is AuthState.LoggedIn) {
             _authState.value = AuthState.Idle
-            scope.launch { _events.emit(AuthEvent.Disconnected) }
         }
+    }
+
+    private fun handleActiveConnectionLoss(currentAuthState: AuthState): Boolean {
+        if (authAttempts.activeAttempt() == null) {
+            return false
+        }
+        if (currentAuthState is AuthState.Error) {
+            return true
+        }
+        if (currentAuthState is AuthState.LoggedIn) {
+            return false
+        }
+
+        val cancelled = authAttempts.cancelActive() ?: return true
+        cancelPendingInput(cancelled.id)
+        clearPendingLogOn(cancelled.id)
+        val message = if (currentAuthState is AuthState.Connecting) {
+            context.getString(R.string.error_steam_connection)
+        } else {
+            context.getString(R.string.error_steam_disconnected_login)
+        }
+        _authState.value = AuthState.Error(message)
+        return true
     }
 
     fun logout() {
         isUserDisconnect = true
         wasLoggedIn = false
-        pendingAuthFlow = PendingAuthFlow.NONE
+        autoReconnectJob?.cancel()
+        autoReconnectJob = null
+        authAttempts.cancelActive()?.let { cancelled ->
+            cancelPendingInput(cancelled.id)
+            clearPendingLogOn(cancelled.id)
+        }
         sessionStore.clear()
         _authState.value = AuthState.Idle
         clientManager.disconnect()
     }
 
     fun destroy() {
+        authAttempts.cancelActive()?.let { cancelled ->
+            cancelPendingInput(cancelled.id)
+            clearPendingLogOn(cancelled.id)
+        }
         scope.cancel()
         clientManager.destroy()
     }
+
+    private fun cancelPendingInput(attemptId: Long) {
+        twoFactorChallenge.cancel(attemptId)
+        deviceConfirmationChoice.cancel(attemptId)
+    }
+
+    private fun clearPendingLogOn(attemptId: Long) {
+        while (true) {
+            val pending = pendingLogOn.get() ?: return
+            if (pending.attemptId != attemptId) {
+                return
+            }
+            if (pendingLogOn.compareAndSet(pending, null)) {
+                pending.result.cancel(CancellationException("Authentication attempt ended"))
+                return
+            }
+        }
+    }
+
+    private data class PendingLogOn(val attemptId: Long, val result: CompletableDeferred<LoggedOnCallback>)
 }
