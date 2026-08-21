@@ -14,7 +14,7 @@ import java.util.zip.ZipInputStream
 class ModFileManager(private val context: Context, private val parser: ModManifestParser) {
     companion object {
         private const val TAG = "ModFileManager"
-        const val MODS_DIR = "/storage/emulated/0/StardewValley/Mods"
+        const val MODS_DIR = "/storage/emulated/0/StardewValley/desktop/Mods"
         private const val DISABLED_SUFFIX = ".disabled"
     }
 

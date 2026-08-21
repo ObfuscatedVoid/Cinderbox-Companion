@@ -89,12 +89,12 @@ class GameDownloadManager(
                 "Lidgren.Network.dll"
             )
         const val CINDERBOX_CONTENT_DIR = "Content"
-        const val CINDERBOX_BASE_DIR = "/storage/emulated/0/StardewValley"
+        const val CINDERBOX_BASE_DIR = "/storage/emulated/0/StardewValley/desktop"
         const val CINDERBOX_DEST = "$CINDERBOX_BASE_DIR/GameFiles"
 
         const val SMAPI_CACHE_FILENAME = "smapi-internal.zip"
         const val SMAPI_DEST = "/storage/emulated/0/StardewValley/smapi-internal"
-        const val MODS_DIR = "/storage/emulated/0/StardewValley/Mods"
+        const val MODS_DIR = "/storage/emulated/0/StardewValley/desktop/Mods"
     }
 
     val progress: StateFlow<DownloadProgress> = _progress.asStateFlow()
