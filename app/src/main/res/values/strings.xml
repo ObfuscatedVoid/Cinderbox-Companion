@@ -163,7 +163,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_game_mode_title">Game Mode</string>
     <string name="settings_cinderbox_mode">Cinderbox Mode</string>
-    <string name="settings_cinderbox_mode_desc">Saves are read from /StardewValley/Saves/ which is directly accessible without special permissions.</string>
+    <string name="settings_cinderbox_mode_desc">Saves are read from /StardewValley/desktop/Saves/ which is directly accessible without special permissions.</string>
     <string name="settings_cinderbox_mode_off_desc">Saves are read from the native Stardew Valley Android directory. Requires Root, Shizuku, or SAF file access.</string>
     <string name="settings_file_access">File Access</string>
     <string name="settings_file_access_current">Current: %1$s</string>

@@ -14,7 +14,7 @@ class SaveFileManager(
         const val SDV_SAVE_PATH =
             "/storage/emulated/0/Android/data/com.chucklefish.stardewvalley/files/Saves"
         const val CINDERBOX_SAVE_PATH =
-            "/storage/emulated/0/StardewValley/Saves"
+            "/storage/emulated/0/StardewValley/desktop/Saves"
     }
 
     /** True when SAF points to a staging directory instead of the game folder. */

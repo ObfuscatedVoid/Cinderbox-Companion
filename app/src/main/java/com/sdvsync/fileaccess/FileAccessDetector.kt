@@ -126,7 +126,7 @@ class FileAccessDetector(private val context: Context) {
 
     /**
      * Whether the current configuration needs MANAGE_EXTERNAL_STORAGE but doesn't have it.
-     * Cinderbox path (/storage/emulated/0/StardewValley/Saves) is external storage
+     * Cinderbox path (/storage/emulated/0/StardewValley/desktop/Saves) is external storage
      * and requires this permission on Android 11+.
      */
     fun needsStoragePermission(cinderboxMode: Boolean = isCinderboxMode()): Boolean {
