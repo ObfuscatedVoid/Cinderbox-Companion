@@ -32,8 +32,8 @@ class SaveFileParser {
         val animals = mutableListOf<AnimalEntry>()
         val craftingRecipes = mutableListOf<CraftingRecipeEntry>()
         val cookingRecipes = mutableListOf<CraftingRecipeEntry>()
-        var completedBundles = 0
-        var totalBundles = 0
+        val bundleRequirements = mutableMapOf<Int, Int>()
+        val bundleDonations = mutableMapOf<Int, Int>()
         var isCommunityCenter = true
         var museumDonated = 0
 
@@ -76,10 +76,12 @@ class SaveFileParser {
 
         // Bundle parsing state
         var inBundleData = false
+        var inBundles = false
+        var bundleKey = ""
+        var bundleDonated = 0
 
         // Museum parsing
-        var inArchaeologyFound = false
-        var inMineralsFound = false
+        var inMuseumPieces = false
 
         // Player depth tracking
         var playerDepth = -1
@@ -115,14 +117,18 @@ class SaveFileParser {
                         when (parser.name) {
                             "craftingRecipes" -> inCraftingRecipes = true
                             "cookingRecipes" -> inCookingRecipes = true
-                            "archaeologyFound" -> inArchaeologyFound = true
-                            "mineralsFound" -> inMineralsFound = true
                         }
                     }
 
                     // Bundle data
                     if (tagStack.size == 2 && parser.name == "bundleData") {
                         inBundleData = true
+                    }
+                    if (tagStack.size == 4 && parser.name == "bundles" && tagStack[1] == "locations") {
+                        inBundles = true
+                    }
+                    if (tagStack.size == 4 && parser.name == "museumPieces" && tagStack[1] == "locations") {
+                        inMuseumPieces = true
                     }
 
                     // Track "key" in item entries for friendship
@@ -184,11 +190,6 @@ class SaveFileParser {
                                     recipeValue = text.toIntOrNull() ?: 0
                                 }
                             }
-
-                            // Museum items
-                            (inArchaeologyFound || inMineralsFound) -> {
-                                // Count unique items by tracking key entries
-                            }
                         }
                     }
 
@@ -203,10 +204,17 @@ class SaveFileParser {
                         }
                     }
 
-                    // Bundle data counting
-                    if (inBundleData && currentTag == "boolean") {
-                        totalBundles++
-                        if (text == "true") completedBundles++
+                    val parentTag = tagStack.getOrNull(tagStack.size - 2)
+                    if ((inBundleData || inBundles) && parentTag == "key") bundleKey = text
+                    if (inBundleData && parentTag == "value" && currentTag == "string") {
+                        val fields = text.split('/')
+                        val id = bundleKey.substringAfterLast('/').toIntOrNull()
+                        val required = fields.getOrNull(4)?.toIntOrNull()
+                            ?: fields.getOrNull(2)?.trim()?.split(Regex("\\s+"))?.size?.div(3)
+                        if (id != null && required != null && required > 0) bundleRequirements[id] = required
+                    }
+                    if (inBundles && currentTag == "boolean" && text == "true") {
+                        bundleDonated++
                     }
                 }
 
@@ -242,8 +250,12 @@ class SaveFileParser {
                         recipeValue = 0
                     }
 
-                    // Museum item counting (each <item> in archaeologyFound/mineralsFound)
-                    if ((inArchaeologyFound || inMineralsFound) && parser.name == "item") {
+                    if (inBundles && parser.name == "item") {
+                        bundleKey.toIntOrNull()?.let { bundleDonations[it] = bundleDonated }
+                        bundleKey = ""
+                        bundleDonated = 0
+                    }
+                    if (inMuseumPieces && parser.name == "item") {
                         museumDonated++
                     }
 
@@ -251,8 +263,8 @@ class SaveFileParser {
                     if (inFriendshipData && parser.name == "friendshipData") inFriendshipData = false
                     if (inCraftingRecipes && parser.name == "craftingRecipes") inCraftingRecipes = false
                     if (inCookingRecipes && parser.name == "cookingRecipes") inCookingRecipes = false
-                    if (inArchaeologyFound && parser.name == "archaeologyFound") inArchaeologyFound = false
-                    if (inMineralsFound && parser.name == "mineralsFound") inMineralsFound = false
+                    if (parser.name == "museumPieces") inMuseumPieces = false
+                    if (parser.name == "bundles") inBundles = false
                     if (inBundleData && parser.name == "bundleData") inBundleData = false
 
                     if (playerDepth > 0 && tagStack.size == playerDepth && parser.name == "player") {
@@ -288,7 +300,11 @@ class SaveFileParser {
             farmer = farmer,
             relationships = relationships.sortedByDescending { it.friendshipPoints },
             animals = animals,
-            bundles = BundleProgress(completedBundles, totalBundles, isCommunityCenter),
+            bundles = BundleProgress(
+                bundleRequirements.count { (id, required) -> (bundleDonations[id] ?: 0) >= required },
+                bundleRequirements.size,
+                isCommunityCenter
+            ),
             museumDonated = museumDonated,
             craftingRecipes = craftingRecipes.sortedBy { it.name },
             cookingRecipes = cookingRecipes.sortedBy { it.name }

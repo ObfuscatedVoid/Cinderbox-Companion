@@ -25,8 +25,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug
+      - name: Test, lint, and build debug APK
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

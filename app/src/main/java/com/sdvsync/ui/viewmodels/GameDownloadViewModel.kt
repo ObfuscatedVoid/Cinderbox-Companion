@@ -5,6 +5,7 @@ import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
+import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadProgress
 import com.sdvsync.download.GameDownloadManager
@@ -13,12 +14,12 @@ import com.sdvsync.download.SmapiSetupProgress
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.steam.SteamContentService
-import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class CinderboxWizardStep {
@@ -98,6 +99,7 @@ class GameDownloadViewModel(
         viewModelScope.launch {
             downloadManager.smapiProgress.collect { progress ->
                 _state.value = _state.value.copy(smapiSetupProgress = progress)
+                if (progress.completed) refreshInstalledVersions()
             }
         }
         viewModelScope.launch {
@@ -140,6 +142,19 @@ class GameDownloadViewModel(
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to check for updates", e)
             }
+        }
+    }
+
+    fun refreshInstalledVersions() {
+        val cinderbox = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_CINDERBOX_VERSION)
+        val smapi = releaseChecker.getInstalledVersion(GitHubReleaseChecker.KEY_SMAPI_VERSION)
+        _state.update {
+            it.copy(
+                installedCinderboxVersion = cinderbox,
+                installedSmapiVersion = smapi,
+                cinderboxUpdateAvailable = releaseChecker.isUpdateAvailable(cinderbox, it.latestCinderboxVersion),
+                smapiUpdateAvailable = releaseChecker.isUpdateAvailable(smapi, it.latestSmapiVersion)
+            )
         }
     }
 
@@ -282,7 +297,7 @@ class GameDownloadViewModel(
         }
 
         // Cinderbox dir already exists — user clearly has it installed
-        if (File(GameDownloadManager.CINDERBOX_BASE_DIR).isDirectory) {
+        if (CinderboxPaths.isInstalled()) {
             fileAccessDetector.setSetupCompleted(SETUP_TYPE_CINDERBOX)
             fileAccessDetector.setCinderboxMode(true)
             _state.value = _state.value.copy(isCinderboxSetup = true)
@@ -295,7 +310,7 @@ class GameDownloadViewModel(
     }
 
     fun onWizardChooseCinderbox() {
-        val dirExists = File(GameDownloadManager.CINDERBOX_BASE_DIR).isDirectory
+        val dirExists = CinderboxPaths.isInstalled()
         if (dirExists) {
             // Already installed — jump to ready
             _wizardState.value = _wizardState.value.copy(
@@ -354,7 +369,7 @@ class GameDownloadViewModel(
     }
 
     fun checkCinderboxDirectory(): Boolean {
-        val exists = File(GameDownloadManager.CINDERBOX_BASE_DIR).isDirectory
+        val exists = CinderboxPaths.isInstalled()
         if (exists) {
             _wizardState.value = _wizardState.value.copy(
                 currentStep = CinderboxWizardStep.READY,

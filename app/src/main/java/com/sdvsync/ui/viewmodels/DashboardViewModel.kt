@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
+import com.sdvsync.cinderbox.CinderboxLayoutEvents
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.BundleManifest
 import com.sdvsync.saves.ImportResult
@@ -64,6 +65,12 @@ class DashboardViewModel(
 
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            CinderboxLayoutEvents.changed.collect { refresh() }
+        }
+    }
 
     fun refresh(isUserRefresh: Boolean = false) {
         viewModelScope.launch {

@@ -163,8 +163,20 @@
     <string name="settings_title">Settings</string>
     <string name="settings_game_mode_title">Game Mode</string>
     <string name="settings_cinderbox_mode">Cinderbox Mode</string>
-    <string name="settings_cinderbox_mode_desc">Saves are read from /StardewValley/desktop/Saves/ which is directly accessible without special permissions.</string>
+    <string name="settings_cinderbox_mode_desc">Saves are read from /StardewValley/desktop/Saves/ using All Files access, Root, or Shizuku.</string>
     <string name="settings_cinderbox_mode_off_desc">Saves are read from the native Stardew Valley Android directory. Requires Root, Shizuku, or SAF file access.</string>
+    <string name="cinderbox_migrate_title">Move files to the new Cinderbox folder</string>
+    <string name="cinderbox_migrate_body">Cinderbox 0.8 stores Saves, Mods, and GameFiles under StardewValley/desktop/. Companion found leftover files in the old location. Move them now so they show up here and in Cinderbox.\n\nBack up your saves first if you have not already.</string>
+    <string name="cinderbox_migrate_move">Move files</string>
+    <string name="cinderbox_migrate_later">Later</string>
+    <string name="cinderbox_migrate_dont_ask">Don\'t ask again</string>
+    <string name="cinderbox_migrate_running">Moving files\u2026</string>
+    <string name="cinderbox_migrate_error">Could not move some files:\n%1$s</string>
+    <string name="cinderbox_migrate_conflicts">These folders already exist in the new location. Their old versions were left intact; no files inside them were merged:\n%1$s</string>
+    <string name="cinderbox_migrate_moved">Moved %1$s to StardewValley/desktop/.</string>
+    <string name="cinderbox_migrate_nothing">Nothing left to move.</string>
+    <string name="cinderbox_migrate_settings_title">Leftover files in the old Cinderbox folder</string>
+    <string name="cinderbox_migrate_settings_desc">Saves, Mods, or GameFiles are still under /StardewValley/ instead of /StardewValley/desktop/. Move them so Cinderbox 0.8 and this app use the same files.</string>
     <string name="settings_file_access">File Access</string>
     <string name="settings_file_access_current">Current: %1$s</string>
     <string name="settings_file_access_available">Available: %1$s</string>
@@ -620,4 +632,5 @@
     <!-- Settings: app update check -->
     <string name="settings_update_check_title">Check for app updates</string>
     <string name="settings_update_check_desc">Show update dialog on login when a new version is available</string>
+    <string name="action_done">Done</string>
 </resources>

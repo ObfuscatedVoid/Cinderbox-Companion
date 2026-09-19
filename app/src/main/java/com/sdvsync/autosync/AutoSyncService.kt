@@ -45,6 +45,7 @@ class AutoSyncService : Service() {
     }
 
     private val syncEngine: SyncEngine by inject()
+    private val saveFileManager: com.sdvsync.saves.SaveFileManager by inject()
     private val syncHistory: SyncHistoryStore by inject()
     private val processMonitor = GameProcessMonitor()
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -81,10 +82,7 @@ class AutoSyncService : Service() {
     private suspend fun autoSync() {
         try {
             // Find which save was most recently modified and push it
-            val localSaves = com.sdvsync.saves.SaveFileManager(
-                com.sdvsync.fileaccess.RootFileAccess(),
-                com.sdvsync.saves.SaveMetadataParser()
-            ).listLocalSaves()
+            val localSaves = saveFileManager.listLocalSaves()
 
             if (localSaves.isEmpty()) {
                 updateNotification("No local saves found")

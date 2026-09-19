@@ -1,5 +1,6 @@
 package com.sdvsync.di
 
+import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.download.AppUpdateManager
 import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.download.GitHubReleaseChecker
@@ -16,6 +17,7 @@ import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveBundleManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveFileParser
+import com.sdvsync.saves.SaveLocation
 import com.sdvsync.saves.SaveMetadataParser
 import com.sdvsync.saves.SaveValidator
 import com.sdvsync.steam.SteamAuthenticator
@@ -28,6 +30,7 @@ import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
 import com.sdvsync.ui.viewmodels.AppUpdateViewModel
 import com.sdvsync.ui.viewmodels.BackupListViewModel
+import com.sdvsync.ui.viewmodels.CinderboxMigrationViewModel
 import com.sdvsync.ui.viewmodels.DashboardViewModel
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
@@ -74,15 +77,17 @@ val appModule = module {
     single { SaveValidator() }
     single { SaveBackupManager(androidContext()) }
     single { SaveFileParser() }
-    factory {
+    single {
         val detector = get<FileAccessDetector>()
-        val strategy = get<FileAccessStrategy>()
-        val basePath = when {
-            detector.isCinderboxMode() -> SaveFileManager.CINDERBOX_SAVE_PATH
-            strategy is SAFFileAccess -> strategy.basePath
-            else -> SaveFileManager.SDV_SAVE_PATH
+        SaveFileManager(get()) {
+            val strategy = detector.resolveStrategy()
+            val basePath = when {
+                strategy is SAFFileAccess -> strategy.basePath
+                detector.isCinderboxMode() -> CinderboxPaths.SAVES_DIR
+                else -> SaveFileManager.SDV_SAVE_PATH
+            }
+            SaveLocation(strategy, basePath)
         }
-        SaveFileManager(strategy, get(), basePath)
     }
 
     // Sync
@@ -97,7 +102,7 @@ val appModule = module {
     single { ModDownloadManager(androidContext()) }
     single { NexusModSource(get(), get()) }
     single { SmapiUpdateChecker(get()) }
-    single { SaveBundleManager(androidContext(), get(), get(), get()) }
+    single { SaveBundleManager(androidContext(), get(), get(), get(), get(), get()) }
 
     // ViewModels
     viewModel { LoginViewModel(get()) }
@@ -113,4 +118,5 @@ val appModule = module {
     viewModel { BackupListViewModel(androidContext(), get(), get(), get()) }
     viewModel { SaveViewerViewModel(androidContext(), get(), get()) }
     viewModel { AppUpdateViewModel(get(), get()) }
+    viewModel { CinderboxMigrationViewModel(get()) }
 }

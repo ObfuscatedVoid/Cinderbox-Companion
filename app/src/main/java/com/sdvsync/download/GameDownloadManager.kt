@@ -1,9 +1,11 @@
 package com.sdvsync.download
 
 import android.content.Context
+import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.logging.AppLogger
 import java.io.File
 import java.io.InputStream
+import java.nio.file.Files
 import java.util.zip.ZipInputStream
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
@@ -89,12 +91,12 @@ class GameDownloadManager(
                 "Lidgren.Network.dll"
             )
         const val CINDERBOX_CONTENT_DIR = "Content"
-        const val CINDERBOX_BASE_DIR = "/storage/emulated/0/StardewValley/desktop"
-        const val CINDERBOX_DEST = "$CINDERBOX_BASE_DIR/GameFiles"
+        const val CINDERBOX_BASE_DIR = CinderboxPaths.DESKTOP_DIR
+        const val CINDERBOX_DEST = CinderboxPaths.GAME_FILES_DIR
 
         const val SMAPI_CACHE_FILENAME = "smapi-internal.zip"
-        const val SMAPI_DEST = "/storage/emulated/0/StardewValley/smapi-internal"
-        const val MODS_DIR = "/storage/emulated/0/StardewValley/desktop/Mods"
+        const val SMAPI_DEST = CinderboxPaths.SMAPI_DIR
+        const val MODS_DIR = CinderboxPaths.MODS_DIR
     }
 
     val progress: StateFlow<DownloadProgress> = _progress.asStateFlow()
@@ -213,11 +215,6 @@ class GameDownloadManager(
                 }
 
                 AppLogger.i(TAG, "Cinderbox APK downloaded: ${destFile.length()} bytes")
-
-                releaseChecker.setInstalledVersion(
-                    GitHubReleaseChecker.KEY_CINDERBOX_VERSION,
-                    releaseInfo.version
-                )
 
                 _cinderboxProgress.value =
                     CinderboxDownloadProgress(
@@ -368,6 +365,11 @@ class GameDownloadManager(
                         if (!entry.isDirectory) {
                             try {
                                 val destFile = File(smapiDestDir, entryName)
+                                require(
+                                    destFile.canonicalPath.startsWith(smapiDestDir.canonicalPath + File.separator)
+                                ) {
+                                    "SMAPI entry outside target directory: $entryName"
+                                }
                                 destFile.parentFile?.mkdirs()
                                 destFile.outputStream().buffered().use { output ->
                                     var bytesRead: Int
@@ -410,7 +412,7 @@ class GameDownloadManager(
                 }
             )
         try {
-            File(MODS_DIR).mkdirs()
+            Files.createDirectories(File(MODS_DIR).toPath())
             extracted++
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -469,6 +471,14 @@ class GameDownloadManager(
     suspend fun copyToCinderbox(installDir: String) = withContext(Dispatchers.IO) {
         val srcDir = File(installDir)
         val destDir = File(CINDERBOX_DEST)
+
+        val missing = CINDERBOX_DLLS.filter { !File(srcDir, it).isFile }.toMutableList()
+        val content = File(srcDir, CINDERBOX_CONTENT_DIR)
+        if (!content.isDirectory || content.walk().none { it.isFile }) missing += CINDERBOX_CONTENT_DIR
+        if (missing.isNotEmpty()) {
+            setCopyError("Missing game files: ${missing.joinToString(", ")}")
+            return@withContext
+        }
 
         // --- Count total files up front ---
         val filesToCopy = mutableListOf<Pair<File, File>>() // source -> dest
@@ -578,6 +588,11 @@ class GameDownloadManager(
                             if (!entry.isDirectory) {
                                 try {
                                     val destFile = File(smapiDestDir, entryName)
+                                    require(
+                                        destFile.canonicalPath.startsWith(smapiDestDir.canonicalPath + File.separator)
+                                    ) {
+                                        "SMAPI entry outside target directory: $entryName"
+                                    }
                                     destFile.parentFile?.mkdirs()
                                     destFile.outputStream().buffered().use { output ->
                                         var bytesRead: Int
@@ -618,7 +633,7 @@ class GameDownloadManager(
                 overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f
             )
         try {
-            File(MODS_DIR).mkdirs()
+            Files.createDirectories(File(MODS_DIR).toPath())
             copied++
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e

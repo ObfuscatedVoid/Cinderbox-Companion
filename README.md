@@ -91,6 +91,9 @@ If you're using Cinderbox, the app expects files in the following structure:
 
 The setup wizard and SMAPI extraction handle most of this automatically. Game files require a Steam account that owns the PC version.
 
+If you used the **Cinderbox client** before version 0.8, those files lived directly under `StardewValley/` (`Saves/`, `Mods/`, `GameFiles/`).
+Companion 0.1.1+ uses the `desktop/` layout required by Cinderbox 0.8+. It offers to move leftover files on launch; you can also move them from Settings. Existing destination save or mod folders are left intact, with their old copies reported as conflicts. An existing `GameFiles/` folder is never merged with another version. Back up your saves before migrating.
+
 Please join the [Cinderbox Discord](https://discord.gg/AjstnPVYwS) for help with Cinderbox-specific issues and an up-to-date guide and list of compatible mods.
 
 ## Building from Source

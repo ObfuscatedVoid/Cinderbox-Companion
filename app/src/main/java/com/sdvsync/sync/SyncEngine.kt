@@ -126,11 +126,9 @@ class SyncEngine(
 
             // Backup existing local save
             onProgress?.invoke(context.getString(R.string.sync_progress_backing_up))
-            if (existingLocal != null) {
-                val localFiles = saveFileManager.readLocalSave(saveFolderName)
-                if (localFiles.isNotEmpty()) {
-                    backupManager.backupSaveData(saveFolderName, localFiles)
-                }
+            val localFiles = saveFileManager.readLocalSave(saveFolderName)
+            if (localFiles.isNotEmpty()) {
+                backupManager.backupSaveData(saveFolderName, localFiles)
             }
 
             // Write to the device
@@ -262,14 +260,8 @@ class SyncEngine(
             }
 
             // Step 5: Upload local files to cloud
-            // Use the same path prefix as existing cloud files so we overwrite them
-            // (not create duplicates at a different path)
-            val cloudPathPrefix = cloudFileList?.firstOrNull {
-                it.pathPrefix.contains("%WinAppDataRoaming%")
-            }?.pathPrefix ?: cloudFileList?.firstOrNull()?.pathPrefix
-
             onProgress?.invoke(context.getString(R.string.sync_progress_uploading))
-            cloudService.uploadSave(saveFolderName, localFiles, cloudPathPrefix) { uploaded, total ->
+            cloudService.uploadSave(saveFolderName, localFiles) { uploaded, total ->
                 onProgress?.invoke(context.getString(R.string.sync_progress_uploading_file, uploaded, total))
             }
 

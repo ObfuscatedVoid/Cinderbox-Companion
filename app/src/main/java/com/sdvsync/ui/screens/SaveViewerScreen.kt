@@ -344,7 +344,7 @@ private fun BundlesTab(data: SaveFileData) {
 
 @Composable
 private fun MuseumTab(donatedItems: Int) {
-    val totalMuseumItems = 102
+    val totalMuseumItems = 95
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),

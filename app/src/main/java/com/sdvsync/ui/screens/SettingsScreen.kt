@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -24,6 +25,7 @@ import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.CinderboxMigrationDialog
 import com.sdvsync.ui.components.PixelDivider
 import com.sdvsync.ui.components.PixelIconButton
 import com.sdvsync.ui.components.StardewButton
@@ -32,6 +34,7 @@ import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.StoragePermissionDialog
+import com.sdvsync.ui.viewmodels.CinderboxMigrationViewModel
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import kotlin.math.roundToInt
 import org.koin.androidx.compose.koinViewModel
@@ -56,10 +59,19 @@ private fun SectionHeader(text: String) {
     )
 }
 
+@Composable
+private fun SettingsSectionGap() {
+    Spacer(Modifier.height(16.dp))
+    PixelDivider()
+    Spacer(Modifier.height(16.dp))
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
+    val migrationViewModel: CinderboxMigrationViewModel = koinViewModel()
+    val migrationState by migrationViewModel.state.collectAsState()
 
     val context = LocalContext.current
 
@@ -81,6 +93,16 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
         viewModel.load()
     }
 
+    if (migrationState.showDialog) {
+        CinderboxMigrationDialog(
+            state = migrationState,
+            onMove = migrationViewModel::migrate,
+            onLater = migrationViewModel::remindLater,
+            onDontAsk = migrationViewModel::dontAskAgain,
+            onDismissResult = migrationViewModel::dismissResult
+        )
+    }
+
     val sliderColors = SliderDefaults.colors(
         thumbColor = MaterialTheme.colorScheme.primary,
         activeTrackColor = MaterialTheme.colorScheme.primary
@@ -90,6 +112,8 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
         checkedTrackColor = MaterialTheme.colorScheme.primary
     )
     val filterChipColors = FilterChipDefaults.filterChipColors(
+        containerColor = Color.Transparent,
+        labelColor = MaterialTheme.colorScheme.onSurface,
         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
     )
@@ -157,9 +181,39 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
-            PixelDivider()
-            Spacer(Modifier.height(24.dp))
+            if (state.cinderboxMode && state.hasLegacyCinderboxFiles) {
+                Spacer(Modifier.height(12.dp))
+                StardewCard {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            stringResource(R.string.cinderbox_migrate_settings_title),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.cinderbox_migrate_settings_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        StardewButton(
+                            onClick = migrationViewModel::showPrompt,
+                            variant = StardewButtonVariant.Gold,
+                            enabled = !migrationState.isMigrating
+                        ) {
+                            Text(
+                                if (migrationState.isMigrating) {
+                                    stringResource(R.string.cinderbox_migrate_running)
+                                } else {
+                                    stringResource(R.string.cinderbox_migrate_move)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            SettingsSectionGap()
 
             // File access mode
             SectionHeader(stringResource(R.string.settings_file_access))
@@ -184,7 +238,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                     Spacer(Modifier.height(12.dp))
                     Text(
                         stringResource(R.string.settings_file_access_choose),
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(8.dp))
                     FlowRow(
@@ -195,14 +249,16 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                             selected = state.preferredStrategy == null,
                             onClick = { viewModel.setFileAccessMode(null) },
                             label = { Text(stringResource(R.string.settings_file_access_auto)) },
-                            colors = filterChipColors
+                            colors = filterChipColors,
+                            shape = RectangleShape
                         )
                         state.availableModes.forEach { mode ->
                             FilterChip(
                                 selected = state.preferredStrategy.equals(mode, ignoreCase = true),
                                 onClick = { viewModel.setFileAccessMode(mode) },
                                 label = { Text(strategyDisplayName(mode)) },
-                                colors = filterChipColors
+                                colors = filterChipColors,
+                                shape = RectangleShape
                             )
                         }
                     }
@@ -250,9 +306,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
-            PixelDivider()
-            Spacer(Modifier.height(24.dp))
+            SettingsSectionGap()
 
             // Backups
             SectionHeader(stringResource(R.string.settings_backups_title))
@@ -287,9 +341,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
-            PixelDivider()
-            Spacer(Modifier.height(24.dp))
+            SettingsSectionGap()
 
             // Auto-sync
             SectionHeader(stringResource(R.string.settings_auto_sync_title))
@@ -329,9 +381,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
-            PixelDivider()
-            Spacer(Modifier.height(24.dp))
+            SettingsSectionGap()
 
             // Mods - Nexus API Key
             NexusApiKeySection(
@@ -344,13 +394,11 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                 onClearError = { viewModel.clearApiKeyError() }
             )
 
-            Spacer(Modifier.height(24.dp))
-            PixelDivider()
-            Spacer(Modifier.height(24.dp))
+            SettingsSectionGap()
 
             // Account
             SectionHeader(stringResource(R.string.settings_steam_account))
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
             StardewButton(
                 onClick = {
                     viewModel.logout()
@@ -361,9 +409,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                 Text(stringResource(R.string.settings_logout))
             }
 
-            Spacer(Modifier.height(24.dp))
-            PixelDivider()
-            Spacer(Modifier.height(24.dp))
+            SettingsSectionGap()
 
             // About
             SectionHeader(stringResource(R.string.settings_about_title))
@@ -450,9 +496,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
-            PixelDivider()
-            Spacer(Modifier.height(24.dp))
+            SettingsSectionGap()
 
             // Diagnostics
             SectionHeader(stringResource(R.string.settings_diagnostics_title))
@@ -485,7 +529,7 @@ private fun SAFAccessSection(
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_saf_title),
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.bodyMedium
             )
             Spacer(Modifier.height(8.dp))
 
@@ -497,7 +541,7 @@ private fun SAFAccessSection(
                         stringResource(R.string.settings_saf_configured)
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.secondary
                 )
                 Spacer(Modifier.height(8.dp))
                 StardewOutlinedButton(onClick = onRevoke) {
@@ -536,7 +580,7 @@ private fun ShizukuStatusSection(
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_shizuku_title),
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.bodyMedium
             )
             Spacer(Modifier.height(8.dp))
 
@@ -569,7 +613,7 @@ private fun ShizukuStatusSection(
                     Text(
                         stringResource(R.string.settings_shizuku_ready),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                     Spacer(Modifier.height(8.dp))
                     StardewOutlinedButton(onClick = onBindService) {
@@ -755,7 +799,7 @@ private fun AllFilesAccessSection(permissionGranted: Boolean, accessWorking: Boo
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_all_files_title),
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.bodyMedium
             )
             Spacer(Modifier.height(8.dp))
 
@@ -764,7 +808,7 @@ private fun AllFilesAccessSection(permissionGranted: Boolean, accessWorking: Boo
                     Text(
                         stringResource(R.string.settings_all_files_granted),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
                 permissionGranted -> {
