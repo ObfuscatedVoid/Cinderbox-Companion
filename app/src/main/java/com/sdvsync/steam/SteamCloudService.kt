@@ -51,9 +51,6 @@ class SteamCloudService(private val clientManager: SteamClientManager, private v
     companion object {
         private const val TAG = "SteamCloud"
         const val STARDEW_APP_ID = 413150
-
-        /** Default Steam Cloud path prefix for Stardew Valley saves (matches PC convention) */
-        private const val SDV_CLOUD_PATH_PREFIX = "%WinAppDataRoaming%StardewValley/Saves/"
     }
 
     /**
@@ -192,73 +189,39 @@ class SteamCloudService(private val clientManager: SteamClientManager, private v
         result
     }
 
-    /**
-     * Upload all files for a save to Steam Cloud.
-     * Files map: baseName (e.g. "SaveGameInfo") -> file bytes.
-     *
-     * @param pathPrefix The cloud path prefix for this save's files. If null, looks up
-     *   existing cloud files to match their prefix, or falls back to the default
-     *   Stardew Valley convention (%WinAppDataRoaming%StardewValley/Saves/saveFolderName/).
-     */
+    /** Upload changed files, preserving their existing full paths and all other cloud files. */
     suspend fun uploadSave(
         saveFolderName: String,
         files: Map<String, ByteArray>,
-        pathPrefix: String? = null,
         onProgress: ((uploaded: Int, total: Int) -> Unit)? = null
     ) = withContext(Dispatchers.IO) {
         val cloud = clientManager.cloud
-
-        // Determine the correct path prefix for uploads
-        val effectivePrefix = pathPrefix
-            ?: run {
-                // Look up existing cloud files to match their prefix
-                val existing = listCloudFiles()
-                    .filter { it.saveFolderName == saveFolderName }
-                existing.firstOrNull { it.pathPrefix.contains("%WinAppDataRoaming%") }?.pathPrefix
-                    ?: existing.maxByOrNull { it.pathPrefix.length }?.pathPrefix
-                    ?: "$SDV_CLOUD_PATH_PREFIX$saveFolderName/"
-            }
-
-        AppLogger.d(TAG, "uploadSave: using pathPrefix='$effectivePrefix' for $saveFolderName")
-
-        // Construct full paths using the correct prefix
-        val filePaths = files.keys.map { "$effectivePrefix$it" }
-
-        // Find orphaned files with wrong prefix to clean up
-        val orphanedPaths = if (pathPrefix == null) {
-            // We already listed files above; find any with different prefix
-            val allFiles = listCloudFiles()
-            allFiles.filter { it.saveFolderName == saveFolderName && it.pathPrefix != effectivePrefix }
-                .map { it.fullPath }
-        } else {
-            emptyList()
-        }
-
-        if (orphanedPaths.isNotEmpty()) {
-            AppLogger.d(TAG, "uploadSave: will delete ${orphanedPaths.size} orphaned files: $orphanedPaths")
+        val uploads = planCloudUploads(saveFolderName, files, listCloudFiles())
+        if (uploads.isEmpty()) {
+            onProgress?.invoke(files.size, files.size)
+            return@withContext
         }
 
         // Begin batch
         val batchResponse = cloud.beginAppUploadBatch(
             appId = STARDEW_APP_ID,
             machineName = "SDV-Sync-Android",
-            filesToUpload = filePaths,
-            filesToDelete = orphanedPaths,
+            filesToUpload = uploads.keys.toList(),
+            filesToDelete = emptyList(),
             clientId = 0L,
             appBuildId = 0L
         ).await()
 
         val batchId = batchResponse.batchID
-        AppLogger.d(TAG, "uploadSave: batch started, batchId=$batchId, files=${files.size}")
+        AppLogger.d(TAG, "uploadSave: batch started, batchId=$batchId, files=${uploads.size}")
 
         try {
             var uploadedCount = 0
-            for ((baseName, data) in files) {
-                val fullPath = "$effectivePrefix$baseName"
+            for ((fullPath, data) in uploads) {
                 val sha = sha1(data)
 
                 AppLogger.d(TAG, "uploadSave: uploading $fullPath (${data.size} bytes)")
-                onProgress?.invoke(uploadedCount, files.size)
+                onProgress?.invoke(uploadedCount, uploads.size)
 
                 val uploadInfo = cloud.beginFileUpload(
                     appId = STARDEW_APP_ID,
@@ -312,10 +275,10 @@ class SteamCloudService(private val clientManager: SteamClientManager, private v
                 }
 
                 uploadedCount++
-                AppLogger.d(TAG, "uploadSave: committed $fullPath ($uploadedCount/${files.size})")
+                AppLogger.d(TAG, "uploadSave: committed $fullPath ($uploadedCount/${uploads.size})")
             }
 
-            onProgress?.invoke(files.size, files.size)
+            onProgress?.invoke(uploads.size, uploads.size)
 
             // Complete the batch
             cloud.completeAppUploadBatch(

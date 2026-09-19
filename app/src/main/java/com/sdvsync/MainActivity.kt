@@ -12,8 +12,11 @@ import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -21,6 +24,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -34,6 +38,7 @@ import com.sdvsync.mods.ModDownloadManager
 import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.ui.components.AppUpdateDialog
 import com.sdvsync.ui.components.BottomTab
+import com.sdvsync.ui.components.CinderboxMigrationDialog
 import com.sdvsync.ui.components.StardewBottomBar
 import com.sdvsync.ui.screens.BackupListScreen
 import com.sdvsync.ui.screens.DashboardScreen
@@ -49,6 +54,7 @@ import com.sdvsync.ui.screens.SyncDetailScreen
 import com.sdvsync.ui.screens.SyncLogScreen
 import com.sdvsync.ui.theme.SdvSyncTheme
 import com.sdvsync.ui.viewmodels.AppUpdateViewModel
+import com.sdvsync.ui.viewmodels.CinderboxMigrationViewModel
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import com.sdvsync.ui.viewmodels.ModBrowseViewModel
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
@@ -355,8 +361,14 @@ fun SdvSyncNavGraph(navController: NavHostController) {
 fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, selectedTab: BottomTab) {
     val updateViewModel: AppUpdateViewModel = koinViewModel()
     val updateState by updateViewModel.state.collectAsState()
+    val migrationViewModel: CinderboxMigrationViewModel = koinViewModel()
+    val migrationState by migrationViewModel.state.collectAsState()
 
     LaunchedEffect(Unit) { updateViewModel.checkForUpdate() }
+    LifecycleResumeEffect(Unit) {
+        migrationViewModel.check()
+        onPauseOrDispose {}
+    }
 
     val mainNavController = rememberNavController()
 
@@ -397,28 +409,15 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
         }
     }
 
-    Scaffold(
-        bottomBar = {
-            if (isMainShowBottomBar) {
-                StardewBottomBar(
-                    selectedTab = mainSelectedTab,
-                    onTabSelected = { tab ->
-                        mainNavController.navigate(tab.route) {
-                            popUpTo(mainNavController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
-        }
-    ) { innerPadding ->
+    Column(Modifier.fillMaxSize()) {
         NavHost(
             navController = mainNavController,
             startDestination = "saves",
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier
+                .weight(1f)
+                .consumeWindowInsets(
+                    if (isMainShowBottomBar) WindowInsets.navigationBars else WindowInsets(0, 0, 0, 0)
+                ),
             enterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
             exitTransition = { fadeOut(tween(NAV_ANIM_DURATION)) },
             popEnterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
@@ -483,10 +482,35 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
                 )
             }
         }
+
+        if (isMainShowBottomBar) {
+            StardewBottomBar(
+                selectedTab = mainSelectedTab,
+                onTabSelected = { tab ->
+                    mainNavController.navigate(tab.route) {
+                        popUpTo(mainNavController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
+    }
+
+    if (migrationState.showDialog) {
+        CinderboxMigrationDialog(
+            state = migrationState,
+            onMove = migrationViewModel::migrate,
+            onLater = migrationViewModel::remindLater,
+            onDontAsk = migrationViewModel::dontAskAgain,
+            onDismissResult = migrationViewModel::dismissResult
+        )
     }
 
     val updateInfo = updateState.updateInfo
-    if (updateState.showDialog && updateInfo != null) {
+    if (!migrationState.showDialog && updateState.showDialog && updateInfo != null) {
         AppUpdateDialog(
             updateInfo = updateInfo,
             state = updateState,

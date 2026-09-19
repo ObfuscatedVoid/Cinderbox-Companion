@@ -1,6 +1,7 @@
 package com.sdvsync.download
 
 import android.content.Context
+import android.content.pm.PackageManager
 import com.sdvsync.logging.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -110,7 +111,16 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
         }
     }
 
-    fun getInstalledVersion(key: String): String? = prefs.getString(key, null)
+    @Suppress("DEPRECATION")
+    fun getInstalledVersion(key: String): String? = if (key == KEY_CINDERBOX_VERSION) {
+        try {
+            context.packageManager.getPackageInfo("com.game.cinderbox", 0).versionName
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        }
+    } else {
+        prefs.getString(key, null)
+    }
 
     fun setInstalledVersion(key: String, version: String) {
         prefs.edit().putString(key, version).apply()

@@ -78,13 +78,6 @@ class BackupListViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Backup current save first
-                val currentFiles = saveFileManager.readLocalSave(saveFolderName)
-                if (currentFiles.isNotEmpty()) {
-                    backupManager.backupSaveData(saveFolderName, currentFiles)
-                    AppLogger.d(TAG, "Backed up current save before restore")
-                }
-
                 // Read backup files
                 val backupFiles = mutableMapOf<String, ByteArray>()
                 backupDir.listFiles()?.filter { it.isFile }?.forEach { file ->
@@ -94,6 +87,13 @@ class BackupListViewModel(
                 if (backupFiles.isEmpty()) {
                     _state.update { it.copy(isRestoring = false, restoreResult = "Backup is empty") }
                     return@launch
+                }
+
+                // Backup current save first
+                val currentFiles = saveFileManager.readLocalSave(saveFolderName)
+                if (currentFiles.isNotEmpty()) {
+                    backupManager.backupSaveData(saveFolderName, currentFiles)
+                    AppLogger.d(TAG, "Backed up current save before restore")
                 }
 
                 // Write backup files to save directory

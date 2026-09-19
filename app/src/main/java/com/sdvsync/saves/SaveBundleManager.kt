@@ -15,7 +15,9 @@ class SaveBundleManager(
     private val context: Context,
     private val saveFileManager: SaveFileManager,
     private val modFileManager: ModFileManager,
-    private val metadataParser: SaveMetadataParser
+    private val metadataParser: SaveMetadataParser,
+    private val backupManager: SaveBackupManager,
+    private val validator: SaveValidator
 ) {
     companion object {
         private const val TAG = "SaveBundleManager"
@@ -129,9 +131,8 @@ class SaveBundleManager(
                         }
                         entry.name.startsWith(SAVE_DIR_PREFIX) && !entry.isDirectory -> {
                             val filename = entry.name.removePrefix(SAVE_DIR_PREFIX)
-                            if (filename.isNotBlank()) {
-                                saveFiles[filename] = zip.readBytes()
-                            }
+                            saveFileManager.requireSafeName(filename)
+                            saveFiles[filename] = zip.readBytes()
                         }
                     }
                     zip.closeEntry()
@@ -147,6 +148,12 @@ class SaveBundleManager(
             }
 
             val folderName = targetFolderName ?: manifest!!.save.folderName
+
+            saveFileManager.requireSafeName(folderName)
+            val validation = validator.validateSaveData(saveFiles[folderName], saveFiles["SaveGameInfo"])
+            if (!validation.valid) return ImportResult.Error(validation.errors.joinToString(", "))
+            val existing = saveFileManager.readLocalSave(folderName)
+            if (existing.isNotEmpty()) backupManager.backupSaveData(folderName, existing)
 
             // Write save files to local
             val writeSuccess = saveFileManager.writeLocalSave(folderName, saveFiles)

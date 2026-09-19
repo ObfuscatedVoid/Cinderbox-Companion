@@ -1,29 +1,27 @@
 package com.sdvsync.saves
 
+import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.fileaccess.FileAccessStrategy
 import com.sdvsync.logging.AppLogger
 import java.io.File
 
-class SaveFileManager(
-    private val fileAccess: FileAccessStrategy,
-    private val metadataParser: SaveMetadataParser,
-    private val basePath: String = SDV_SAVE_PATH
-) {
+class SaveFileManager(private val metadataParser: SaveMetadataParser, private val resolveLocation: () -> SaveLocation) {
     companion object {
         private const val TAG = "SaveFileManager"
         const val SDV_SAVE_PATH =
             "/storage/emulated/0/Android/data/com.chucklefish.stardewvalley/files/Saves"
-        const val CINDERBOX_SAVE_PATH =
-            "/storage/emulated/0/StardewValley/Saves"
+        const val CINDERBOX_SAVE_PATH = CinderboxPaths.SAVES_DIR
     }
 
     /** True when SAF points to a staging directory instead of the game folder. */
-    val isStaging: Boolean get() = basePath != SDV_SAVE_PATH && basePath != CINDERBOX_SAVE_PATH
+    val isStaging: Boolean
+        get() = resolveLocation().basePath.let { it != SDV_SAVE_PATH && it != CINDERBOX_SAVE_PATH }
 
     /**
      * List all local saves with their metadata.
      */
     suspend fun listLocalSaves(): List<LocalSave> {
+        val (fileAccess, basePath) = resolveLocation()
         val savesDir = File(basePath)
         val folders = fileAccess.listDirectories(savesDir) ?: return emptyList()
         AppLogger.d(TAG, "listLocalSaves: found ${folders.size} folders in $basePath")
@@ -48,16 +46,20 @@ class SaveFileManager(
      * Returns map of filename -> bytes.
      */
     suspend fun readLocalSave(saveFolderName: String): Map<String, ByteArray> {
+        requireSafeName(saveFolderName)
+        val (fileAccess, basePath) = resolveLocation()
         val saveDir = File(basePath, saveFolderName)
-        val files = fileAccess.listFiles(saveDir) ?: return emptyMap()
+        val files = fileAccess.listFiles(saveDir) ?: run {
+            check(!fileAccess.exists(saveDir)) { "Cannot read save folder: $saveFolderName" }
+            return emptyMap()
+        }
 
         val result = mutableMapOf<String, ByteArray>()
         for (filename in files) {
-            val data = fileAccess.readFile(File(saveDir, filename))
-            if (data != null) {
-                result[filename] = data
-            } else {
-                AppLogger.w(TAG, "readLocalSave: skipped $filename (null read)")
+            requireSafeName(filename)
+            if (filename.endsWith(".sdvsync_tmp")) continue
+            result[filename] = checkNotNull(fileAccess.readFile(File(saveDir, filename))) {
+                "Cannot read save file: $filename"
             }
         }
         AppLogger.d(TAG, "readLocalSave($saveFolderName): read ${result.size}/${files.size} files")
@@ -69,7 +71,12 @@ class SaveFileManager(
      * Creates the save folder if it doesn't exist.
      */
     suspend fun writeLocalSave(saveFolderName: String, files: Map<String, ByteArray>): Boolean {
+        requireSafeName(saveFolderName)
+        val (fileAccess, basePath) = resolveLocation()
         val saveDir = File(basePath, saveFolderName)
+
+        files.keys.forEach(::requireSafeName)
+        require(files.isNotEmpty()) { "No save files to write" }
 
         // Ensure directory exists
         val mkdirsResult = fileAccess.mkdirs(saveDir)
@@ -107,7 +114,23 @@ class SaveFileManager(
     /**
      * Check if save directory exists and is accessible.
      */
-    suspend fun isSaveDirectoryAccessible(): Boolean = fileAccess.exists(File(basePath))
+    suspend fun isSaveDirectoryAccessible(): Boolean {
+        val (fileAccess, basePath) = resolveLocation()
+        return fileAccess.exists(File(basePath))
+    }
+
+    internal fun requireSafeName(name: String) {
+        require(
+            name.isNotBlank() &&
+                name != "." &&
+                name != ".." &&
+                '/' !in name &&
+                '\\' !in name &&
+                '\u0000' !in name
+        ) { "Invalid save file name" }
+    }
 }
 
 data class LocalSave(val folderName: String, val metadata: SaveMetadata, val directory: File)
+
+data class SaveLocation(val fileAccess: FileAccessStrategy, val basePath: String)

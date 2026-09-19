@@ -3,6 +3,7 @@ package com.sdvsync.fileaccess
 import android.content.Context
 import android.os.Build
 import android.os.Environment
+import androidx.core.content.edit
 import com.sdvsync.logging.AppLogger
 
 class FileAccessDetector(private val context: Context) {
@@ -14,6 +15,7 @@ class FileAccessDetector(private val context: Context) {
         private const val KEY_CINDERBOX_MODE = "cinderbox_mode"
         private const val KEY_SETUP_COMPLETED = "setup_completed"
         private const val KEY_SETUP_TYPE = "setup_type"
+        private const val KEY_LAYOUT_DONT_ASK = "cinderbox_layout_dont_ask"
     }
 
     /**
@@ -29,7 +31,7 @@ class FileAccessDetector(private val context: Context) {
             AppLogger.d(TAG, "detectBestStrategy: selected Shizuku")
             return ShizukuFileAccess()
         }
-        if (AllFilesAccess.isAvailable()) {
+        if (isAllFilesUsable()) {
             AppLogger.d(TAG, "detectBestStrategy: selected All Files")
             return AllFilesAccess()
         }
@@ -74,7 +76,7 @@ class FileAccessDetector(private val context: Context) {
         val methods = mutableListOf<String>()
         if (RootFileAccess.isAvailable()) methods.add("Root")
         if (ShizukuFileAccess.isAvailable()) methods.add("Shizuku")
-        if (AllFilesAccess.isAvailable()) methods.add("All Files")
+        if (isAllFilesUsable()) methods.add("All Files")
         if (SAFFileAccess.isAvailable(context)) methods.add("SAF")
         methods.add("Manual") // Always available as fallback
         return methods
@@ -85,13 +87,13 @@ class FileAccessDetector(private val context: Context) {
 
     fun setPreferredStrategy(name: String?) {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .edit().apply {
+            .edit {
                 if (name == null) {
                     remove(KEY_PREFERRED)
                 } else {
                     putString(KEY_PREFERRED, name)
                 }
-            }.apply()
+            }
     }
 
     fun isCinderboxMode(): Boolean = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -99,7 +101,19 @@ class FileAccessDetector(private val context: Context) {
 
     fun setCinderboxMode(enabled: Boolean) {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .edit().putBoolean(KEY_CINDERBOX_MODE, enabled).apply()
+            .edit { putBoolean(KEY_CINDERBOX_MODE, enabled) }
+    }
+
+    // AllFilesAccess.isAvailable() probes the official SDV dir, which Android 14+ blocks.
+    fun isAllFilesUsable(): Boolean = AllFilesAccess.isAvailable() ||
+        (isCinderboxMode() && AllFilesAccess.isPermissionGranted())
+
+    fun isCinderboxMigrationDontAsk(): Boolean = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        .getBoolean(KEY_LAYOUT_DONT_ASK, false)
+
+    fun setCinderboxMigrationDontAsk(dontAsk: Boolean) {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .edit { putBoolean(KEY_LAYOUT_DONT_ASK, dontAsk) }
     }
 
     fun isSetupCompleted(): Boolean = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -107,10 +121,10 @@ class FileAccessDetector(private val context: Context) {
 
     fun setSetupCompleted(type: String) {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_SETUP_COMPLETED, true)
-            .putString(KEY_SETUP_TYPE, type)
-            .apply()
+            .edit {
+                putBoolean(KEY_SETUP_COMPLETED, true)
+                    .putString(KEY_SETUP_TYPE, type)
+            }
     }
 
     fun getSetupType(): String? = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -118,15 +132,15 @@ class FileAccessDetector(private val context: Context) {
 
     fun clearSetupChoice() {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .remove(KEY_SETUP_COMPLETED)
-            .remove(KEY_SETUP_TYPE)
-            .apply()
+            .edit {
+                remove(KEY_SETUP_COMPLETED)
+                    .remove(KEY_SETUP_TYPE)
+            }
     }
 
     /**
      * Whether the current configuration needs MANAGE_EXTERNAL_STORAGE but doesn't have it.
-     * Cinderbox path (/storage/emulated/0/StardewValley/Saves) is external storage
+     * Cinderbox path (/storage/emulated/0/StardewValley/desktop/Saves) is external storage
      * and requires this permission on Android 11+.
      */
     fun needsStoragePermission(cinderboxMode: Boolean = isCinderboxMode()): Boolean {

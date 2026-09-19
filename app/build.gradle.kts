@@ -14,8 +14,9 @@ android {
         applicationId = "com.sdvsync"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "0.1.0"
+        versionCode = 14
+        versionName = "0.1.1"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -135,6 +136,8 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }
 
 ktlint { android.set(true) }

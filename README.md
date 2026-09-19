@@ -45,7 +45,7 @@ The app works best on **Android 13 and below**, where file access to the game's 
 - **Rooted device** — Full access with no restrictions.
 - **Shizuku** — Grants elevated file access without root. Install Shizuku from the Play Store and start it via ADB or wireless debugging.
 - **Manual file transfer** — Use a file manager that still has access to `/Android/data/` (such as ZArchiver, MT Manager, or MT2) to manually move saves between the game directory and a staging folder. The app's SAF staging mode supports this workflow.
-- **Cinderbox mode** — Cinderbox stores saves in `/storage/emulated/0/StardewValley/Saves/` instead of inside `/Android/data/`. This path remains accessible with the standard All Files permission even on Android 14+, avoiding the stricter restrictions that apply to app-private directories.
+- **Cinderbox mode** — Cinderbox stores saves in `/storage/emulated/0/StardewValley/desktop/Saves/` instead of inside `/Android/data/`. This path remains accessible with the standard All Files permission even on Android 14+, avoiding the stricter restrictions that apply to app-private directories.
 
 ## Getting Started
 
@@ -72,23 +72,27 @@ If you're using Cinderbox, the app expects files in the following structure:
 
 ```
 /storage/emulated/0/StardewValley/
-├── GameFiles/
-│   ├── Stardew Valley.dll
-│   ├── StardewValley.GameData.dll
-│   ├── BmFont.dll
-│   ├── xTile.dll
-│   ├── Lidgren.Network.dll
-│   └── Content/
-│       └── (PC game assets)
-├── smapi-internal/
-│   └── (SMAPI files)
-├── Mods/
-│   └── (your mods)
-└── Saves/
-    └── (your save folders)
+├── desktop/
+│   ├── GameFiles/
+│   │   ├── Stardew Valley.dll
+│   │   ├── StardewValley.GameData.dll
+│   │   ├── BmFont.dll
+│   │   ├── xTile.dll
+│   │   ├── Lidgren.Network.dll
+│   │   └── Content/
+│   │       └── (PC game assets)
+│   ├── Mods/
+│   │   └── (your mods)
+│   └── Saves/
+│       └── (your save folders)
+└── smapi-internal/
+    └── (SMAPI files)
 ```
 
 The setup wizard and SMAPI extraction handle most of this automatically. Game files require a Steam account that owns the PC version.
+
+If you used the **Cinderbox client** before version 0.8, those files lived directly under `StardewValley/` (`Saves/`, `Mods/`, `GameFiles/`).
+Companion 0.1.1+ uses the `desktop/` layout required by Cinderbox 0.8+. It offers to move leftover files on launch; you can also move them from Settings. Existing destination save or mod folders are left intact, with their old copies reported as conflicts. An existing `GameFiles/` folder is never merged with another version. Back up your saves before migrating.
 
 Please join the [Cinderbox Discord](https://discord.gg/AjstnPVYwS) for help with Cinderbox-specific issues and an up-to-date guide and list of compatible mods.
 

@@ -1,24 +1,28 @@
 package com.sdvsync.mods
 
 import android.content.Context
+import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.models.InstallResult
 import com.sdvsync.mods.models.InstalledMod
 import java.io.File
+import java.nio.file.Files
+import java.util.UUID
 import java.util.zip.ZipInputStream
 
 /**
  * Manages local mod files in the Mods/ directory.
  * Uses direct java.io.File access (Mods/ is on shared storage, not inside /Android/data/).
  */
-class ModFileManager(private val context: Context, private val parser: ModManifestParser) {
+class ModFileManager(
+    private val context: Context,
+    private val parser: ModManifestParser,
+    private val modsDir: File = File(CinderboxPaths.MODS_DIR)
+) {
     companion object {
         private const val TAG = "ModFileManager"
-        const val MODS_DIR = "/storage/emulated/0/StardewValley/Mods"
         private const val DISABLED_SUFFIX = ".disabled"
     }
-
-    private val modsDir = File(MODS_DIR)
 
     fun isModsDirAccessible(): Boolean = modsDir.exists() && modsDir.isDirectory && modsDir.canRead()
 
@@ -30,7 +34,18 @@ class ModFileManager(private val context: Context, private val parser: ModManife
 
         return modsDir.listFiles()
             ?.filter { it.isDirectory }
-            ?.mapNotNull { folder -> parseMod(folder) }
+            ?.mapNotNull { folder ->
+                val normalized = if (folder.name.endsWith(DISABLED_SUFFIX) &&
+                    !folder.name.startsWith(".") &&
+                    File(folder, "manifest.json").isFile
+                ) {
+                    val target = File(modsDir, ".${folder.name.removeSuffix(DISABLED_SUFFIX)}")
+                    if (!target.exists() && folder.renameTo(target)) target else folder
+                } else {
+                    folder
+                }
+                parseMod(normalized)
+            }
             ?.sortedBy { it.manifest.name.lowercase() }
             ?: emptyList()
     }
@@ -46,7 +61,7 @@ class ModFileManager(private val context: Context, private val parser: ModManife
             null
         } ?: return null
 
-        val enabled = !folder.name.endsWith(DISABLED_SUFFIX)
+        val enabled = !folder.name.startsWith(".")
         val folderSize = folder.walk().filter { it.isFile }.sumOf { it.length() }
 
         return InstalledMod(
@@ -59,29 +74,21 @@ class ModFileManager(private val context: Context, private val parser: ModManife
         )
     }
 
-    /**
-     * Enable a mod by removing the .disabled suffix from its folder.
-     */
     fun enableMod(folderName: String): Boolean {
-        if (!folderName.endsWith(DISABLED_SUFFIX)) return true
-        val folder = File(modsDir, folderName)
-        val newName = folderName.removeSuffix(DISABLED_SUFFIX)
-        val target = File(modsDir, newName)
-        return folder.renameTo(target).also {
-            AppLogger.d(TAG, "Enable mod: $folderName -> $newName: $it")
-        }
+        if (!folderName.startsWith(".")) return true
+        return renameMod(folderName, folderName.removePrefix("."))
     }
 
-    /**
-     * Disable a mod by appending .disabled to its folder name.
-     */
     fun disableMod(folderName: String): Boolean {
-        if (folderName.endsWith(DISABLED_SUFFIX)) return true
-        val folder = File(modsDir, folderName)
-        val target = File(modsDir, "$folderName$DISABLED_SUFFIX")
-        return folder.renameTo(target).also {
-            AppLogger.d(TAG, "Disable mod: $folderName -> ${target.name}: $it")
-        }
+        if (folderName.startsWith(".")) return true
+        // SMAPI only skips folders whose names start with a dot.
+        return renameMod(folderName, ".$folderName")
+    }
+
+    private fun renameMod(from: String, to: String): Boolean {
+        val target = File(modsDir, to)
+        if (target.exists()) return false
+        return File(modsDir, from).renameTo(target)
     }
 
     /**
@@ -100,7 +107,7 @@ class ModFileManager(private val context: Context, private val parser: ModManife
      * Handles single-mod, nested-folder, and multi-mod archives.
      */
     fun installFromZip(zipFile: File): InstallResult {
-        val tempDir = File(context.cacheDir, "mod_extract_${System.currentTimeMillis()}")
+        val tempDir = Files.createTempDirectory(context.cacheDir.toPath(), "mod_extract_").toFile()
         try {
             // Extract zip to temp directory
             tempDir.mkdirs()
@@ -125,30 +132,29 @@ class ModFileManager(private val context: Context, private val parser: ModManife
                 val targetName = modFolder.name.takeIf { it != tempDir.name }
                     ?: manifest.name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "")
 
-                val targetDir = File(modsDir, targetName)
-
-                // Remove existing if updating
-                if (targetDir.exists()) {
-                    // Preserve config.json if it exists
-                    val existingConfig = File(targetDir, "config.json")
-                    val savedConfig = if (existingConfig.exists()) {
-                        existingConfig.readText()
-                    } else {
-                        null
+                require(targetName.isNotBlank() && targetName != "." && targetName != "..") {
+                    "Invalid mod folder name"
+                }
+                val existing = listInstalledMods().firstOrNull { it.manifest.uniqueID == manifest.uniqueID }
+                val targetDir = existing?.let { File(it.folderPath) } ?: File(modsDir, targetName)
+                check(!targetDir.exists() || existing != null) { "A different mod already uses $targetName" }
+                Files.createDirectories(modsDir.toPath())
+                val staged = Files.createTempDirectory(modsDir.toPath(), ".install-").toFile()
+                val previous = File(modsDir, ".backup-${UUID.randomUUID()}")
+                try {
+                    check(modFolder.copyRecursively(staged, overwrite = true)) { "Could not stage mod files" }
+                    val config = File(targetDir, "config.json")
+                    if (config.isFile) config.copyTo(File(staged, "config.json"), overwrite = true)
+                    if (targetDir.exists()) Files.move(targetDir.toPath(), previous.toPath())
+                    try {
+                        Files.move(staged.toPath(), targetDir.toPath())
+                    } catch (e: Exception) {
+                        if (previous.exists()) Files.move(previous.toPath(), targetDir.toPath())
+                        throw e
                     }
-
-                    targetDir.deleteRecursively()
-
-                    // Copy mod folder to Mods/
-                    modFolder.copyRecursively(targetDir, overwrite = true)
-
-                    // Restore config.json
-                    if (savedConfig != null) {
-                        File(targetDir, "config.json").writeText(savedConfig)
-                    }
-                } else {
-                    modsDir.mkdirs()
-                    modFolder.copyRecursively(targetDir, overwrite = true)
+                    previous.deleteRecursively()
+                } finally {
+                    staged.deleteRecursively()
                 }
 
                 parseMod(targetDir)?.let { installed.add(it) }
@@ -174,7 +180,7 @@ class ModFileManager(private val context: Context, private val parser: ModManife
             while (entry != null) {
                 val file = File(destDir, entry.name)
                 // Protect against zip slip
-                if (!file.canonicalPath.startsWith(destDir.canonicalPath)) {
+                if (!file.canonicalPath.startsWith(destDir.canonicalPath + File.separator)) {
                     throw SecurityException("Zip entry outside target dir: ${entry.name}")
                 }
                 if (entry.isDirectory) {

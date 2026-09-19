@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sdvsync.cinderbox.CinderboxLayoutEvents
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModDataStore
 import com.sdvsync.mods.ModFileManager
@@ -57,6 +58,9 @@ class ModManagerViewModel(
 
     init {
         loadInstalledMods()
+        viewModelScope.launch {
+            CinderboxLayoutEvents.changed.collect { loadInstalledMods() }
+        }
     }
 
     fun loadInstalledMods() {

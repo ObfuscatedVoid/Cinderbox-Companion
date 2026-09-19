@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,12 +34,13 @@ fun StardewDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .pixelBorder(),
+                .pixelBorder()
+                .padding(8.dp),
             shape = RectangleShape,
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(
-                modifier = Modifier.padding(
+                modifier = Modifier.verticalScroll(rememberScrollState()).padding(
                     start = 12.dp,
                     end = 12.dp,
                     top = 12.dp,
