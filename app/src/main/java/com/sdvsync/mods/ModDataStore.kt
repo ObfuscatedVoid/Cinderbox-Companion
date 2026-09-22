@@ -60,7 +60,7 @@ class ModDataStore(private val context: Context) {
     fun getNexusApiKey(): String? = encryptedPrefs?.getString(KEY_NEXUS_API_KEY, null)
 
     fun setNexusApiKey(key: String?) {
-        encryptedPrefs?.edit()?.apply {
+        checkNotNull(encryptedPrefs) { "Secure storage is unavailable" }.edit().apply {
             if (key != null) {
                 putString(KEY_NEXUS_API_KEY, key)
             } else {

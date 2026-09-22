@@ -1,29 +1,9 @@
 package com.sdvsync.ui.components
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.os.Build
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.sdvsync.R
 import com.sdvsync.fileaccess.AllFilesAccess
@@ -31,60 +11,22 @@ import com.sdvsync.fileaccess.AllFilesAccess
 @Composable
 fun StoragePermissionDialog(onPermissionResult: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { /* handled by LifecycleResumeEffect below */ }
-
+    val requestPermission = rememberStoragePermissionRequest {
+        if (AllFilesAccess.isPermissionGranted(context)) onPermissionResult()
+    }
     LifecycleResumeEffect(Unit) {
-        if (AllFilesAccess.isPermissionGranted()) onPermissionResult()
+        if (AllFilesAccess.isPermissionGranted(context)) onPermissionResult()
         onPauseOrDispose {}
     }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    stringResource(R.string.storage_permission_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    stringResource(R.string.storage_permission_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(16.dp))
-                Row(modifier = Modifier.align(Alignment.End)) {
-                    AppOutlinedButton(onClick = onDismiss) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    AppButton(
-                        onClick = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                try {
-                                    val intent = Intent(
-                                        Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                        "package:${context.packageName}".toUri()
-                                    )
-                                    launcher.launch(intent)
-                                } catch (_: ActivityNotFoundException) {
-                                    val fallback = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                    launcher.launch(fallback)
-                                }
-                            }
-                        },
-                        variant = ButtonVariant.Action
-                    ) {
-                        Text(stringResource(R.string.storage_permission_grant))
-                    }
-                }
-            }
+    AppDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.storage_permission_title),
+        text = stringResource(R.string.storage_permission_description),
+        confirmButton = {
+            AppButton(onClick = requestPermission) { Text(stringResource(R.string.storage_permission_grant)) }
+        },
+        dismissButton = {
+            AppOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
-    }
+    )
 }

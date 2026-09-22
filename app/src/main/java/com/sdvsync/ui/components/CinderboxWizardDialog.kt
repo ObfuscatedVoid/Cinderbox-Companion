@@ -2,7 +2,6 @@ package com.sdvsync.ui.components
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -100,9 +99,12 @@ fun CinderboxWizardDialog(
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
     // Permission launchers — LifecycleResumeEffect handles refresh on return
-    val storageLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { /* refresh handled by LifecycleResumeEffect */ }
+    val requestStoragePermission = rememberStoragePermissionRequest {
+        onRefreshPermissions(
+            AllFilesAccess.isPermissionGranted(context),
+            context.packageManager.canRequestPackageInstalls()
+        )
+    }
 
     val installLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -112,7 +114,7 @@ fun CinderboxWizardDialog(
     if (wizardState.currentStep == CinderboxWizardStep.PERMISSIONS) {
         LifecycleResumeEffect(Unit) {
             onRefreshPermissions(
-                AllFilesAccess.isPermissionGranted(),
+                AllFilesAccess.isPermissionGranted(context),
                 context.packageManager.canRequestPackageInstalls()
             )
             onPauseOrDispose {}
@@ -169,12 +171,7 @@ fun CinderboxWizardDialog(
                         CinderboxWizardStep.PERMISSIONS -> PermissionsStep(
                             hasStorage = wizardState.hasStoragePermission,
                             hasInstall = wizardState.hasInstallPermission,
-                            onGrantStorage = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                    storageLauncher.launch(intent)
-                                }
-                            },
+                            onGrantStorage = requestStoragePermission,
                             onGrantInstall = {
                                 val intent = Intent(
                                     Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,

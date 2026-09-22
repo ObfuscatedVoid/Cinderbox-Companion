@@ -121,8 +121,8 @@ class SettingsViewModel(
                     shizukuInstalled = shizukuInstalled,
                     shizukuRunning = shizukuRunning,
                     shizukuPermissionGranted = shizukuPermission,
-                    allFilesEligible = android.os.Build.VERSION.SDK_INT >= 30,
-                    allFilesPermissionGranted = AllFilesAccess.isPermissionGranted(),
+                    allFilesEligible = true,
+                    allFilesPermissionGranted = AllFilesAccess.isPermissionGranted(context),
                     allFilesAccessWorking = fileAccessDetector.isAllFilesUsable(),
                     safEligible = SAFFileAccess.isDeviceEligible(),
                     safConfigured = SAFFileAccess.isAvailable(context),
@@ -196,8 +196,10 @@ class SettingsViewModel(
     }
 
     fun setMaxBackups(count: Int) {
-        backupManager.setMaxBackupsAndPrune(count)
-        _state.update { it.copy(maxBackups = backupManager.maxBackups) }
+        viewModelScope.launch(Dispatchers.IO) {
+            backupManager.setMaxBackupsAndPrune(count)
+            _state.update { it.copy(maxBackups = backupManager.maxBackups) }
+        }
     }
 
     fun toggleCinderboxMode(enabled: Boolean) {

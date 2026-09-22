@@ -8,6 +8,8 @@ import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
+import com.sdvsync.util.MAX_SAVE_BYTES
+import com.sdvsync.util.readLimited
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -83,7 +85,7 @@ class BackupListViewModel(
                 // Read backup files
                 val backupFiles = mutableMapOf<String, ByteArray>()
                 backupDir.listFiles()?.filter { it.isFile }?.forEach { file ->
-                    backupFiles[file.name] = file.readBytes()
+                    backupFiles[file.name] = file.inputStream().use { it.readLimited(MAX_SAVE_BYTES) }
                 }
 
                 if (backupFiles.isEmpty()) {

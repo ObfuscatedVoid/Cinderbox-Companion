@@ -3,6 +3,7 @@ package com.sdvsync.saves
 import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.fileaccess.FileAccessStrategy
 import com.sdvsync.logging.AppLogger
+import com.sdvsync.util.MAX_SAVE_BYTES
 import java.io.File
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -66,13 +67,18 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
                 it.endsWith(".sdvsync_bak")
             }
         ) { "Interrupted save detected; restore its backup before syncing" }
+        check(files.size <= 100) { "Too many files in save folder" }
+        var total = 0L
         val result = mutableMapOf<String, ByteArray>()
         for (filename in files) {
             requireSafeName(filename)
             if (filename.endsWith(".sdvsync_tmp")) continue
-            result[filename] = checkNotNull(fileAccess.readFile(File(saveDir, filename))) {
+            val bytes = checkNotNull(fileAccess.readFile(File(saveDir, filename))) {
                 "Cannot read save file: $filename"
             }
+            total += bytes.size
+            check(total <= MAX_SAVE_BYTES) { "Save exceeds the supported size limit" }
+            result[filename] = bytes
         }
         AppLogger.d(TAG, "readLocalSave($saveFolderName): read ${result.size}/${files.size} files")
         result

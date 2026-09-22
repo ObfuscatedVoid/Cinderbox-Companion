@@ -1,9 +1,15 @@
 package com.sdvsync.fileaccess
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import androidx.core.content.ContextCompat
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileManager
+import com.sdvsync.util.MAX_SAVE_BYTES
+import com.sdvsync.util.readLimited
 import java.io.File
 
 /**
@@ -24,9 +30,8 @@ class AllFilesAccess : FileAccessStrategy {
          * True when the permission is granted AND the save directory is actually accessible.
          * Some devices grant the permission but still block /Android/data/.
          */
-        fun isAvailable(): Boolean {
-            if (Build.VERSION.SDK_INT < 30) return false
-            if (!Environment.isExternalStorageManager()) return false
+        fun isAvailable(context: Context): Boolean {
+            if (!isPermissionGranted(context)) return false
             val target = File(SaveFileManager.SDV_SAVE_PATH)
             return target.exists() && target.canRead()
         }
@@ -35,9 +40,11 @@ class AllFilesAccess : FileAccessStrategy {
          * True when the MANAGE_EXTERNAL_STORAGE permission is granted,
          * regardless of whether the save directory is actually accessible.
          */
-        fun isPermissionGranted(): Boolean {
-            if (Build.VERSION.SDK_INT < 30) return false
-            return Environment.isExternalStorageManager()
+        fun isPermissionGranted(context: Context): Boolean = if (Build.VERSION.SDK_INT >= 30) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+                PackageManager.PERMISSION_GRANTED
         }
     }
 
@@ -58,7 +65,7 @@ class AllFilesAccess : FileAccessStrategy {
     }
 
     override suspend fun readFile(file: File): ByteArray? = try {
-        if (file.exists()) file.readBytes() else null
+        if (file.exists()) file.inputStream().use { it.readLimited(MAX_SAVE_BYTES) } else null
     } catch (e: Exception) {
         AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
         null

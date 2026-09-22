@@ -1,5 +1,7 @@
 package com.sdvsync.fileaccess
 
+import com.sdvsync.util.MAX_SAVE_BYTES
+import com.sdvsync.util.readLimited
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -17,7 +19,7 @@ internal fun runFileCommand(shell: List<String>, command: String, timeoutSeconds
     try {
         process = ProcessBuilder(shell + command).redirectOutput(output).redirectError(errors).start()
         check(process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) { "File operation timed out" }
-        return ShellResult(process.exitValue() == 0, output.readBytes())
+        return ShellResult(process.exitValue() == 0, output.inputStream().use { it.readLimited(MAX_SAVE_BYTES) })
     } finally {
         process?.destroyForcibly()
         output.delete()

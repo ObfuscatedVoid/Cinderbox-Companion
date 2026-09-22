@@ -3,6 +3,8 @@ package com.sdvsync.saves
 import android.util.Xml
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.util.GzipUtil
+import com.sdvsync.util.MAX_SAVE_BYTES
+import com.sdvsync.util.readLimited
 import java.io.ByteArrayInputStream
 import java.io.File
 import org.xmlpull.v1.XmlPullParser
@@ -57,7 +59,7 @@ class SaveMetadataParser {
             return null
         }
         return try {
-            val rawBytes = file.readBytes()
+            val rawBytes = file.inputStream().use { it.readLimited(MAX_SAVE_BYTES) }
             AppLogger.d(TAG, "parseFromFile: ${file.name} size=${rawBytes.size}, isGzip=${GzipUtil.isGzip(rawBytes)}")
             val xmlData = GzipUtil.decompressIfCompressed(rawBytes)
             val result = parse(ByteArrayInputStream(xmlData))

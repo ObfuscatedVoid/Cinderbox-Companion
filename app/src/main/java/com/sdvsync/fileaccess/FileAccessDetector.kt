@@ -2,7 +2,6 @@ package com.sdvsync.fileaccess
 
 import android.content.Context
 import android.os.Build
-import android.os.Environment
 import androidx.core.content.edit
 import com.sdvsync.logging.AppLogger
 
@@ -104,9 +103,9 @@ class FileAccessDetector(private val context: Context) {
             .edit { putBoolean(KEY_CINDERBOX_MODE, enabled) }
     }
 
-    // AllFilesAccess.isAvailable() probes the official SDV dir, which Android 14+ blocks.
-    fun isAllFilesUsable(): Boolean = AllFilesAccess.isAvailable() ||
-        (isCinderboxMode() && AllFilesAccess.isPermissionGranted())
+    // AllFilesAccess.isAvailable(context) probes the official SDV dir, which Android 14+ blocks.
+    fun isAllFilesUsable(): Boolean = AllFilesAccess.isAvailable(context) ||
+        (isCinderboxMode() && AllFilesAccess.isPermissionGranted(context))
 
     fun isCinderboxMigrationDontAsk(): Boolean = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
         .getBoolean(KEY_LAYOUT_DONT_ASK, false)
@@ -144,9 +143,8 @@ class FileAccessDetector(private val context: Context) {
      * and requires this permission on Android 11+.
      */
     fun needsStoragePermission(cinderboxMode: Boolean = isCinderboxMode()): Boolean {
-        if (Build.VERSION.SDK_INT < 30) return false
-        if (!cinderboxMode) return false
-        if (Environment.isExternalStorageManager()) return false
+        if (!cinderboxMode && Build.VERSION.SDK_INT >= 30) return false
+        if (AllFilesAccess.isPermissionGranted(context)) return false
         if (RootFileAccess.isAvailable() || ShizukuFileAccess.isAvailable()) return false
         return true
     }

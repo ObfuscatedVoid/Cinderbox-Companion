@@ -1,8 +1,5 @@
 package com.sdvsync.ui.screens
 
-import android.content.Intent
-import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -18,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.BuildConfig
 import com.sdvsync.R
@@ -32,6 +28,7 @@ import com.sdvsync.ui.components.AppTopBar
 import com.sdvsync.ui.components.ButtonVariant
 import com.sdvsync.ui.components.CinderboxMigrationDialog
 import com.sdvsync.ui.components.StoragePermissionDialog
+import com.sdvsync.ui.components.rememberStoragePermissionRequest
 import com.sdvsync.ui.viewmodels.CinderboxMigrationViewModel
 import com.sdvsync.ui.viewmodels.SettingsViewModel
 import kotlin.math.roundToInt
@@ -73,11 +70,7 @@ fun SettingsScreen(onLogout: () -> Unit, viewModel: SettingsViewModel = koinView
 
     val context = LocalContext.current
 
-    val allFilesLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) {
-        viewModel.load()
-    }
+    val requestStoragePermission = rememberStoragePermissionRequest { viewModel.load() }
 
     val safLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -273,15 +266,7 @@ fun SettingsScreen(onLogout: () -> Unit, viewModel: SettingsViewModel = koinView
                 AllFilesAccessSection(
                     permissionGranted = state.allFilesPermissionGranted,
                     accessWorking = state.allFilesAccessWorking,
-                    onGrantPermission = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            val intent = Intent(
-                                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                "package:${context.packageName}".toUri()
-                            )
-                            allFilesLauncher.launch(intent)
-                        }
-                    }
+                    onGrantPermission = requestStoragePermission
                 )
             }
 

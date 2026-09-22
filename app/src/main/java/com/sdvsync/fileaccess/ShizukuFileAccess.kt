@@ -5,6 +5,7 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
 import com.sdvsync.logging.AppLogger
+import com.sdvsync.util.MAX_SAVE_BYTES
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -141,7 +142,7 @@ class ShizukuFileAccess : FileAccessStrategy {
             val service = requireService()
             val size = service.getFileSize(file.absolutePath)
             if (size < 0) return@withContext null
-            check(size <= Int.MAX_VALUE) { "File is too large" }
+            check(size <= MAX_SAVE_BYTES) { "File is too large" }
 
             val result = ByteArray(size.toInt())
             var offset = 0L

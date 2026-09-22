@@ -1,6 +1,8 @@
 package com.sdvsync.steam
 
 import com.sdvsync.logging.AppLogger
+import com.sdvsync.util.MAX_SAVE_BYTES
+import com.sdvsync.util.readLimited
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.*
 import java.security.MessageDigest
@@ -140,7 +142,7 @@ class SteamCloudService(private val clientManager: SteamClientManager, private v
         httpClient.newCall(requestBuilder.build()).execute().use { response ->
             check(response.isSuccessful) { "Download failed: HTTP ${response.code}" }
             // Preserve the exact payload for backups and SHA-1 comparisons; parsers decompress it.
-            response.body?.bytes() ?: error("Empty response body")
+            response.body?.byteStream()?.use { it.readLimited(MAX_SAVE_BYTES) } ?: error("Empty response body")
         }
     }
 
@@ -160,10 +162,14 @@ class SteamCloudService(private val clientManager: SteamClientManager, private v
             throw RuntimeException("No files found for save: $saveFolderName")
         }
 
+        check(saveFiles.size <= 100) { "Too many files in cloud save" }
+        var total = 0L
         val result = mutableMapOf<String, ByteArray>()
         saveFiles.forEachIndexed { index, file ->
             onProgress?.invoke(index, saveFiles.size)
             val data = downloadFile(file.fullPath)
+            total += data.size
+            check(total <= MAX_SAVE_BYTES) { "Cloud save exceeds the supported size limit" }
             result[file.baseName] = data
         }
         onProgress?.invoke(saveFiles.size, saveFiles.size)

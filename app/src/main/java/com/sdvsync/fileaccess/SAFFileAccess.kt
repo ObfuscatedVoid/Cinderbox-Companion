@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.documentfile.provider.DocumentFile
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileManager
+import com.sdvsync.util.MAX_SAVE_BYTES
+import com.sdvsync.util.readLimited
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -175,7 +177,7 @@ class SAFFileAccess(
     override suspend fun readFile(file: File): ByteArray? = withContext(Dispatchers.IO) {
         try {
             val doc = resolveDocument(file) ?: return@withContext null
-            context.contentResolver.openInputStream(doc.uri)?.use { it.readBytes() }
+            context.contentResolver.openInputStream(doc.uri)?.use { it.readLimited(MAX_SAVE_BYTES) }
         } catch (e: Exception) {
             AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
             null
