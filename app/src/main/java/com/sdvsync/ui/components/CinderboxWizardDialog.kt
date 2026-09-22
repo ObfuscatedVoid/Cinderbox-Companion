@@ -353,7 +353,7 @@ private fun PermissionRow(title: String, description: String, granted: Boolean, 
             } else {
                 AppButton(
                     onClick = onGrant,
-                    variant = ButtonVariant.Action
+                    variant = ButtonVariant.Primary
                 ) {
                     Text(stringResource(R.string.wizard_grant_button))
                 }
@@ -446,7 +446,7 @@ private fun InstallApkStep(apkFile: File?, onInstall: (File) -> Unit, onInstalle
 
         AppButton(
             onClick = { apkFile?.let { onInstall(it) } },
-            variant = ButtonVariant.Action,
+            variant = ButtonVariant.Primary,
             modifier = Modifier.fillMaxWidth(),
             enabled = apkFile != null
         ) {
@@ -531,7 +531,7 @@ private fun ReadyStep(onStartDownload: () -> Unit) {
 
             AppButton(
                 onClick = onStartDownload,
-                variant = ButtonVariant.Gold,
+                variant = ButtonVariant.Secondary,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.wizard_start_download))

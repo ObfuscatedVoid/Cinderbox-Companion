@@ -93,7 +93,7 @@ fun DashboardScreen(
             confirmButton = {
                 AppButton(
                     onClick = { viewModel.confirmImport() },
-                    variant = ButtonVariant.Action
+                    variant = ButtonVariant.Primary
                 ) {
                     Text(stringResource(R.string.import_confirm))
                 }

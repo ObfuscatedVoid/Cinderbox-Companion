@@ -304,7 +304,7 @@ fun GameDownloadScreen(viewModel: GameDownloadViewModel = koinViewModel()) {
                 DownloadState.IDLE -> {
                     AppButton(
                         onClick = { viewModel.onDownloadButtonClicked() },
-                        variant = ButtonVariant.Gold,
+                        variant = ButtonVariant.Secondary,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = state.branches.isNotEmpty()
                     ) {
@@ -482,7 +482,7 @@ fun GameDownloadScreen(viewModel: GameDownloadViewModel = koinViewModel()) {
                     if (showCopyButton) {
                         AppButton(
                             onClick = { viewModel.copyCinderbox() },
-                            variant = if (copyFailed) ButtonVariant.Primary else ButtonVariant.Action,
+                            variant = if (copyFailed) ButtonVariant.Primary else ButtonVariant.Primary,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
@@ -546,7 +546,7 @@ fun GameDownloadScreen(viewModel: GameDownloadViewModel = koinViewModel()) {
                             viewModel.resetDownload()
                             viewModel.startDownload()
                         },
-                        variant = ButtonVariant.Gold,
+                        variant = ButtonVariant.Secondary,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.download_button))
@@ -758,7 +758,7 @@ private fun SmapiSetupSection(
             Spacer(Modifier.height(8.dp))
             AppButton(
                 onClick = onExtract,
-                variant = ButtonVariant.Action,
+                variant = ButtonVariant.Primary,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isCopying
             ) {
@@ -891,7 +891,7 @@ private fun CinderboxSection(
                 onClick = {
                     cinderboxProgress.apkFile?.let { installCinderboxApk(context, it) }
                 },
-                variant = ButtonVariant.Action,
+                variant = ButtonVariant.Primary,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = cinderboxProgress.apkFile != null
             ) {
@@ -1001,7 +1001,7 @@ private fun CinderboxSection(
             Spacer(Modifier.height(8.dp))
             AppButton(
                 onClick = onDownload,
-                variant = ButtonVariant.Action,
+                variant = ButtonVariant.Primary,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(

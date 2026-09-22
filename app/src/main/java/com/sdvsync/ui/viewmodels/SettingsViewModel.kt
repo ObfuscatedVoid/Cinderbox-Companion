@@ -271,8 +271,13 @@ class SettingsViewModel(
 
     fun removeNexusApiKey() {
         viewModelScope.launch(Dispatchers.IO) {
-            modDataStore.setNexusApiKey(null)
-            load()
+            try {
+                modDataStore.setNexusApiKey(null)
+                load()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _state.update { it.copy(apiKeyErrorRes = R.string.mods_error_secure_storage) }
+            }
         }
     }
 

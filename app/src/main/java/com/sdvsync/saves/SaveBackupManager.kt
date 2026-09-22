@@ -1,6 +1,7 @@
 package com.sdvsync.saves
 
 import android.content.Context
+import androidx.core.content.edit
 import com.sdvsync.logging.AppLogger
 import java.io.File
 import java.nio.file.Files
@@ -37,7 +38,7 @@ class SaveBackupManager(private val context: Context) {
     fun setMaxBackupsAndPrune(count: Int) {
         maxBackups = count.coerceIn(MIN_MAX_BACKUPS, MAX_MAX_BACKUPS)
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .edit().putInt(KEY_MAX_BACKUPS, maxBackups).apply()
+            .edit { putInt(KEY_MAX_BACKUPS, maxBackups) }
         pruneAllSaves()
     }
 

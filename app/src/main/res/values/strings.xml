@@ -7,8 +7,6 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_retry">Retry</string>
     <string name="action_refresh">Refresh</string>
-    <string name="action_pull">Pull</string>
-    <string name="action_push">Push</string>
 
     <!-- Login -->
     <string name="login_brand_tagline">Stardew Valley Save Sync</string>
@@ -22,7 +20,7 @@
     <string name="login_2fa_label">Code</string>
     <string name="login_2fa_submit">Submit Code</string>
     <string name="login_2fa_incorrect">That code was not accepted. Enter a new Steam Guard code.</string>
-    <string name="login_device_confirmation_title">Approve the sign-in in Steam</string>
+    <string name="login_device_confirmation_title">Approve the sign-in using Steam</string>
     <string name="login_device_confirmation_prompt">Open the Steam mobile app and approve this sign-in. Then return here and continue.</string>
     <string name="login_device_confirmation_continue">I’ve Approved It</string>
     <string name="login_device_confirmation_use_code">Use a Steam Guard Code</string>
@@ -42,18 +40,13 @@
     <!-- Dashboard -->
     <string name="dashboard_title">Stardew Saves</string>
     <string name="dashboard_no_saves">No saves found on Steam Cloud</string>
-    <string name="dashboard_pull">Pull from Steam</string>
-    <string name="dashboard_push">Push to Steam</string>
-    <string name="dashboard_refreshing">Refreshing\u2026</string>
 
     <!-- Save info -->
-    <string name="save_year">Year %1$d</string>
     <string name="save_season_spring">Spring</string>
     <string name="save_season_summer">Summer</string>
     <string name="save_season_fall">Fall</string>
     <string name="save_season_winter">Winter</string>
     <string name="save_season_unknown">Unknown</string>
-    <string name="save_day">Day %1$d</string>
     <string name="save_display_date">%1$s %2$d, Year %3$d</string>
     <string name="save_version">v%1$s</string>
     <string name="save_farm_name">%1$s Farm</string>
@@ -66,12 +59,7 @@
     <string name="save_status_local_newer">Local is newer</string>
 
     <!-- Sync -->
-    <string name="sync_pulling">Downloading save\u2026</string>
-    <string name="sync_pushing">Uploading save\u2026</string>
-    <string name="sync_complete">Sync complete</string>
-    <string name="sync_failed">Sync failed: %1$s</string>
     <string name="sync_conflict_title">Save Conflict</string>
-    <string name="sync_conflict_message">Cloud and local saves differ. Which version do you want to keep?</string>
     <string name="sync_keep_cloud">Keep Cloud</string>
     <string name="sync_keep_local">Keep Local</string>
     <string name="sync_conflict_detected">Conflict detected</string>
@@ -196,7 +184,7 @@
     <string name="settings_logout">Log Out</string>
     <string name="settings_backups_title">Cloud Backups</string>
     <string name="settings_backups_description">A backup is created before every sync to protect your save data.</string>
-    <string name="settings_backups_count">Keep up to %1$d backups per save</string>
+    <string name="settings_backups_count">Backup limit per save: %1$d</string>
     <string name="settings_about_title">About</string>
     <string name="settings_about">Cinderbox Companion v%1$s</string>
     <string name="settings_about_desc">Companion app for Cinderbox \u2014 sync saves, download game files, and manage mods.</string>
@@ -252,10 +240,6 @@
     <string name="error_invalid_password">Invalid password or expired token</string>
     <string name="error_2fa_mismatch">Invalid 2FA code</string>
     <string name="error_session_expired">Session expired, please log in again</string>
-    <string name="error_file_access">Cannot access save files. Check file access settings.</string>
-    <string name="error_sdv_not_installed">Stardew Valley is not installed</string>
-    <string name="error_save_corrupt">Save file appears corrupt</string>
-    <string name="error_version_mismatch">Warning: Cloud save version (%1$s) may not be compatible with your game version</string>
 
     <!-- Game Download -->
     <string name="download_title">Download Game</string>
@@ -295,9 +279,9 @@
     <string name="download_verify_toggle">Verify files after download</string>
     <string name="download_verify_desc">Reads back all files to confirm disk integrity</string>
     <string name="download_verifying">Verifying files\u2026</string>
-    <string name="download_verify_progress">%1$d / %2$d files verified</string>
-    <string name="download_verify_passed">All %1$d files verified successfully</string>
-    <string name="download_verify_failed">Verification failed for %1$d file(s)</string>
+    <string name="download_verify_progress">Files checked: %1$d / %2$d</string>
+    <string name="download_verify_passed">Files readable: %1$d</string>
+    <string name="download_verify_failed">Files with read errors: %1$d</string>
     <string name="download_notification_verifying">Verifying files\u2026 %1$d%%</string>
 
     <!-- Cinderbox App -->
@@ -312,9 +296,6 @@
     <string name="cinderbox_install_button">Install Cinderbox</string>
     <string name="cinderbox_download_again">Download Again</string>
     <string name="cinderbox_download_error">Download failed: %1$s</string>
-    <string name="cinderbox_install_permission_title">Permission Required</string>
-    <string name="cinderbox_install_permission_desc">Android requires you to allow installing apps from this source. Tap the button below to open settings, then enable the toggle.</string>
-    <string name="cinderbox_grant_permission">Grant Permission</string>
 
     <!-- Cinderbox Wizard -->
     <string name="wizard_setup_title">What\'s your setup?</string>
@@ -351,20 +332,19 @@
     <string name="smapi_downloading">Downloading SMAPI\u2026</string>
     <string name="smapi_download_progress">%1$s / %2$s</string>
     <string name="smapi_extracting">Extracting SMAPI\u2026</string>
-    <string name="smapi_extract_progress">%1$d / %2$d files extracted</string>
+    <string name="smapi_extract_progress">Files extracted: %1$d / %2$d</string>
     <string name="smapi_extract_success">SMAPI setup complete!</string>
-    <string name="smapi_extract_success_desc">%1$d files extracted to /StardewValley/smapi-internal/</string>
+    <string name="smapi_extract_success_desc">Files extracted to /StardewValley/smapi-internal/: %1$d</string>
     <string name="smapi_extract_error">SMAPI extraction had errors: %1$s</string>
     <string name="smapi_extract_again">Extract Again</string>
 
     <!-- Cinderbox copy -->
     <string name="cinderbox_copy_button">Copy to Cinderbox</string>
     <string name="cinderbox_copying">Copying to Cinderbox\u2026</string>
-    <string name="cinderbox_copy_progress">%1$d / %2$d files copied</string>
-    <string name="cinderbox_copy_success">Cinderbox ready! %1$d files set up.</string>
-    <string name="cinderbox_copy_failed">Copy failed for %1$d file(s):</string>
+    <string name="cinderbox_copy_progress">Files copied: %1$d / %2$d</string>
+    <string name="cinderbox_copy_success">Cinderbox is ready. Files installed: %1$d</string>
+    <string name="cinderbox_copy_failed">Files that could not be copied: %1$d</string>
     <string name="cinderbox_copy_retry">Retry Copy to Cinderbox</string>
-    <string name="cinderbox_error_unknown">Unknown copy error</string>
 
     <!-- Bottom navigation tabs -->
     <string name="tab_saves">Saves</string>
@@ -379,26 +359,20 @@
     <string name="mods_browse_button">Browse Mods</string>
     <string name="mods_import_button">Import ZIP</string>
     <string name="mods_import">Import Mod</string>
-    <string name="mods_update_banner">%1$d mod(s) have updates available</string>
+    <string name="mods_update_banner">Mods with updates: %1$d</string>
     <string name="mods_update_single">1 mod has an update available</string>
     <string name="mods_checking_updates">Checking for updates\u2026</string>
-    <string name="mods_up_to_date">Up to date</string>
     <string name="mods_update_available">Update available</string>
     <string name="mods_disabled">Disabled</string>
     <string name="mods_enabled">Enabled</string>
     <string name="mods_smapi_mod">SMAPI Mod</string>
     <string name="mods_content_pack">Content Pack</string>
     <string name="mods_installed">Installed</string>
-    <string name="mods_not_installed">Not installed</string>
     <string name="mods_install">Install</string>
-    <string name="mods_update">Update</string>
-    <string name="mods_reinstall">Reinstall</string>
     <string name="mods_remove">Remove Mod</string>
     <string name="mods_remove_confirm_title">Remove %1$s?</string>
     <string name="mods_remove_confirm_message">This will permanently delete this mod from the Mods folder.</string>
     <string name="mods_remove_confirm">Remove</string>
-    <string name="mods_enable">Enable</string>
-    <string name="mods_disable">Disable</string>
     <string name="mods_check_update">Check for Update</string>
     <string name="mods_folder_size">Folder size: %1$s</string>
     <string name="mods_installed_on">Installed: %1$s</string>
@@ -416,21 +390,16 @@
     <string name="mods_details">Details</string>
     <string name="mods_info">Info</string>
     <string name="mods_actions">Actions</string>
-    <string name="mods_no_description">No description available</string>
     <string name="mods_update_available_version">Update: v%1$s → v%2$s</string>
     <string name="mods_view_update">View Update</string>
     <string name="mods_view_on_nexus">View on Nexus</string>
     <string name="mods_check_for_update">Check for Update</string>
     <string name="mods_checking_update">Checking\u2026</string>
-    <string name="mods_up_to_date_single">Mod is up to date</string>
     <string name="mods_search_installed_hint">Search installed mods\u2026</string>
     <string name="mods_filter_all">All</string>
     <string name="mods_filter_enabled">Enabled</string>
     <string name="mods_filter_disabled">Disabled</string>
     <string name="mods_filter_has_update">Has Update</string>
-    <string name="mods_sort_name">Name</string>
-    <string name="mods_sort_author">Author</string>
-    <string name="mods_sort_status">Status</string>
     <string name="mods_no_matching">No matching mods</string>
 
     <!-- Mod Browse -->
@@ -451,7 +420,6 @@
     <string name="mods_api_key_hint">API key</string>
     <string name="mods_api_key_save">Save</string>
     <string name="mods_api_key_get">Get your free API key →</string>
-    <string name="mods_api_key_valid">API key validated</string>
     <string name="mods_api_key_invalid">Invalid API key</string>
     <string name="mods_api_key_validation_failed">Could not validate the API key. Please try again.</string>
     <string name="mods_api_key_remove">Remove API Key</string>
@@ -468,21 +436,15 @@
     <string name="mods_detail_files">Files</string>
     <string name="mods_detail_description">Description</string>
     <string name="mods_detail_last_updated">Last updated: %1$s</string>
-    <string name="mods_detail_file_size">%1$s</string>
-    <string name="mods_detail_main_file">Main file</string>
-    <string name="mods_detail_optional">Optional</string>
-    <string name="mods_detail_old_version">Old version</string>
 
     <!-- Mod download -->
     <string name="mods_download_notification_channel">Mod Download</string>
     <string name="mods_download_notification_channel_desc">Mod download progress</string>
     <string name="mods_download_notification_title">Downloading mod</string>
     <string name="mods_download_downloading">Downloading %1$s\u2026</string>
-    <string name="mods_download_extracting">Extracting\u2026</string>
     <string name="mods_download_installing">Installing\u2026</string>
     <string name="mods_download_complete">%1$s installed successfully</string>
     <string name="mods_download_failed">Failed to install mod: %1$s</string>
-    <string name="mods_download_in_browser">Download in Browser</string>
     <string name="mods_open_nexus">Open Nexus Website</string>
 
     <!-- NXM download -->
@@ -491,11 +453,6 @@
     <string name="nxm_invalid_link">Invalid NXM download link</string>
 
     <!-- Mod install errors -->
-    <string name="mods_error_no_manifest">No manifest.json found in archive</string>
-    <string name="mods_error_extract_failed">Failed to extract archive: %1$s</string>
-    <string name="mods_error_copy_failed">Failed to copy mod files: %1$s</string>
-    <string name="mods_error_mods_dir_inaccessible">Cannot access Mods directory</string>
-    <string name="mods_error_api_key_required">A Nexus API key is required to browse mods</string>
     <string name="mods_error_api_key_rejected">Nexus rejected this API key. Replace it with a valid key.</string>
     <string name="mods_error_load_failed">Failed to load mods</string>
     <string name="mods_error_load_more_failed">Could not load more mods</string>
@@ -521,9 +478,9 @@
     <string name="backups_restore">Restore</string>
     <string name="backups_restore_title">Restore backup?</string>
     <string name="backups_restore_message">Your current save will be backed up first, then replaced with this backup.</string>
-    <string name="backups_files">%1$d files \u2022 %2$s</string>
-    <string name="backups_days_behind">%1$d day(s) behind current</string>
-    <string name="backups_days_ahead">%1$d day(s) ahead of current</string>
+    <string name="backups_files">Files: %1$d \u2022 %2$s</string>
+    <string name="backups_days_behind">Days behind current: %1$d</string>
+    <string name="backups_days_ahead">Days ahead of current: %1$d</string>
     <string name="backups_same_as_current">Same progress as current</string>
     <string name="backups_current_save">Current Save</string>
     <string name="backups_no_metadata">Could not read save metadata</string>
@@ -563,10 +520,10 @@
     <string name="save_viewer_no_relationships">No relationships yet</string>
     <string name="save_viewer_no_animals">No farm animals yet</string>
     <string name="save_viewer_bundles_title">Community Center</string>
-    <string name="save_viewer_bundles_progress">%1$d / %2$d bundles completed</string>
+    <string name="save_viewer_bundles_progress">Bundles completed: %1$d / %2$d</string>
     <string name="save_viewer_bundles_none">No bundle data found</string>
     <string name="save_viewer_museum_title">Museum</string>
-    <string name="save_viewer_museum_progress">%1$d / %2$d items donated</string>
+    <string name="save_viewer_museum_progress">Museum donations: %1$d / %2$d</string>
     <string name="save_viewer_crafting_recipes">Crafting Recipes (%1$d)</string>
     <string name="save_viewer_cooking_recipes">Cooking Recipes (%1$d)</string>
     <string name="save_viewer_no_recipes">No recipes learned yet</string>
@@ -589,7 +546,7 @@
     <string name="import_preview_farmer">Farmer: %1$s</string>
     <string name="import_preview_farm">Farm: %1$s</string>
     <string name="import_preview_date">%1$s %2$d, Year %3$d</string>
-    <string name="import_preview_mods">%1$d mods included</string>
+    <string name="import_preview_mods">Included mods: %1$d</string>
     <string name="import_confirm">Import</string>
     <string name="import_success">Save imported successfully</string>
     <string name="import_error">Import failed: %1$s</string>
@@ -607,10 +564,6 @@
     <string name="github_installed_version">Installed: v%1$s</string>
 
     <!-- Auto-sync notification -->
-    <string name="notification_channel_sync">Save Sync</string>
-    <string name="notification_auto_sync_title">Cinderbox Companion</string>
-    <string name="notification_auto_sync_monitoring">Monitoring Stardew Valley\u2026</string>
-    <string name="notification_auto_sync_uploading">Uploading save to Steam Cloud\u2026</string>
 
     <!-- Storage permission dialog -->
     <string name="storage_permission_title">Storage Permission Required</string>
@@ -636,4 +589,7 @@
     <string name="sync_download_device">Download to device</string>
     <string name="sync_upload_steam">Upload to Steam Cloud</string>
     <string name="dashboard_empty_hint">Pull down to refresh, or import a save from your device.</string>
+    <string name="settings_logout_confirm">Sign out of Steam? You will need to sign in again to sync saves or download game files.</string>
+    <string name="sync_log_clear_confirm">Clear all sync history? Your saves and backups will be kept.</string>
+    <string name="mods_error_secure_storage">Could not access secure storage. Your saved key has not been changed.</string>
 </resources>

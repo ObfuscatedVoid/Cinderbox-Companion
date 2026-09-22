@@ -2,6 +2,7 @@ package com.sdvsync.download
 
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.core.content.edit
 import com.sdvsync.logging.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -97,10 +98,10 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
                 if (matchedInfo != null) {
                     memoryCache[repo] = matchedInfo to System.currentTimeMillis()
                     // Persist to SharedPreferences
-                    prefs.edit()
-                        .putString("cache_$repo", serializeReleaseInfo(matchedInfo))
-                        .putLong("cache_time_$repo", System.currentTimeMillis())
-                        .apply()
+                    prefs.edit {
+                        putString("cache_$repo", serializeReleaseInfo(matchedInfo))
+                        putLong("cache_time_$repo", System.currentTimeMillis())
+                    }
                 }
 
                 matchedInfo
@@ -123,7 +124,7 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
     }
 
     fun setInstalledVersion(key: String, version: String) {
-        prefs.edit().putString(key, version).apply()
+        prefs.edit { putString(key, version) }
     }
 
     fun isUpdateAvailable(installed: String?, latest: String?): Boolean {
@@ -142,10 +143,10 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
 
     fun invalidateCache(repo: String) {
         memoryCache.remove(repo)
-        prefs.edit()
-            .remove("cache_$repo")
-            .remove("cache_time_$repo")
-            .apply()
+        prefs.edit {
+            remove("cache_$repo")
+            remove("cache_time_$repo")
+        }
     }
 
     private fun fetchLatestRelease(repo: String): JSONObject? {

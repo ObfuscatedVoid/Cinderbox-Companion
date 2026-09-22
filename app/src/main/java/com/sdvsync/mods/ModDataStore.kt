@@ -55,8 +55,6 @@ class ModDataStore(private val context: Context) {
         }
     }
 
-    // ── API Key ─────────────────────────────────────────────────────────
-
     fun getNexusApiKey(): String? = encryptedPrefs?.getString(KEY_NEXUS_API_KEY, null)
 
     fun setNexusApiKey(key: String?) {
@@ -69,8 +67,6 @@ class ModDataStore(private val context: Context) {
             apply()
         }
     }
-
-    // ── Update Cache ────────────────────────────────────────────────────
 
     suspend fun getUpdateCache(): Map<String, ModUpdateInfo> = context.modDataStore.data
         .map { prefs ->
@@ -88,8 +84,6 @@ class ModDataStore(private val context: Context) {
     suspend fun getLastUpdateCheck(): Long = context.modDataStore.data
         .map { prefs -> prefs[LAST_UPDATE_CHECK_KEY] ?: 0L }
         .first()
-
-    // ── Mod Metadata (install source, timestamps) ───────────────────────
 
     suspend fun getModMetadata(uniqueId: String): ModMetadata? {
         val all = getAllModMetadata()
@@ -117,8 +111,6 @@ class ModDataStore(private val context: Context) {
             prefs[MOD_METADATA_KEY]?.let { parseMetadata(it) } ?: emptyMap()
         }
         .first()
-
-    // ── Mod Profiles ──────────────────────────────────────────────────
 
     suspend fun getProfiles(): List<ModProfile> = context.modDataStore.data
         .map { prefs ->
@@ -176,8 +168,6 @@ class ModDataStore(private val context: Context) {
         AppLogger.e(TAG, "Failed to parse profiles", e)
         emptyList()
     }
-
-    // ── Save Mod Associations ──────────────────────────────────────────
 
     suspend fun getSaveModAssociation(saveFolderName: String): SaveModAssociation? = context.modDataStore.data
         .map { prefs ->
@@ -256,8 +246,6 @@ class ModDataStore(private val context: Context) {
         AppLogger.e(TAG, "Failed to parse save mod associations", e)
         emptyMap()
     }
-
-    // ── Serialization ───────────────────────────────────────────────────
 
     private fun serializeUpdateCache(updates: Map<String, ModUpdateInfo>): String {
         val obj = JSONObject()

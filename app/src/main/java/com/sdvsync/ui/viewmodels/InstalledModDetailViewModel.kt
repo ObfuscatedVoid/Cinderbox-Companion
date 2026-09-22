@@ -10,6 +10,7 @@ import com.sdvsync.mods.api.NexusModSource
 import com.sdvsync.mods.api.SmapiUpdateChecker
 import com.sdvsync.mods.models.InstalledMod
 import com.sdvsync.mods.models.ModUpdateInfo
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,8 @@ data class InstalledModDetailState(
     val removed: Boolean = false,
     val updateInfo: ModUpdateInfo? = null,
     val metadata: ModMetadata? = null,
+    val error: String? = null,
+    val isWorking: Boolean = false,
     val isCheckingUpdate: Boolean = false
 )
 
@@ -46,28 +49,41 @@ class InstalledModDetailViewModel(
         loadMod()
     }
 
-    private fun loadMod() {
+    private fun loadMod() = runOperation { reloadMod() }
+
+    private suspend fun reloadMod() {
+        val mod = fileManager.listInstalledMods().find { it.manifest.uniqueID.equals(uniqueId, true) }
+        val metadata = dataStore.getModMetadata(uniqueId)
+        val info = dataStore.getUpdateCache().entries.firstOrNull { it.key.equals(uniqueId, true) }?.value
+        _state.update { it.copy(mod = mod, isLoading = false, metadata = metadata, updateInfo = info) }
+    }
+
+    private fun runOperation(action: suspend () -> Unit) {
+        if (_state.value.isWorking) return
+        _state.update { it.copy(isWorking = true, error = null) }
         viewModelScope.launch(Dispatchers.IO) {
-            val mods = fileManager.listInstalledMods()
-            val mod = mods.find { it.manifest.uniqueID.equals(uniqueId, ignoreCase = true) }
-            val metadata = dataStore.getModMetadata(uniqueId)
-            val updateCache = dataStore.getUpdateCache()
-            val updateInfo = updateCache[uniqueId]
-            _state.update {
-                it.copy(mod = mod, isLoading = false, metadata = metadata, updateInfo = updateInfo)
+            try {
+                action()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                AppLogger.e(TAG, "Mod operation failed", e)
+                _state.update { it.copy(error = e.message ?: "Mod operation failed", showRemoveDialog = false) }
+            } finally {
+                _state.update { it.copy(isWorking = false, isLoading = false) }
             }
         }
     }
 
     fun toggleMod(enable: Boolean) {
         val mod = _state.value.mod ?: return
-        viewModelScope.launch(Dispatchers.IO) {
+        runOperation {
             val success = if (enable) {
                 fileManager.enableMod(mod.folderName)
             } else {
                 fileManager.disableMod(mod.folderName)
             }
-            if (success) loadMod()
+            check(success) { "Could not change the mod’s enabled state" }
+            reloadMod()
         }
     }
 
@@ -81,8 +97,9 @@ class InstalledModDetailViewModel(
 
     fun confirmRemove() {
         val mod = _state.value.mod ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            if (fileManager.removeMod(mod.folderName)) {
+        runOperation {
+            check(fileManager.removeMod(mod.folderName)) { "Could not remove the mod" }
+            run {
                 dataStore.removeModMetadata(mod.manifest.uniqueID)
                 _state.update { it.copy(removed = true, showRemoveDialog = false) }
             }
@@ -90,34 +107,38 @@ class InstalledModDetailViewModel(
     }
 
     fun checkForUpdate() {
+        if (_state.value.isCheckingUpdate) return
         val mod = _state.value.mod ?: return
+        _state.update { it.copy(isCheckingUpdate = true, error = null) }
         viewModelScope.launch(Dispatchers.IO) {
-            _state.update { it.copy(isCheckingUpdate = true) }
             try {
                 val updates = updateChecker.checkForUpdates(listOf(mod))
                 var info = updates[mod.manifest.uniqueID]
 
                 // Fetch changelog from Nexus if source is a Nexus update key
                 if (info != null && info.source.startsWith("Nexus:", ignoreCase = true)) {
-                    val nexusModId = info.source.removePrefix("Nexus:").removePrefix("nexus:").trim()
+                    val nexusModId = info.source.substringAfter(":").trim()
+                    val latestVersion = info.latestVersion
                     try {
                         val files = nexusSource.getModFiles(nexusModId)
                         // Find file matching latest version, fall back to most recent primary file
                         val matchingFile = files.find {
-                            it.modVersion == info!!.latestVersion || it.fileVersion == info!!.latestVersion
+                            it.modVersion == latestVersion || it.fileVersion == latestVersion
                         } ?: files.filter { it.isPrimary }.maxByOrNull { it.uploadedAt }
                         if (matchingFile?.changelogHtml != null) {
                             info = info.copy(changelogHtml = matchingFile.changelogHtml)
                         }
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         AppLogger.w(TAG, "Failed to fetch Nexus changelog for mod $nexusModId", e)
                     }
                 }
 
                 _state.update { it.copy(updateInfo = info, isCheckingUpdate = false) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Update check failed", e)
-                _state.update { it.copy(isCheckingUpdate = false) }
+                _state.update { it.copy(isCheckingUpdate = false, error = e.message ?: "Could not check for updates") }
             }
         }
     }

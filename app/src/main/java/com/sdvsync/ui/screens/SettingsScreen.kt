@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +23,7 @@ import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.ui.components.AppButton
 import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDialog
 import com.sdvsync.ui.components.AppDivider
 import com.sdvsync.ui.components.AppOutlinedButton
 import com.sdvsync.ui.components.AppTopBar
@@ -68,6 +70,26 @@ fun SettingsScreen(onLogout: () -> Unit, viewModel: SettingsViewModel = koinView
     val migrationViewModel: CinderboxMigrationViewModel = koinViewModel()
     val migrationState by migrationViewModel.state.collectAsStateWithLifecycle()
 
+    var showLogout by rememberSaveable { mutableStateOf(false) }
+    if (showLogout) {
+        AppDialog(
+            onDismissRequest = { showLogout = false },
+            title = stringResource(R.string.settings_logout),
+            text = stringResource(R.string.settings_logout_confirm),
+            confirmButton = {
+                AppButton(onClick = {
+                    showLogout = false
+                    viewModel.logout()
+                    onLogout()
+                }, variant = ButtonVariant.Danger) {
+                    Text(stringResource(R.string.settings_logout))
+                }
+            },
+            dismissButton = {
+                AppOutlinedButton(onClick = { showLogout = false }) { Text(stringResource(R.string.action_cancel)) }
+            }
+        )
+    }
     val context = LocalContext.current
 
     val requestStoragePermission = rememberStoragePermissionRequest { viewModel.load() }
@@ -181,7 +203,7 @@ fun SettingsScreen(onLogout: () -> Unit, viewModel: SettingsViewModel = koinView
                         Spacer(Modifier.height(12.dp))
                         AppButton(
                             onClick = migrationViewModel::showPrompt,
-                            variant = ButtonVariant.Gold,
+                            variant = ButtonVariant.Secondary,
                             enabled = !migrationState.isMigrating
                         ) {
                             Text(
@@ -375,10 +397,7 @@ fun SettingsScreen(onLogout: () -> Unit, viewModel: SettingsViewModel = koinView
             SectionHeader(stringResource(R.string.settings_steam_account))
             Spacer(Modifier.height(8.dp))
             AppButton(
-                onClick = {
-                    viewModel.logout()
-                    onLogout()
-                },
+                onClick = { showLogout = true },
                 variant = ButtonVariant.Danger
             ) {
                 Text(stringResource(R.string.settings_logout))
@@ -689,7 +708,7 @@ private fun NexusApiKeySection(
                 Spacer(Modifier.height(8.dp))
                 AppButton(
                     onClick = { onSaveKey(keyInput) },
-                    variant = ButtonVariant.Action,
+                    variant = ButtonVariant.Primary,
                     enabled = keyInput.isNotBlank() && !isValidating
                 ) {
                     if (isValidating) {
@@ -746,7 +765,7 @@ private fun NexusApiKeySection(
                         onSaveKey(keyInput)
                         showChangeDialog = false
                     },
-                    variant = ButtonVariant.Action,
+                    variant = ButtonVariant.Primary,
                     enabled = keyInput.isNotBlank() && !isValidating
                 ) {
                     if (isValidating) {

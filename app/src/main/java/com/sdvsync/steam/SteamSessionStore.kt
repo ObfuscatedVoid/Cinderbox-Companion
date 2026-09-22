@@ -1,6 +1,7 @@
 package com.sdvsync.steam
 
 import android.content.Context
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.io.File
@@ -21,28 +22,28 @@ class SteamSessionStore(private val context: Context) {
 
     var username: String?
         get() = prefs.getString("username", null)
-        set(value) = prefs.edit().putString("username", value).apply()
+        set(value) = prefs.edit { putString("username", value) }
 
     var accessToken: String?
         get() = prefs.getString("access_token", null)
-        set(value) = prefs.edit().putString("access_token", value).apply()
+        set(value) = prefs.edit { putString("access_token", value) }
 
     var refreshToken: String?
         get() = prefs.getString("refresh_token", null)
-        set(value) = prefs.edit().putString("refresh_token", value).apply()
+        set(value) = prefs.edit { putString("refresh_token", value) }
 
     var steamId: Long
         get() = prefs.getLong("steam_id", 0L)
-        set(value) = prefs.edit().putLong("steam_id", value).apply()
+        set(value) = prefs.edit { putLong("steam_id", value) }
 
     var cellId: Int
         get() = prefs.getInt("cell_id", 0)
-        set(value) = prefs.edit().putInt("cell_id", value).apply()
+        set(value) = prefs.edit { putInt("cell_id", value) }
 
     fun hasSession(): Boolean = !username.isNullOrEmpty() && !refreshToken.isNullOrEmpty()
 
     fun clear() {
-        prefs.edit().clear().apply()
+        prefs.edit { clear() }
         File(context.filesDir, "sentry").listFiles()?.forEach { it.delete() }
     }
 }

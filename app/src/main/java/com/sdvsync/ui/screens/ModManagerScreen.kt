@@ -153,7 +153,7 @@ fun ModManagerScreen(
                             Spacer(Modifier.height(24.dp))
                             AppButton(
                                 onClick = onBrowseClick,
-                                variant = ButtonVariant.Gold
+                                variant = ButtonVariant.Secondary
                             ) {
                                 Text(stringResource(R.string.mods_browse_button))
                             }
@@ -327,7 +327,7 @@ fun ModManagerScreen(
                             Spacer(Modifier.height(8.dp))
                             AppButton(
                                 onClick = onBrowseClick,
-                                variant = ButtonVariant.Gold,
+                                variant = ButtonVariant.Secondary,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(stringResource(R.string.mods_browse_button))

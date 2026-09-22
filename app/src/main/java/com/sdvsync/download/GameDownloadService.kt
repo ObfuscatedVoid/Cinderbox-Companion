@@ -8,7 +8,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.sdvsync.MainActivity
@@ -55,13 +54,11 @@ class GameDownloadService : Service() {
                 putExtra(EXTRA_OS, os)
                 putExtra(EXTRA_VERIFY, verify)
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         }
 
+        // Android matches service Intent components, not Intent object identity.
+        @android.annotation.SuppressLint("ImplicitSamInstance")
         fun stop(context: Context) {
             context.stopService(Intent(context, GameDownloadService::class.java))
         }
@@ -423,17 +420,15 @@ class GameDownloadService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.download_notification_channel),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = getString(R.string.download_notification_channel_desc)
-            }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            getString(R.string.download_notification_channel),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = getString(R.string.download_notification_channel_desc)
         }
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
     }
 
     private fun buildNotification(text: String): Notification {

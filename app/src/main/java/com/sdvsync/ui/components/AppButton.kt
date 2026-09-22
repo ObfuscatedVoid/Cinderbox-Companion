@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-enum class ButtonVariant { Primary, Action, Gold, Danger }
+enum class ButtonVariant { Primary, Secondary, Danger }
 
 @Composable
 fun AppButton(
@@ -20,8 +20,8 @@ fun AppButton(
 ) {
     val colors = MaterialTheme.colorScheme
     val (container, foreground) = when (variant) {
-        ButtonVariant.Primary, ButtonVariant.Action -> colors.primary to colors.onPrimary
-        ButtonVariant.Gold -> colors.tertiaryContainer to colors.onTertiaryContainer
+        ButtonVariant.Primary -> colors.primary to colors.onPrimary
+        ButtonVariant.Secondary -> colors.tertiaryContainer to colors.onTertiaryContainer
         ButtonVariant.Danger -> colors.error to colors.onError
     }
     Button(

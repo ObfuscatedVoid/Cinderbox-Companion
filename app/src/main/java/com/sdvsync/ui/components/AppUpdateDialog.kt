@@ -1,7 +1,6 @@
 package com.sdvsync.ui.components
 
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.sdvsync.R
 import com.sdvsync.download.GitHubReleaseInfo
@@ -141,7 +141,7 @@ fun AppUpdateDialog(
                         Spacer(Modifier.width(8.dp))
                         when {
                             state.downloadError != null -> {
-                                AppButton(onClick = onUpdate, variant = ButtonVariant.Action) {
+                                AppButton(onClick = onUpdate, variant = ButtonVariant.Primary) {
                                     Text(stringResource(R.string.update_retry))
                                 }
                             }
@@ -150,17 +150,17 @@ fun AppUpdateDialog(
                                     onClick = {
                                         val intent = Intent(
                                             Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                            Uri.parse("package:${context.packageName}")
+                                            "package:${context.packageName}".toUri()
                                         )
                                         context.startActivity(intent)
                                     },
-                                    variant = ButtonVariant.Action
+                                    variant = ButtonVariant.Primary
                                 ) {
                                     Text(stringResource(R.string.update_allow_installs))
                                 }
                             }
                             else -> {
-                                AppButton(onClick = onUpdate, variant = ButtonVariant.Action) {
+                                AppButton(onClick = onUpdate, variant = ButtonVariant.Primary) {
                                     Text(stringResource(R.string.update_button))
                                 }
                             }

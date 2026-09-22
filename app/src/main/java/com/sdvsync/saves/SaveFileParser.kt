@@ -130,11 +130,6 @@ class SaveFileParser {
                     if (tagStack.size == 4 && parser.name == "museumPieces" && tagStack[1] == "locations") {
                         inMuseumPieces = true
                     }
-
-                    // Track "key" in item entries for friendship
-                    if (inFriendshipData && parser.name == "key") {
-                        // Next text in <string> will be the NPC name
-                    }
                 }
 
                 XmlPullParser.TEXT -> {

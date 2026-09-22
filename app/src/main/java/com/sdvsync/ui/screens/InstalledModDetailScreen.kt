@@ -73,7 +73,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                 if (state.isLoading) {
                     CircularProgressIndicator()
                 } else {
-                    Text("Mod not found")
+                    Text(state.error ?: "Mod not found")
                 }
             }
             return@Scaffold
@@ -86,6 +86,9 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            state.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 16.dp))
+            }
             // Info card
             SectionHeader(stringResource(R.string.mods_info))
             Spacer(Modifier.height(8.dp))
@@ -158,7 +161,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                             Spacer(Modifier.height(8.dp))
                             AppButton(
                                 onClick = { uriHandler.openUri(url) },
-                                variant = ButtonVariant.Gold
+                                variant = ButtonVariant.Secondary
                             ) {
                                 Text(stringResource(R.string.mods_view_update))
                             }
@@ -258,6 +261,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                         )
                         Switch(
                             checked = mod.enabled,
+                            enabled = !state.isWorking,
                             onCheckedChange = { viewModel.toggleMod(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onPrimary,

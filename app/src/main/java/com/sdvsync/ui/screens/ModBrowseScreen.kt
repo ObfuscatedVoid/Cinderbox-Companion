@@ -104,7 +104,7 @@ fun ModBrowseScreen(
                             AppButton(
                                 onClick = { viewModel.validateAndSaveApiKey(apiKeyInput) },
                                 enabled = apiKeyInput.isNotBlank() && !state.isValidatingKey,
-                                variant = ButtonVariant.Action
+                                variant = ButtonVariant.Primary
                             ) {
                                 if (state.isValidatingKey) {
                                     CircularProgressIndicator(

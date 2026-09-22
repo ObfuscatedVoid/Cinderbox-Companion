@@ -287,7 +287,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                                     uriHandler.openUri(state.downloadErrorUrl!!)
                                     viewModel.clearError()
                                 },
-                                variant = ButtonVariant.Gold
+                                variant = ButtonVariant.Secondary
                             ) {
                                 Text(stringResource(R.string.mods_open_nexus))
                             }
@@ -383,7 +383,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                                         }
                                         AppButton(
                                             onClick = { viewModel.installFile(file.fileId) },
-                                            variant = ButtonVariant.Action,
+                                            variant = ButtonVariant.Primary,
                                             enabled =
                                             progress.state == ModDownloadState.IDLE ||
                                                 progress.state == ModDownloadState.COMPLETED ||

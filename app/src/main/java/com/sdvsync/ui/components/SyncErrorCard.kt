@@ -28,13 +28,13 @@ import com.sdvsync.sync.SyncErrorCategory
 fun SyncErrorCard(
     category: SyncErrorCategory,
     rawMessage: String,
+    modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
     onSwitchToCinderbox: (() -> Unit)? = null,
     onSelectSafFolder: (() -> Unit)? = null,
     onNavigateToSettings: (() -> Unit)? = null,
     onForceSync: (() -> Unit)? = null,
-    onRunHealthCheck: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onRunHealthCheck: (() -> Unit)? = null
 ) {
     val (title, description) = errorContent(category)
     var showDetails by remember { mutableStateOf(false) }

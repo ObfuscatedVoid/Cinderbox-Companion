@@ -1,6 +1,7 @@
 package com.sdvsync.download
 
 import android.content.Context
+import androidx.core.content.edit
 import com.sdvsync.BuildConfig
 import com.sdvsync.logging.AppLogger
 import java.io.File
@@ -25,15 +26,15 @@ class AppUpdateManager(
     fun isUpdateCheckEnabled(): Boolean = prefs.getBoolean(KEY_UPDATE_CHECK_ENABLED, true)
 
     fun setUpdateCheckEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_UPDATE_CHECK_ENABLED, enabled).apply()
+        prefs.edit { putBoolean(KEY_UPDATE_CHECK_ENABLED, enabled) }
     }
 
     fun getSkippedVersion(): String? = prefs.getString(KEY_SKIPPED_VERSION, null)
 
     fun setSkippedVersion(version: String?) {
-        prefs.edit().apply {
+        prefs.edit {
             if (version == null) remove(KEY_SKIPPED_VERSION) else putString(KEY_SKIPPED_VERSION, version)
-        }.apply()
+        }
     }
 
     fun shouldShowUpdate(latestVersion: String): Boolean {

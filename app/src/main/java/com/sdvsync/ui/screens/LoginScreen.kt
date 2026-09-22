@@ -384,7 +384,7 @@ private fun LoginOptions(
     AppButton(
         onClick = onLogin,
         modifier = Modifier.fillMaxWidth(),
-        variant = ButtonVariant.Action,
+        variant = ButtonVariant.Primary,
         enabled = canLogin
     ) {
         Text(stringResource(R.string.login_button))

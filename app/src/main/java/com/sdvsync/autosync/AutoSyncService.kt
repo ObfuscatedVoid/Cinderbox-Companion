@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.sdvsync.MainActivity
@@ -32,13 +31,11 @@ class AutoSyncService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, AutoSyncService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         }
 
+        // Android matches service Intent components, not Intent object identity.
+        @android.annotation.SuppressLint("ImplicitSamInstance")
         fun stop(context: Context) {
             context.stopService(Intent(context, AutoSyncService::class.java))
         }
@@ -128,17 +125,15 @@ class AutoSyncService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Auto Sync",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Background save sync monitoring"
-            }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Auto Sync",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Background save sync monitoring"
         }
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
     }
 
     private fun buildNotification(text: String): Notification {

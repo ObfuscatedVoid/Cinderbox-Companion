@@ -26,7 +26,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Test, lint, and build debug APK
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+        run: ./gradlew ktlintCheck testDebugUnitTest lintDebug assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

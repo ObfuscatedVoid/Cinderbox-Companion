@@ -211,8 +211,6 @@ class ModManagerViewModel(
         updateDisplayedMods()
     }
 
-    // ── Profiles ─────────────────────────────────────────────────────────
-
     private fun loadProfiles() {
         viewModelScope.launch(Dispatchers.IO) {
             try {

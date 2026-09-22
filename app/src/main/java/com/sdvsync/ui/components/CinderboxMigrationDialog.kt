@@ -100,7 +100,7 @@ fun CinderboxMigrationDialog(
                             Spacer(Modifier.width(8.dp))
                             AppButton(
                                 onClick = onMove,
-                                variant = ButtonVariant.Action
+                                variant = ButtonVariant.Primary
                             ) {
                                 Text(stringResource(R.string.action_retry))
                             }
@@ -128,7 +128,7 @@ fun CinderboxMigrationDialog(
                         Spacer(Modifier.width(8.dp))
                         AppButton(
                             onClick = onMove,
-                            variant = ButtonVariant.Gold,
+                            variant = ButtonVariant.Secondary,
                             enabled = !state.isMigrating
                         ) {
                             Text(stringResource(R.string.cinderbox_migrate_move))

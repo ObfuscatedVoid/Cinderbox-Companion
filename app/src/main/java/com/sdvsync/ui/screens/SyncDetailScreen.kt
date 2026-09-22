@@ -165,7 +165,7 @@ fun SyncDetailScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    variant = ButtonVariant.Action,
+                    variant = ButtonVariant.Primary,
                     enabled = hasDeviceSave && !state.isSyncing
                 ) {
                     SyncIcon(direction = SyncDirection.PUSH, size = 18.dp)
@@ -185,7 +185,7 @@ fun SyncDetailScreen(
                     AppButton(
                         onClick = onViewSaveClick,
                         modifier = Modifier.weight(1f),
-                        variant = ButtonVariant.Gold,
+                        variant = ButtonVariant.Secondary,
                         enabled = !state.isSyncing
                     ) {
                         Text(stringResource(R.string.save_viewer_button))
@@ -372,7 +372,7 @@ fun SyncDetailScreen(
                                             viewModel.clearResult()
                                             viewModel.pushSave(saveFolderName, force = true)
                                         },
-                                        variant = ButtonVariant.Action
+                                        variant = ButtonVariant.Primary
                                     ) {
                                         Text(stringResource(R.string.sync_keep_local))
                                     }

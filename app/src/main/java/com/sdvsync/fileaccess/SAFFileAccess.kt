@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileManager
@@ -61,9 +63,7 @@ class SAFFileAccess(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
             context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putString(KEY_TREE_URI, uri.toString())
-                .apply()
+                .edit { putString(KEY_TREE_URI, uri.toString()) }
         }
 
         /** Remove persisted URI and release the permission. */
@@ -73,7 +73,7 @@ class SAFFileAccess(
             if (uriStr != null) {
                 try {
                     context.contentResolver.releasePersistableUriPermission(
-                        Uri.parse(uriStr),
+                        uriStr.toUri(),
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     )
                 } catch (e: Exception) {
@@ -81,15 +81,13 @@ class SAFFileAccess(
                 }
             }
             context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .remove(KEY_TREE_URI)
-                .apply()
+                .edit { remove(KEY_TREE_URI) }
         }
 
         fun getPersistedUri(context: Context): Uri? {
             val uriStr = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_TREE_URI, null) ?: return null
-            val uri = Uri.parse(uriStr)
+            val uri = uriStr.toUri()
             // Verify the grant is still valid
             val validGrants = context.contentResolver.persistedUriPermissions
             val valid = validGrants.any { it.uri == uri && it.isReadPermission && it.isWritePermission }

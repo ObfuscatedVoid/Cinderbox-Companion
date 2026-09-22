@@ -290,8 +290,6 @@ class GameDownloadViewModel(
         downloadManager.resetCinderboxProgress()
     }
 
-    // ── Cinderbox Wizard ──────────────────────────────────────────────────
-
     fun onDownloadButtonClicked() {
         // Already completed setup before — skip wizard
         if (fileAccessDetector.isSetupCompleted()) {
