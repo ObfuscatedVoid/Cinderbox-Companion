@@ -276,13 +276,13 @@
     <string name="download_platform_windows">Windows</string>
     <string name="download_platform_macos">macOS</string>
     <string name="download_platform_linux">Linux</string>
-    <string name="download_verify_toggle">Verify files after download</string>
-    <string name="download_verify_desc">Reads back all files to confirm disk integrity</string>
-    <string name="download_verifying">Verifying files\u2026</string>
+    <string name="download_verify_toggle">Check downloaded files</string>
+    <string name="download_verify_desc">Read each file to check for storage errors</string>
+    <string name="download_verifying">Checking files\u2026</string>
     <string name="download_verify_progress">Files checked: %1$d / %2$d</string>
     <string name="download_verify_passed">Files readable: %1$d</string>
     <string name="download_verify_failed">Files with read errors: %1$d</string>
-    <string name="download_notification_verifying">Verifying files\u2026 %1$d%%</string>
+    <string name="download_notification_verifying">Checking files\u2026 %1$d%%</string>
 
     <!-- Cinderbox App -->
     <string name="cinderbox_section_title">Cinderbox App</string>
