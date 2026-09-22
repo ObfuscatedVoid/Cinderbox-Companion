@@ -6,24 +6,14 @@ Works with both the official Android port and [Cinderbox](https://www.nexusmods.
 
 > **This is an independent fan project.** It is not affiliated with, endorsed by, or connected to ConcernedApe, Chucklefish, or the Cinderbox developers. Stardew Valley is a trademark of ConcernedApe.
 
-![image0](https://github.com/user-attachments/assets/a2a17382-db24-4b00-a940-c8338d809b42)
+## Save safety
 
----
-
-## Important Warning
-
-**Use this app at your own risk.** I have limited experience with Stardew Valley modding and cannot guarantee how syncing, downloading, or mod management will affect your save files.
-
-**Always back up your saves before using this app.** The app creates automatic backups during sync, but you should also keep your own copies in a safe location.
-
-I am not responsible for any loss of save data, corrupted files, or damage to your device that may result from using this app. If something goes wrong with your saves, having a manual backup is the only reliable way to recover them.
-
----
+Keep an independent backup of your saves before syncing, restoring, or migrating them. Companion creates local backups before replacement, but an interrupted process or a failing storage provider can still require manual recovery. Review the source, destination, and conflict warning before confirming a sync.
 
 ## Features
 
 - **Steam Cloud Sync** — Pull saves from Steam Cloud to your device, or push local saves back. Conflict detection tells you which version is newer before you overwrite anything.
-- **Game File Download** — Download Stardew Valley game files directly from Steam using your own account. Supports branch selection and file verification.
+- **Game File Download** — Download Stardew Valley game files directly from Steam using your own account. Supports branch selection and a post-download file-readability check. This check does not independently compare installed files against Steam manifest hashes.
 - **Cinderbox Setup Wizard** — Guided setup for Cinderbox: handles permissions, downloads the APK, walks you through installation, and verifies everything is ready before downloading game files.
 - **SMAPI Setup** — Extracts SMAPI internals to the correct location so mods can load.
 - **Mod Manager** — Browse Nexus Mods, download, install, update, and manage SMAPI mods and content packs directly from the app. Requires a free Nexus Mods API key.
@@ -38,14 +28,11 @@ I am not responsible for any loss of save data, corrupted files, or damage to yo
 
 ## Android Version Compatibility
 
-The app works best on **Android 13 and below**, where file access to the game's save directory is straightforward.
+Android 11 introduced restrictions on access to other apps’ directories under `Android/data`. All Files access does not remove those restrictions, and the system document picker also limits access there. Device software and provider behavior vary. See Android’s [storage changes](https://developer.android.com/about/versions/11/privacy/storage) and [All Files access documentation](https://developer.android.com/training/data-storage/manage-all-files).
 
-**Android 14+** introduced stricter file access restrictions that prevent apps from reading `/Android/data/` directly. Workarounds:
-
-- **Rooted device** — Full access with no restrictions.
-- **Shizuku** — Grants elevated file access without root. Install Shizuku from the Play Store and start it via ADB or wireless debugging.
-- **Manual file transfer** — Use a file manager that still has access to `/Android/data/` (such as ZArchiver, MT Manager, or MT2) to manually move saves between the game directory and a staging folder. The app's SAF staging mode supports this workflow.
-- **Cinderbox mode** — Cinderbox stores saves in `/storage/emulated/0/StardewValley/desktop/Saves/` instead of inside `/Android/data/`. This path remains accessible with the standard All Files permission even on Android 14+, avoiding the stricter restrictions that apply to app-private directories.
+- **Official Android game:** use an available Root or Shizuku strategy, or copy saves manually through a staging directory selected in Settings. Privileged access depends on the device and its configuration.
+- **Cinderbox:** saves live in `/storage/emulated/0/StardewValley/desktop/Saves/`. Companion requests All Files access on Android 11+, or the storage runtime permission on Android 8–10.
+- **SAF staging:** select a folder containing complete save directories. Manually transfer saves between that folder and the game directory when direct access is unavailable.
 
 ## Getting Started
 
@@ -58,13 +45,13 @@ The app works best on **Android 13 and below**, where file access to the game's 
 
 On first use, the app auto-detects the best available method to access save files. You can change this in Settings under "File Access". The available methods depend on your device:
 
-| Method    | Requires                           | Android Version             |
-| --------- | ---------------------------------- | --------------------------- |
-| Root      | Rooted device                      | All                         |
-| Shizuku   | Shizuku app running                | All                         |
-| All Files | MANAGE_EXTERNAL_STORAGE permission | 11–13 (may not work on 14+) |
-| SAF       | User-selected directory            | All (staging mode on 14+)   |
-| Manual    | File manager                       | All                         |
+| Method | Requires | Scope |
+| --- | --- | --- |
+| Root | Root permission | Paths allowed by the root service |
+| Shizuku | Running Shizuku service and permission | Paths allowed by the device’s shell access |
+| All Files | All Files access on Android 11+; storage permission on Android 8–10 | Shared storage; other apps’ private directories can remain restricted |
+| SAF | A directory selected in the system picker | Only that directory and its children |
+| Manual | Manual transfer and readable shared storage | Saves copied into the configured location |
 
 ## Cinderbox Directory Structure
 
@@ -107,6 +94,29 @@ cd ./Cinderbox-Companion
 The debug APK will be in `app/build/outputs/apk/debug/`.
 
 Requires JDK 17 and Android SDK 35.
+
+## Development checks
+
+Run formatting separately before compilation:
+
+```bash
+./gradlew ktlintFormat
+./gradlew ktlintCheck testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+```
+
+Run instrumentation tests on a disposable emulator or test device:
+
+```bash
+adb install -r app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk
+adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w com.sdvsync.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Tests use isolated fixtures and do not upload Steam saves. Back up device data before testing. The test runner restarts the app, so test connection recovery separately in one running app process.
+
+`./gradlew minifyReleaseWithR8` checks release compilation and shrinking without packaging a signed release. Release installation and signing need separate validation. Lint reports dependency and target-SDK update advisories; review them separately from source-code defects rather than suppressing them.
+
+Before a release, also check large text, portrait/landscape navigation, pull-to-refresh, offline recovery, import cancellation, and the actual storage provider being supported. Passing fixture tests does not establish root, Shizuku, physical-device, full-game, or live Steam-upload compatibility.
 
 ## Links
 
