@@ -171,8 +171,10 @@ class GameDownloadManager(
                 }
 
                 com.sdvsync.saves.requireSafeSaveName(releaseInfo.assetName)
+                val directory = File(context.cacheDir, "installers")
+                Files.createDirectories(directory.toPath())
                 val destFile =
-                    downloadToFile(httpClient, releaseInfo.assetUrl, File(context.cacheDir, releaseInfo.assetName)) {
+                    downloadToFile(httpClient, releaseInfo.assetUrl, File(directory, releaseInfo.assetName)) {
                             bytes,
                             total
                         ->

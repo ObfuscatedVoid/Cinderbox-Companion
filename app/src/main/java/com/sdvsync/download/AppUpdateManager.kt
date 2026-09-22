@@ -50,7 +50,9 @@ class AppUpdateManager(
         withContext(Dispatchers.IO) {
             com.sdvsync.saves.requireSafeSaveName(assetName)
             try {
-                downloadToFile(httpClient, assetUrl, File(context.cacheDir, assetName)) { bytes, total ->
+                val directory = File(context.cacheDir, "updates")
+                java.nio.file.Files.createDirectories(directory.toPath())
+                downloadToFile(httpClient, assetUrl, File(directory, assetName)) { bytes, total ->
                     if (total > 0) onProgress(bytes.toFloat() / total)
                 }
             } catch (e: Exception) {

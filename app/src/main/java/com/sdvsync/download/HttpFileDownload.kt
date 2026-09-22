@@ -1,12 +1,17 @@
 package com.sdvsync.download
 
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -17,10 +22,30 @@ internal suspend fun downloadToFile(
     destination: File,
     onProgress: (Long, Long) -> Unit = { _, _ -> }
 ): File = withContext(Dispatchers.IO) {
-    client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
-        check(response.isSuccessful) { "Download failed: HTTP ${response.code}" }
-        val body = checkNotNull(response.body) { "Empty response body" }
-        body.byteStream().use { copyDownload(it, destination, body.contentLength(), onProgress) }
+    val request = Request.Builder().url(url).get().build()
+    require(request.url.isHttps) { "Downloads require HTTPS" }
+    val call = client.newBuilder().followSslRedirects(false).build().newCall(request)
+    coroutineScope {
+        // Close the socket on cancellation even while a response-body read is blocked.
+        val cancellation = launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            try {
+                awaitCancellation()
+            } finally {
+                call.cancel()
+            }
+        }
+        try {
+            call.execute().use { response ->
+                check(response.isSuccessful) { "Download failed: HTTP ${response.code}" }
+                val body = checkNotNull(response.body) { "Empty response body" }
+                body.byteStream().use { copyDownload(it, destination, body.contentLength(), onProgress) }
+            }
+        } catch (e: IOException) {
+            currentCoroutineContext().ensureActive()
+            throw e
+        } finally {
+            cancellation.cancel()
+        }
     }
 }
 

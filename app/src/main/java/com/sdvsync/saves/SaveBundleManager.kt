@@ -78,7 +78,9 @@ class SaveBundleManager(
         )
 
         // Create ZIP
-        val exportFile = File(context.cacheDir, "$saveFolderName.sdvsync")
+        val directory = File(context.cacheDir, "exports")
+        java.nio.file.Files.createDirectories(directory.toPath())
+        val exportFile = File(directory, "$saveFolderName.sdvsync")
         ZipOutputStream(exportFile.outputStream().buffered()).use { zip ->
             // Write manifest
             zip.putNextEntry(ZipEntry(MANIFEST_FILENAME))
