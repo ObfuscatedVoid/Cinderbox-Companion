@@ -81,6 +81,7 @@ class GameDownloadViewModel(
     val state: StateFlow<GameDownloadState> = _state.asStateFlow()
     private val _wizardState = MutableStateFlow(CinderboxWizardState())
     val wizardState: StateFlow<CinderboxWizardState> = _wizardState.asStateFlow()
+    private var copyJob: Job? = null
     private var smapiJob: Job? = null
     private var cinderboxJob: Job? = null
     private var pendingSetupType: String? = null
@@ -239,8 +240,9 @@ class GameDownloadViewModel(
     }
 
     fun copyCinderbox() {
+        if (copyJob?.isActive == true) return
         downloadManager.resetCopyState()
-        viewModelScope.launch {
+        copyJob = viewModelScope.launch {
             try {
                 downloadManager.copyToCinderbox(_state.value.installDirectory)
             } catch (e: CancellationException) {

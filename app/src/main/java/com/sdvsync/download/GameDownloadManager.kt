@@ -4,15 +4,16 @@ import android.content.Context
 import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.logging.AppLogger
 import java.io.File
-import java.io.InputStream
 import java.nio.file.Files
-import java.util.zip.ZipInputStream
 import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
@@ -97,6 +98,9 @@ class GameDownloadManager(
         const val SMAPI_DEST = CinderboxPaths.SMAPI_DIR
         const val MODS_DIR = CinderboxPaths.MODS_DIR
     }
+
+    private val installationMutex = Mutex()
+    private var smapiArchiveVersion: String? = null
 
     val progress: StateFlow<DownloadProgress> = _progress.asStateFlow()
     val smapiProgress: StateFlow<SmapiSetupProgress> = _smapiProgress.asStateFlow()
@@ -195,7 +199,7 @@ class GameDownloadManager(
         }
     }
 
-    suspend fun downloadSmapiZip(): File? {
+    private suspend fun downloadSmapiZip(): File? {
         return withContext(Dispatchers.IO) {
             val destFile = File(context.cacheDir, SMAPI_CACHE_FILENAME)
             try {
@@ -221,7 +225,7 @@ class GameDownloadManager(
                         downloadedBytes = bytes,
                         totalDownloadBytes = total.coerceAtLeast(0)
                     )
-                }
+                }.also { smapiArchiveVersion = releaseInfo.version }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "SMAPI zip download failed", e)
@@ -232,352 +236,127 @@ class GameDownloadManager(
         }
     }
 
-    suspend fun extractSmapiFromCache() = withContext(Dispatchers.IO) {
-        val cacheFile = File(context.cacheDir, SMAPI_CACHE_FILENAME)
-        if (!cacheFile.exists()) {
-            _smapiProgress.value =
-                SmapiSetupProgress(errorMessage = "SMAPI zip not found. Download it first.")
-            return@withContext
-        }
-
-        _smapiProgress.value = SmapiSetupProgress(isRunning = true, currentFile = "Counting files…")
-
-        val buffer = ByteArray(256 * 1024)
-        val smapiDestDir = File(SMAPI_DEST)
-        val errors = mutableListOf<String>()
-        var extracted = 0
-
-        val totalEntries =
-            try {
-                cacheFile.inputStream().use { countZipEntries(it) } + 1 // +1 for Mods/
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                AppLogger.e(TAG, "Failed to count SMAPI entries", e)
-                _smapiProgress.value =
-                    SmapiSetupProgress(
-                        completed = true,
-                        errorMessage = "Failed to open SMAPI zip: ${e.message}"
+    private suspend fun extractSmapiFromCache() {
+        val archive = File(context.cacheDir, SMAPI_CACHE_FILENAME)
+        try {
+            val total = smapiFileCount(archive)
+            _smapiProgress.value = SmapiSetupProgress(isRunning = true, totalFiles = total)
+            var extracted = 0
+            StagedInstallation(File(SMAPI_DEST)).use { stage ->
+                extractSmapi(archive, stage.directory) { name ->
+                    extracted++
+                    _smapiProgress.value = SmapiSetupProgress(
+                        isRunning = true,
+                        currentFile = name,
+                        extractedFiles = extracted,
+                        totalFiles = total,
+                        percent = extracted.toFloat() / total
                     )
-                return@withContext
-            }
-
-        _smapiProgress.value = SmapiSetupProgress(isRunning = true, totalFiles = totalEntries)
-
-        try {
-            cacheFile.inputStream().use { fileStream ->
-                ZipInputStream(fileStream).use { zip ->
-                    var entry = zip.nextEntry
-                    while (entry != null) {
-                        coroutineContext.ensureActive()
-
-                        val entryName = entry.name
-                        val displayName = "smapi-internal/$entryName"
-
-                        _smapiProgress.value =
-                            _smapiProgress.value.copy(
-                                currentFile = displayName,
-                                extractedFiles = extracted,
-                                percent =
-                                if (totalEntries > 0) {
-                                    extracted.toFloat() / totalEntries
-                                } else {
-                                    0f
-                                }
-                            )
-
-                        if (!entry.isDirectory) {
-                            try {
-                                val destFile = File(smapiDestDir, entryName)
-                                require(
-                                    destFile.canonicalPath.startsWith(smapiDestDir.canonicalPath + File.separator)
-                                ) {
-                                    "SMAPI entry outside target directory: $entryName"
-                                }
-                                destFile.parentFile?.mkdirs()
-                                destFile.outputStream().buffered().use { output ->
-                                    var bytesRead: Int
-                                    while (zip.read(buffer).also { bytesRead = it } != -1) {
-                                        coroutineContext.ensureActive()
-                                        output.write(buffer, 0, bytesRead)
-                                    }
-                                }
-                                extracted++
-                            } catch (e: Exception) {
-                                if (e is kotlinx.coroutines.CancellationException) {
-                                    throw e
-                                }
-                                AppLogger.e(TAG, "Failed to extract $displayName", e)
-                                errors.add(displayName)
-                            }
-                        }
-
-                        zip.closeEntry()
-                        entry = zip.nextEntry
-                    }
                 }
+                Files.createDirectories(File(MODS_DIR).toPath())
+                coroutineContext.ensureActive()
+                publishInstallations(listOf(stage))
             }
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            AppLogger.e(TAG, "Failed to open SMAPI zip", e)
-            errors.add(SMAPI_CACHE_FILENAME)
-        }
-
-        // Create Mods/ directory
-        _smapiProgress.value =
-            _smapiProgress.value.copy(
-                currentFile = "Mods/",
-                extractedFiles = extracted,
-                percent =
-                if (totalEntries > 0) {
-                    extracted.toFloat() / totalEntries
-                } else {
-                    0f
-                }
-            )
-        try {
-            Files.createDirectories(File(MODS_DIR).toPath())
-            extracted++
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            AppLogger.e(TAG, "Failed to create Mods directory", e)
-            errors.add("Mods/")
-        }
-
-        AppLogger.i(
-            TAG,
-            "SMAPI setup complete: $extracted/$totalEntries files, ${errors.size} errors"
-        )
-
-        _smapiProgress.value =
-            SmapiSetupProgress(
-                isRunning = false,
-                percent = 1f,
-                extractedFiles = extracted,
-                totalFiles = totalEntries,
+            _smapiProgress.value = SmapiSetupProgress(
                 completed = true,
-                errorMessage =
-                if (errors.isNotEmpty()) {
-                    errors.joinToString(", ")
-                } else {
-                    null
+                percent = 1f,
+                extractedFiles = total,
+                totalFiles = total
+            )
+        } catch (e: CancellationException) {
+            _smapiProgress.value = SmapiSetupProgress(errorMessage = "SMAPI setup cancelled")
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "SMAPI setup failed", e)
+            _smapiProgress.value = SmapiSetupProgress(errorMessage = e.message ?: "SMAPI setup failed")
+        }
+    }
+
+    suspend fun downloadAndExtractSmapi() = withContext(Dispatchers.IO) {
+        installationMutex.withLock {
+            downloadSmapiZip() ?: return@withLock
+            extractSmapiFromCache()
+            if (_smapiProgress.value.completed) {
+                smapiArchiveVersion?.let {
+                    releaseChecker.setInstalledVersion(GitHubReleaseChecker.KEY_SMAPI_VERSION, it)
                 }
-            )
-    }
-
-    suspend fun downloadAndExtractSmapi() {
-        downloadSmapiZip() ?: return
-        extractSmapiFromCache()
-        // Only record installed version after successful extraction
-        val smapiProgress = _smapiProgress.value
-        if (smapiProgress.completed && smapiProgress.errorMessage == null) {
-            val releaseInfo = releaseChecker.getLatestRelease(
-                GitHubReleaseChecker.SMAPI_REPO,
-                GitHubReleaseChecker.SMAPI_ASSET_PATTERN
-            )
-            releaseInfo?.let {
-                releaseChecker.setInstalledVersion(GitHubReleaseChecker.KEY_SMAPI_VERSION, it.version)
             }
         }
-    }
-
-    private fun countZipEntries(inputStream: InputStream): Int {
-        var count = 0
-        ZipInputStream(inputStream).use { zip ->
-            while (zip.nextEntry != null) {
-                count++
-                zip.closeEntry()
-            }
-        }
-        return count
     }
 
     suspend fun copyToCinderbox(installDir: String) = withContext(Dispatchers.IO) {
-        val srcDir = File(installDir)
-        val destDir = File(CINDERBOX_DEST)
-
-        val missing = CINDERBOX_DLLS.filter { !File(srcDir, it).isFile }.toMutableList()
-        val content = File(srcDir, CINDERBOX_CONTENT_DIR)
-        if (!content.isDirectory || content.walk().none { it.isFile }) missing += CINDERBOX_CONTENT_DIR
-        if (missing.isNotEmpty()) {
-            setCopyError("Missing game files: ${missing.joinToString(", ")}")
-            return@withContext
-        }
-
-        // --- Count total files up front ---
-        val filesToCopy = mutableListOf<Pair<File, File>>() // source -> dest
-
-        for (dll in CINDERBOX_DLLS) {
-            val src = File(srcDir, dll)
-            if (src.exists()) {
-                filesToCopy.add(src to File(destDir, dll))
-            }
-        }
-
-        val contentSrc = File(srcDir, CINDERBOX_CONTENT_DIR)
-        if (contentSrc.exists() && contentSrc.isDirectory) {
-            contentSrc.walk().filter { it.isFile }.forEach { file ->
-                val relativePath = file.relativeTo(srcDir).path
-                filesToCopy.add(file to File(destDir, relativePath))
-            }
-        }
-
-        val smapiCacheFile = File(context.cacheDir, SMAPI_CACHE_FILENAME)
-        val smapiEntryCount = if (smapiCacheFile.exists()) {
-            smapiCacheFile.inputStream().use { countZipEntries(it) }
-        } else {
-            0
-        }
-        val totalFiles = filesToCopy.size + smapiEntryCount + 1 // +1 for Mods/ dir
-
-        AppLogger.i(
-            TAG,
-            "Cinderbox setup: ${filesToCopy.size} game files + $smapiEntryCount SMAPI files + Mods dir = $totalFiles total"
-        )
-
-        _progress.value =
-            _progress.value.copy(
-                state = DownloadState.COPYING,
-                currentFile = "",
-                copiedFiles = 0,
-                totalFilesToCopy = totalFiles,
-                overallPercent = 0f
-            )
-
-        val errors = mutableListOf<String>()
-        var copied = 0
-        val buffer = ByteArray(256 * 1024)
-
-        // Copy DLLs + Content
-        for ((src, dest) in filesToCopy) {
-            coroutineContext.ensureActive()
-
-            val relativeName = src.relativeTo(srcDir).path
-            _progress.value =
-                _progress.value.copy(
-                    currentFile = relativeName,
-                    copiedFiles = copied,
-                    overallPercent =
-                    if (totalFiles > 0) {
-                        copied.toFloat() / totalFiles
-                    } else {
-                        0f
-                    }
-                )
-
+        installationMutex.withLock {
             try {
-                dest.parentFile?.mkdirs()
-                src.inputStream().buffered().use { input ->
-                    dest.outputStream().buffered().use { output ->
-                        var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            coroutineContext.ensureActive()
-                            output.write(buffer, 0, bytesRead)
-                        }
-                    }
+                val source = File(installDir).canonicalFile
+                val content = File(source, CINDERBOX_CONTENT_DIR)
+                require(CINDERBOX_DLLS.all { File(source, it).isFile }) { "Required game DLLs are missing" }
+                require(content.isDirectory) { "Game Content is missing" }
+                val contentFiles = Files.walk(content.toPath()).use { paths ->
+                    paths.peek { require(!Files.isSymbolicLink(it)) { "Game Content contains a symbolic link" } }
+                        .filter { Files.isRegularFile(it) }
+                        .map { it.toFile() }.toArray().map { it as File }
                 }
-                copied++
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                AppLogger.e(TAG, "Failed to copy $relativeName", e)
-                errors.add(relativeName)
-            }
-        }
-
-        // Extract SMAPI zip from cache
-        val smapiDestDir = File(SMAPI_DEST)
-        if (smapiCacheFile.exists()) {
-            try {
-                smapiCacheFile.inputStream().use { fileStream ->
-                    ZipInputStream(fileStream).use { zip ->
-                        var entry = zip.nextEntry
-                        while (entry != null) {
-                            coroutineContext.ensureActive()
-
-                            val entryName = entry.name
-                            val displayName = "smapi-internal/$entryName"
-
-                            _progress.value =
-                                _progress.value.copy(
-                                    currentFile = displayName,
-                                    copiedFiles = copied,
-                                    overallPercent =
-                                    if (totalFiles > 0) {
-                                        copied.toFloat() / totalFiles
-                                    } else {
-                                        0f
-                                    }
-                                )
-
-                            if (!entry.isDirectory) {
-                                try {
-                                    val destFile = File(smapiDestDir, entryName)
-                                    require(
-                                        destFile.canonicalPath.startsWith(smapiDestDir.canonicalPath + File.separator)
-                                    ) {
-                                        "SMAPI entry outside target directory: $entryName"
-                                    }
-                                    destFile.parentFile?.mkdirs()
-                                    destFile.outputStream().buffered().use { output ->
-                                        var bytesRead: Int
-                                        while (zip.read(buffer).also { bytesRead = it } != -1) {
-                                            coroutineContext.ensureActive()
-                                            output.write(buffer, 0, bytesRead)
-                                        }
-                                    }
-                                    copied++
-                                } catch (e: Exception) {
-                                    if (e is kotlinx.coroutines.CancellationException) {
-                                        throw e
-                                    }
-                                    AppLogger.e(TAG, "Failed to extract $displayName", e)
-                                    errors.add(displayName)
-                                }
+                val files = CINDERBOX_DLLS.map { File(source, it) } + contentFiles
+                require(content.isDirectory && files.size > CINDERBOX_DLLS.size) { "Game Content is missing" }
+                val sourceRoot = source.path + File.separator
+                require(
+                    files.all {
+                        it.canonicalPath.startsWith(sourceRoot)
+                    }
+                ) { "Game files point outside the source directory" }
+                val archive = File(context.cacheDir, SMAPI_CACHE_FILENAME).takeIf { it.isFile }
+                val total = files.size + (archive?.let(::smapiFileCount) ?: 0)
+                var copied = 0
+                fun progress(name: String) {
+                    _progress.value = _progress.value.copy(
+                        state = DownloadState.COPYING,
+                        currentFile = name,
+                        copiedFiles = copied,
+                        totalFilesToCopy = total,
+                        overallPercent = copied.toFloat() / total,
+                        copyCompleted = false,
+                        copyErrors = emptyList()
+                    )
+                }
+                progress("")
+                StagedInstallation(File(CINDERBOX_DEST)).use { gameStage ->
+                    for (file in files) {
+                        val relative = file.relativeTo(source).path
+                        copyGameFile(file, File(gameStage.directory, relative))
+                        copied++
+                        progress(relative)
+                    }
+                    Files.createDirectories(File(MODS_DIR).toPath())
+                    if (archive != null) {
+                        StagedInstallation(File(SMAPI_DEST)).use { smapiStage ->
+                            extractSmapi(archive, smapiStage.directory) { name ->
+                                copied++
+                                progress("smapi-internal/$name")
                             }
-
-                            zip.closeEntry()
-                            entry = zip.nextEntry
+                            coroutineContext.ensureActive()
+                            publishInstallations(listOf(gameStage, smapiStage))
                         }
+                    } else {
+                        coroutineContext.ensureActive()
+                        publishInstallations(listOf(gameStage))
                     }
                 }
+                _progress.value = _progress.value.copy(
+                    state = DownloadState.COMPLETED,
+                    currentFile = "",
+                    copiedFiles = copied,
+                    totalFilesToCopy = total,
+                    overallPercent = 1f,
+                    copyCompleted = true,
+                    copyErrors = emptyList()
+                )
+            } catch (e: CancellationException) {
+                setCopyError("Game setup cancelled")
+                throw e
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                AppLogger.e(TAG, "Failed to open SMAPI zip", e)
-                errors.add(SMAPI_CACHE_FILENAME)
+                AppLogger.e(TAG, "Cinderbox setup failed", e)
+                setCopyError(e.message ?: "Game setup failed")
             }
-        } else {
-            AppLogger.w(TAG, "SMAPI cache file not found, skipping SMAPI extraction in copy")
         }
-
-        // Create Mods/ directory
-        _progress.value =
-            _progress.value.copy(
-                currentFile = "Mods/",
-                copiedFiles = copied,
-                overallPercent = if (totalFiles > 0) copied.toFloat() / totalFiles else 0f
-            )
-        try {
-            Files.createDirectories(File(MODS_DIR).toPath())
-            copied++
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            AppLogger.e(TAG, "Failed to create Mods directory", e)
-            errors.add("Mods/")
-        }
-
-        AppLogger.i(
-            TAG,
-            "Cinderbox setup complete: $copied/$totalFiles files, ${errors.size} errors"
-        )
-
-        _progress.value =
-            _progress.value.copy(
-                state = DownloadState.COMPLETED,
-                currentFile = "",
-                copiedFiles = copied,
-                totalFilesToCopy = totalFiles,
-                overallPercent = 1f,
-                copyCompleted = true,
-                copyErrors = errors
-            )
     }
 }
