@@ -14,8 +14,8 @@ android {
         applicationId = "com.sdvsync"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "0.1.1"
+        versionCode = 15
+        versionName = "0.1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

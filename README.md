@@ -107,7 +107,7 @@ Run formatting separately before compilation:
 Run instrumentation tests on a disposable emulator or test device:
 
 ```bash
-adb install -r app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk
+adb install -r app/build/outputs/apk/debug/CinderboxCompanion-v0.1.2.apk
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell am instrument -w com.sdvsync.test/androidx.test.runner.AndroidJUnitRunner
 ```

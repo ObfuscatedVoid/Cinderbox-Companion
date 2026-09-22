@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.edit
 import com.sdvsync.logging.AppLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -106,6 +107,7 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
 
                 matchedInfo
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Failed to check GitHub release for $repo", e)
                 cachedJson?.let { parseReleaseInfoFromCache(it) }
             }
@@ -127,19 +129,7 @@ class GitHubReleaseChecker(private val context: Context, private val httpClient:
         prefs.edit { putString(key, version) }
     }
 
-    fun isUpdateAvailable(installed: String?, latest: String?): Boolean {
-        if (installed == null || latest == null) return false
-        // Strip "v" prefix and pre-release suffix (e.g. "-beta.2")
-        val installedParts = installed.removePrefix("v").split("-")[0].split(".").mapNotNull { it.toIntOrNull() }
-        val latestParts = latest.removePrefix("v").split("-")[0].split(".").mapNotNull { it.toIntOrNull() }
-        for (i in 0 until maxOf(installedParts.size, latestParts.size)) {
-            val inst = installedParts.getOrElse(i) { 0 }
-            val lat = latestParts.getOrElse(i) { 0 }
-            if (lat > inst) return true
-            if (lat < inst) return false
-        }
-        return false
-    }
+    fun isUpdateAvailable(installed: String?, latest: String?): Boolean = isNewerRelease(installed, latest)
 
     fun invalidateCache(repo: String) {
         memoryCache.remove(repo)
