@@ -76,7 +76,7 @@ fun ModCard(
                     val statusText = when {
                         !mod.enabled -> stringResource(R.string.mods_disabled)
                         hasUpdate -> stringResource(R.string.mods_update_available)
-                        else -> stringResource(R.string.mods_up_to_date)
+                        else -> stringResource(R.string.mods_enabled)
                     }
                     val statusColor = when {
                         !mod.enabled -> MaterialTheme.colorScheme.onSurfaceVariant

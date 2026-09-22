@@ -14,6 +14,7 @@ import com.sdvsync.mods.models.InstalledMod
 import com.sdvsync.mods.models.ModProfile
 import com.sdvsync.mods.models.ModUpdateInfo
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,6 +94,7 @@ class ModManagerViewModel(
                     checkForUpdates()
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Failed to load mods", e)
                 _state.update {
                     it.copy(isLoading = false, isRefreshing = false, error = e.message ?: "Failed to load mods")
@@ -103,10 +105,10 @@ class ModManagerViewModel(
 
     fun checkForUpdates() {
         val mods = _state.value.installedMods
-        if (mods.isEmpty()) return
+        if (mods.isEmpty() || _state.value.isCheckingUpdates) return
+        _state.update { it.copy(isCheckingUpdates = true) }
 
         viewModelScope.launch(Dispatchers.IO) {
-            _state.update { it.copy(isCheckingUpdates = true) }
             try {
                 // Only check enabled mods
                 val enabledMods = mods.filter { it.enabled }
@@ -118,14 +120,15 @@ class ModManagerViewModel(
                 _state.update { it.copy(updates = updates, isCheckingUpdates = false) }
                 updateDisplayedMods()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Update check failed", e)
-                _state.update { it.copy(isCheckingUpdates = false) }
+                _state.update { it.copy(isCheckingUpdates = false, error = e.message ?: "Could not check for updates") }
             }
         }
     }
 
     fun toggleMod(folderName: String, enable: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        changeMods {
             val success = if (enable) {
                 fileManager.enableMod(folderName)
             } else {
@@ -133,25 +136,31 @@ class ModManagerViewModel(
             }
             if (success) {
                 loadInstalledMods()
+            } else {
+                _state.update {
+                    it.copy(error = "Could not change the mod’s enabled state")
+                }
             }
         }
     }
 
     fun removeMod(folderName: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        changeMods {
             val mod = _state.value.installedMods.find { it.folderName == folderName }
             if (fileManager.removeMod(folderName)) {
                 mod?.let { dataStore.removeModMetadata(it.manifest.uniqueID) }
                 loadInstalledMods()
+            } else {
+                _state.update { it.copy(error = "Could not remove the mod") }
             }
         }
     }
 
     fun importFromUri(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
+            val tempFile = File.createTempFile("mod-import-", ".zip", context.cacheDir)
             _state.update { it.copy(importMessage = null) }
             try {
-                val tempFile = File(context.cacheDir, "import_${System.currentTimeMillis()}.zip")
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     tempFile.outputStream().use { output ->
                         input.copyTo(output)
@@ -159,7 +168,6 @@ class ModManagerViewModel(
                 } ?: throw IllegalStateException("Cannot read file")
 
                 val result = fileManager.installFromZip(tempFile)
-                tempFile.delete()
 
                 when (result) {
                     is InstallResult.Success -> {
@@ -172,8 +180,11 @@ class ModManagerViewModel(
                     }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Import failed", e)
                 _state.update { it.copy(importMessage = "Import failed: ${e.message}") }
+            } finally {
+                tempFile.delete()
             }
         }
     }
@@ -206,16 +217,17 @@ class ModManagerViewModel(
                 val activeName = detectActiveProfile(profiles)
                 _state.update { it.copy(profiles = profiles, activeProfileName = activeName) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Failed to load profiles", e)
             }
         }
     }
 
     fun saveCurrentAsProfile(name: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        changeMods {
             val enabledIds = _state.value.installedMods
                 .filter { it.enabled }
-                .map { it.manifest.uniqueID }
+                .map { it.manifest.uniqueID.lowercase() }
                 .toSet()
 
             val profile = ModProfile(name = name, enabledModIds = enabledIds)
@@ -233,28 +245,24 @@ class ModManagerViewModel(
     }
 
     fun applyProfile(profile: ModProfile) {
+        if (_state.value.isApplyingProfile) return
+        _state.update { it.copy(isApplyingProfile = true) }
         viewModelScope.launch(Dispatchers.IO) {
-            _state.update { it.copy(isApplyingProfile = true) }
             try {
-                val mods = _state.value.installedMods
-                for (mod in mods) {
-                    val shouldEnable = mod.manifest.uniqueID in profile.enabledModIds
-                    if (mod.enabled != shouldEnable) {
-                        if (shouldEnable) {
-                            fileManager.enableMod(mod.folderName)
-                        } else {
-                            fileManager.disableMod(mod.folderName)
-                        }
-                    }
-                }
+                val failed = fileManager.applyProfile(profile.enabledModIds)
                 _state.update {
                     it.copy(
                         isApplyingProfile = false,
-                        profileMessage = "Profile \"${profile.name}\" applied"
+                        profileMessage = if (failed.isEmpty()) {
+                            "Profile \"${profile.name}\" applied"
+                        } else {
+                            "Could not change: ${failed.joinToString()}"
+                        }
                     )
                 }
                 loadInstalledMods()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Failed to apply profile", e)
                 _state.update {
                     it.copy(isApplyingProfile = false, profileMessage = "Failed to apply profile")
@@ -264,7 +272,7 @@ class ModManagerViewModel(
     }
 
     fun deleteProfile(name: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        changeMods {
             dataStore.deleteProfile(name)
             loadProfiles()
         }
@@ -274,13 +282,25 @@ class ModManagerViewModel(
         _state.update { it.copy(profileMessage = null) }
     }
 
+    private fun changeMods(action: suspend () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                action()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                AppLogger.e(TAG, "Mod operation failed", e)
+                _state.update { it.copy(error = e.message ?: "Mod operation failed") }
+            }
+        }
+    }
+
     private fun detectActiveProfile(profiles: List<ModProfile>): String? {
         val currentEnabled = _state.value.installedMods
             .filter { it.enabled }
-            .map { it.manifest.uniqueID }
+            .map { it.manifest.uniqueID.lowercase() }
             .toSet()
 
-        return profiles.find { it.enabledModIds == currentEnabled }?.name
+        return profiles.find { it.enabledModIds.map { id -> id.lowercase() }.toSet() == currentEnabled }?.name
     }
 
     private fun updateDisplayedMods() {

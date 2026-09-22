@@ -175,6 +175,20 @@ fun ModManagerScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        state.error?.let { error ->
+                            item(key = "error") {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    shape = MaterialTheme.shapes.medium
+                                ) {
+                                    Text(
+                                        error,
+                                        modifier = Modifier.padding(16.dp),
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
                         // Profiles section
                         if (state.profiles.isNotEmpty() || state.installedMods.isNotEmpty()) {
                             item {

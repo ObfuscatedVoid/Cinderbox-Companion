@@ -5,6 +5,7 @@ import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.models.InstallResult
 import com.sdvsync.mods.models.InstalledMod
+import com.sdvsync.saves.requireSafeSaveName
 import java.io.File
 import java.nio.file.Files
 import java.util.UUID
@@ -29,11 +30,17 @@ class ModFileManager(
     /**
      * Scan the Mods/ directory and parse all installed mods.
      */
+    @Synchronized
     fun listInstalledMods(): List<InstalledMod> {
         if (!modsDir.exists()) return emptyList()
 
         return modsDir.listFiles()
-            ?.filter { it.isDirectory }
+            ?.filter {
+                it.isDirectory &&
+                    !it.name.startsWith(".install-") &&
+                    !it.name.startsWith(".backup-") &&
+                    it.canonicalFile.parentFile == modsDir.canonicalFile
+            }
             ?.mapNotNull { folder ->
                 val normalized = if (folder.name.endsWith(DISABLED_SUFFIX) &&
                     !folder.name.startsWith(".") &&
@@ -74,110 +81,140 @@ class ModFileManager(
         )
     }
 
+    @Synchronized
     fun enableMod(folderName: String): Boolean {
+        modFolder(folderName)
         if (!folderName.startsWith(".")) return true
         return renameMod(folderName, folderName.removePrefix("."))
     }
 
+    @Synchronized
     fun disableMod(folderName: String): Boolean {
+        modFolder(folderName)
         if (folderName.startsWith(".")) return true
         // SMAPI only skips folders whose names start with a dot.
         return renameMod(folderName, ".$folderName")
     }
 
     private fun renameMod(from: String, to: String): Boolean {
-        val target = File(modsDir, to)
+        val target = modFolder(to)
         if (target.exists()) return false
-        return File(modsDir, from).renameTo(target)
+        return modFolder(from).renameTo(target)
     }
 
     /**
      * Remove a mod by recursively deleting its folder.
      */
+    @Synchronized
     fun removeMod(folderName: String): Boolean {
-        val folder = File(modsDir, folderName)
+        val folder = modFolder(folderName)
         if (!folder.exists()) return true
         return folder.deleteRecursively().also {
             AppLogger.d(TAG, "Remove mod: $folderName: $it")
         }
     }
 
-    /**
-     * Install a mod from a zip file.
-     * Handles single-mod, nested-folder, and multi-mod archives.
-     */
+    private fun modFolder(name: String): File {
+        requireSafeSaveName(name)
+        val file = File(modsDir, name)
+        require(file.canonicalFile.parentFile == modsDir.canonicalFile) { "Mod folder is outside the Mods directory" }
+        return file
+    }
+
+    @Synchronized
+    fun applyProfile(enabledIds: Set<String>): List<String> {
+        val wanted = enabledIds.map { it.lowercase() }.toSet()
+        return listInstalledMods().mapNotNull { mod ->
+            val enable = mod.manifest.uniqueID.lowercase() in wanted
+            if (mod.enabled == enable) return@mapNotNull null
+            val success = if (enable) enableMod(mod.folderName) else disableMod(mod.folderName)
+            mod.manifest.name.takeUnless { success }
+        }
+    }
+
+    @Synchronized
     fun installFromZip(zipFile: File): InstallResult {
         val tempDir = Files.createTempDirectory(context.cacheDir.toPath(), "mod_extract_").toFile()
+        val staged = mutableListOf<Pair<File, File>>()
+        val backups = mutableListOf<Pair<File, File>>()
+        val installed = mutableListOf<File>()
         try {
-            // Extract zip to temp directory
-            tempDir.mkdirs()
             extractZip(zipFile, tempDir)
-
-            // Find all manifest.json files
-            val manifests = tempDir.walk()
-                .filter { it.name.equals("manifest.json", ignoreCase = true) && it.isFile }
-                .toList()
-
-            if (manifests.isEmpty()) {
-                return InstallResult.Error("No manifest.json found in archive")
-            }
-
-            val installed = mutableListOf<InstalledMod>()
-
-            for (manifestFile in manifests) {
-                val modFolder = manifestFile.parentFile ?: continue
-                val manifest = parser.parse(manifestFile.readText()) ?: continue
-
-                // Determine the target folder name
-                val targetName = modFolder.name.takeIf { it != tempDir.name }
-                    ?: manifest.name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "")
-
-                require(targetName.isNotBlank() && targetName != "." && targetName != "..") {
-                    "Invalid mod folder name"
-                }
-                val existing = listInstalledMods().firstOrNull { it.manifest.uniqueID == manifest.uniqueID }
-                val targetDir = existing?.let { File(it.folderPath) } ?: File(modsDir, targetName)
-                check(!targetDir.exists() || existing != null) { "A different mod already uses $targetName" }
-                Files.createDirectories(modsDir.toPath())
-                val staged = Files.createTempDirectory(modsDir.toPath(), ".install-").toFile()
-                val previous = File(modsDir, ".backup-${UUID.randomUUID()}")
-                try {
-                    check(modFolder.copyRecursively(staged, overwrite = true)) { "Could not stage mod files" }
-                    val config = File(targetDir, "config.json")
-                    if (config.isFile) config.copyTo(File(staged, "config.json"), overwrite = true)
-                    if (targetDir.exists()) Files.move(targetDir.toPath(), previous.toPath())
-                    try {
-                        Files.move(staged.toPath(), targetDir.toPath())
-                    } catch (e: Exception) {
-                        if (previous.exists()) Files.move(previous.toPath(), targetDir.toPath())
-                        throw e
+            val manifests = tempDir.walk().filter { it.name.equals("manifest.json", true) && it.isFile }.toList()
+            check(manifests.isNotEmpty()) { "No manifest.json found in archive" }
+            val existing = listInstalledMods()
+            val ids = mutableSetOf<String>()
+            val targets = mutableSetOf<String>()
+            for (file in manifests) {
+                check(file.length() <= 1024 * 1024) { "Mod manifest is too large" }
+                val manifest =
+                    checkNotNull(parser.parse(file.readText())) { "Invalid mod manifest: ${file.parentFile?.name}" }
+                check(ids.add(manifest.uniqueID.lowercase())) { "Duplicate mod ID in archive" }
+                val folder = checkNotNull(file.parentFile)
+                check(
+                    manifests.none {
+                        it != file && folder.toPath().startsWith(checkNotNull(it.parentFile).toPath())
                     }
-                    previous.deleteRecursively()
-                } finally {
-                    staged.deleteRecursively()
+                ) {
+                    "Archive contains nested mod manifests"
                 }
-
-                parseMod(targetDir)?.let { installed.add(it) }
-                AppLogger.d(TAG, "Installed mod: ${manifest.name} to ${targetDir.name}")
+                val targetName = folder.name.takeIf { folder != tempDir }
+                    ?: manifest.name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "")
+                val previous = existing.firstOrNull { it.manifest.uniqueID.equals(manifest.uniqueID, true) }
+                val target = modFolder(previous?.folderName ?: targetName)
+                check(targets.add(target.name.lowercase())) { "Multiple mods use the same folder" }
+                check(!target.exists() || previous != null) { "A different mod already uses ${target.name}" }
+                Files.createDirectories(modsDir.toPath())
+                val stage = Files.createTempDirectory(modsDir.toPath(), ".install-").toFile()
+                staged.add(stage to target)
+                check(folder.copyRecursively(stage, overwrite = true)) { "Could not stage mod files" }
+                val config = File(target, "config.json")
+                if (config.isFile) config.copyTo(File(stage, "config.json"), overwrite = true)
             }
-
-            return if (installed.isEmpty()) {
-                InstallResult.Error("Failed to install any mods from archive")
-            } else {
-                InstallResult.Success(installed)
+            for ((stage, target) in staged) {
+                if (target.exists()) {
+                    val backup = File(modsDir, ".backup-${UUID.randomUUID()}")
+                    Files.move(target.toPath(), backup.toPath())
+                    backups.add(backup to target)
+                }
+                Files.move(stage.toPath(), target.toPath())
+                installed.add(target)
             }
+            val mods = installed.map { checkNotNull(parseMod(it)) { "Installed mod could not be read" } }
+            backups.forEach { (backup, _) -> backup.deleteRecursively() }
+            return InstallResult.Success(mods)
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Failed to install from zip", e)
-            return InstallResult.Error(e.message ?: "Unknown error")
+            var recovered = true
+            installed.asReversed().forEach { if (!it.deleteRecursively()) recovered = false }
+            backups.asReversed().forEach { (backup, target) ->
+                try {
+                    Files.move(backup.toPath(), target.toPath())
+                } catch (_: Exception) {
+                    recovered = false
+                }
+            }
+            AppLogger.e(TAG, "Mod installation failed", e)
+            return InstallResult.Error(
+                if (recovered) {
+                    e.message ?: "Installation failed"
+                } else {
+                    "Installation failed. Original mods are retained in .backup folders; recovery is required."
+                }
+            )
         } finally {
+            staged.forEach { (stage, _) -> stage.deleteRecursively() }
             tempDir.deleteRecursively()
         }
     }
 
     private fun extractZip(zipFile: File, destDir: File) {
         ZipInputStream(zipFile.inputStream().buffered()).use { zip ->
+            var count = 0
+            var total = 0L
+            val names = mutableSetOf<String>()
             var entry = zip.nextEntry
             while (entry != null) {
+                check(++count <= 10000 && names.add(entry.name)) { "Too many or duplicate archive entries" }
                 val file = File(destDir, entry.name)
                 // Protect against zip slip
                 if (!file.canonicalPath.startsWith(destDir.canonicalPath + File.separator)) {
@@ -188,7 +225,14 @@ class ModFileManager(
                 } else {
                     file.parentFile?.mkdirs()
                     file.outputStream().buffered().use { out ->
-                        zip.copyTo(out)
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            val bytes = zip.read(buffer)
+                            if (bytes == -1) break
+                            total += bytes
+                            check(total <= 2L * 1024 * 1024 * 1024) { "Mod archive exceeds 2 GiB" }
+                            out.write(buffer, 0, bytes)
+                        }
                     }
                 }
                 zip.closeEntry()

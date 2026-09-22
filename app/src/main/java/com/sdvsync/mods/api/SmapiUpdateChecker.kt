@@ -52,8 +52,10 @@ class SmapiUpdateChecker(private val httpClient: OkHttpClient) {
                 .post(body.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
-            val response = httpClient.newCall(request).execute()
-            val responseBody = response.use { it.body?.string() } ?: return@withContext emptyMap()
+            val responseBody = httpClient.newCall(request).execute().use {
+                check(it.isSuccessful) { "Update check failed: HTTP ${it.code}" }
+                checkNotNull(it.body?.string()) { "Empty update response" }
+            }
             val results = JSONArray(responseBody)
 
             val updates = mutableMapOf<String, ModUpdateInfo>()
@@ -74,7 +76,7 @@ class SmapiUpdateChecker(private val httpClient: OkHttpClient) {
 
                 // Only add if the version actually differs
                 if (latestVersion != installed.manifest.version) {
-                    updates[id] = ModUpdateInfo(
+                    updates[installed.manifest.uniqueID] = ModUpdateInfo(
                         uniqueID = id,
                         installedVersion = installed.manifest.version,
                         latestVersion = latestVersion,
@@ -88,7 +90,7 @@ class SmapiUpdateChecker(private val httpClient: OkHttpClient) {
             updates
         } catch (e: Exception) {
             AppLogger.e(TAG, "Update check failed", e)
-            emptyMap()
+            throw e
         }
     }
 

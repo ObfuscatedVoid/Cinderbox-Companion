@@ -54,7 +54,28 @@ class ModManifestParser {
     }
 
     /** Strip trailing commas before } and ] — common in SMAPI mod manifests. */
-    private fun sanitizeJson(json: String): String = json.replace(Regex(",\\s*([}\\]])"), "$1")
+    private fun sanitizeJson(json: String): String = buildString {
+        var quoted = false
+        var escaped = false
+        json.forEachIndexed { index, char ->
+            if (quoted) {
+                append(char)
+                if (escaped) {
+                    escaped = false
+                } else {
+                    when (char) {
+                        '\\' -> escaped = true
+                        '"' -> quoted = false
+                    }
+                }
+            } else {
+                if (char == '"') quoted = true
+                val trailingComma =
+                    char == ',' && json.substring(index + 1).firstOrNull { !it.isWhitespace() } in listOf('}', ']')
+                if (!trailingComma) append(char)
+            }
+        }
+    }
 
     /** Case-insensitive string lookup. */
     private fun JSONObject.getStringCI(key: String): String? {
