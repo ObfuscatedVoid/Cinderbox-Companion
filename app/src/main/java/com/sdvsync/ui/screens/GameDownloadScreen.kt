@@ -12,6 +12,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadState
@@ -50,8 +51,8 @@ private fun formatDate(epochSeconds: Long): String {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GameDownloadScreen(viewModel: GameDownloadViewModel = koinViewModel()) {
-    val state by viewModel.state.collectAsState()
-    val wizardState by viewModel.wizardState.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val wizardState by viewModel.wizardState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadBranches()

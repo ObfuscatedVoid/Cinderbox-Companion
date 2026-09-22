@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -49,10 +50,10 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinViewModel()) {
-    val authState by viewModel.authState.collectAsState()
-    val username by viewModel.username.collectAsState()
-    val password by viewModel.password.collectAsState()
-    val twoFactorCode by viewModel.twoFactorCode.collectAsState()
+    val authState by viewModel.authState.collectAsStateWithLifecycle()
+    val username by viewModel.username.collectAsStateWithLifecycle()
+    val password by viewModel.password.collectAsStateWithLifecycle()
+    val twoFactorCode by viewModel.twoFactorCode.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     var passwordVisible by remember { mutableStateOf(false) }
 

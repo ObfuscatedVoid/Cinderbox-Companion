@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.sync.SyncHistoryEntry
 import com.sdvsync.ui.components.AppCard
@@ -24,7 +25,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun SyncLogScreen(onBack: () -> Unit, viewModel: SyncLogViewModel = koinViewModel()) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.load()

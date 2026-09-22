@@ -8,6 +8,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -16,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.mods.models.ModProfile
 import com.sdvsync.ui.components.AppButton
@@ -41,7 +44,7 @@ fun ModManagerScreen(
     onModClick: (String) -> Unit = {},
     viewModel: ModManagerViewModel = koinViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // File picker for zip import
@@ -99,23 +102,23 @@ fun ModManagerScreen(
         }
     ) { padding ->
         PullToRefreshBox(
-            isRefreshing = false,
-            onRefresh = { viewModel.loadInstalledMods() },
+            isRefreshing = state.isRefreshing,
+            onRefresh = { viewModel.loadInstalledMods(isUserRefresh = true) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
             when {
-                state.isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                state.isLoading && state.installedMods.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         LoadingIndicator(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
                 }
 
-                state.error != null -> {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                state.error != null && state.installedMods.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         Column(
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -136,7 +139,7 @@ fun ModManagerScreen(
                 }
 
                 state.installedMods.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         Column(
                             modifier = Modifier
                                 .align(Alignment.Center)

@@ -15,6 +15,7 @@ import com.sdvsync.mods.models.ModProfile
 import com.sdvsync.mods.models.ModUpdateInfo
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,7 @@ data class ModManagerState(
     val installedMods: List<InstalledMod> = emptyList(),
     val updates: Map<String, ModUpdateInfo> = emptyMap(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isCheckingUpdates: Boolean = false,
     val error: String? = null,
     val importMessage: String? = null,
@@ -56,6 +58,8 @@ class ModManagerViewModel(
     private val _state = MutableStateFlow(ModManagerState())
     val state: StateFlow<ModManagerState> = _state.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init {
         loadInstalledMods()
         viewModelScope.launch {
@@ -63,14 +67,22 @@ class ModManagerViewModel(
         }
     }
 
-    fun loadInstalledMods() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _state.update { it.copy(isLoading = true, error = null) }
+    @Synchronized
+    fun loadInstalledMods(isUserRefresh: Boolean = false) {
+        if (loadJob?.isActive == true) return
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
+            _state.update {
+                it.copy(
+                    isLoading = it.installedMods.isEmpty() && !isUserRefresh,
+                    isRefreshing = isUserRefresh,
+                    error = null
+                )
+            }
             try {
                 val mods = fileManager.listInstalledMods()
                 val updates = dataStore.getUpdateCache()
                 _state.update {
-                    it.copy(installedMods = mods, updates = updates, isLoading = false)
+                    it.copy(installedMods = mods, updates = updates, isLoading = false, isRefreshing = false)
                 }
                 updateDisplayedMods()
                 loadProfiles()
@@ -83,7 +95,7 @@ class ModManagerViewModel(
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load mods", e)
                 _state.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load mods")
+                    it.copy(isLoading = false, isRefreshing = false, error = e.message ?: "Failed to load mods")
                 }
             }
         }

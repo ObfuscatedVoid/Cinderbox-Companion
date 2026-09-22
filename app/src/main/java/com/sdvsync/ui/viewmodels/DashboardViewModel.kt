@@ -20,12 +20,16 @@ import com.sdvsync.steam.SteamCloudService
 import com.sdvsync.steam.SteamSessionStore
 import com.sdvsync.sync.ConflictResolver
 import com.sdvsync.sync.SyncDirection
+import com.sdvsync.sync.saveContentMatches
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -66,32 +70,57 @@ class DashboardViewModel(
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
+    private var refreshJob: Job? = null
+
     init {
         viewModelScope.launch {
             CinderboxLayoutEvents.changed.collect { refresh() }
         }
     }
 
+    @Synchronized
     fun refresh(isUserRefresh: Boolean = false) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                isLoading = !isUserRefresh,
-                isRefreshing = isUserRefresh,
-                error = null,
-                isStagingMode = saveFileManager.isStaging
-            )
+        if (refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch(Dispatchers.IO) {
+            _state.update {
+                it.copy(
+                    isLoading = it.saves.isEmpty() && !isUserRefresh,
+                    isRefreshing = isUserRefresh,
+                    error = null,
+                    isStagingMode = saveFileManager.isStaging
+                )
+            }
 
             try {
+                val localSaves = saveFileManager.listLocalSaves()
+                val localMap = localSaves.associateBy { it.folderName }
+                if (_state.value.saves.isEmpty()) {
+                    val entries = localSaves.map { save ->
+                        val comparison = conflictResolver.compare(null, save.metadata)
+                        SaveEntry(
+                            save.folderName,
+                            null,
+                            save.metadata,
+                            comparison.direction,
+                            comparison.message,
+                            false,
+                            true
+                        )
+                    }
+                    _state.update { it.copy(saves = entries, isLoading = entries.isEmpty()) }
+                }
                 if (!ensureSteamReady()) {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        isRefreshing = false,
-                        error = if (sessionStore.hasSession()) {
-                            context.getString(R.string.error_steam_connection)
-                        } else {
-                            context.getString(R.string.error_not_connected)
-                        }
-                    )
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            error = if (sessionStore.hasSession()) {
+                                context.getString(R.string.error_steam_connection)
+                            } else {
+                                context.getString(R.string.error_not_connected)
+                            }
+                        )
+                    }
                     return@launch
                 }
 
@@ -116,18 +145,11 @@ class DashboardViewModel(
                                 cloudMetadata[folderName] = it
                             }
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             AppLogger.w(TAG, "Failed to parse SaveGameInfo for $folderName", e)
                         }
                     }
                 }
-
-                // Fetch local saves
-                val localSaves = try {
-                    saveFileManager.listLocalSaves()
-                } catch (_: Exception) {
-                    emptyList()
-                }
-                val localMap = localSaves.associateBy { it.folderName }
 
                 // Merge into a unified list (use cloudSaves.keys so saves appear
                 // even if SaveGameInfo metadata couldn't be parsed)
@@ -136,7 +158,12 @@ class DashboardViewModel(
                     val cloudMeta = cloudMetadata[folderName]
                     val localMeta = localMap[folderName]?.metadata
 
-                    val comparison = conflictResolver.compare(cloudMeta, localMeta)
+                    val matches = if (localMeta != null && cloudMeta != null) {
+                        saveContentMatches(saveFileManager.readLocalSave(folderName), cloudSaves[folderName].orEmpty())
+                    } else {
+                        false
+                    }
+                    val comparison = conflictResolver.compare(cloudMeta, localMeta, contentMatches = matches)
 
                     SaveEntry(
                         folderName = folderName,
@@ -154,29 +181,35 @@ class DashboardViewModel(
                     )
                 }
 
-                _state.value = DashboardState(
-                    saves = entries,
-                    isLoading = false,
-                    isRefreshing = false,
-                    isStagingMode = saveFileManager.isStaging
-                )
+                _state.update {
+                    it.copy(
+                        saves = entries,
+                        isLoading = false,
+                        isRefreshing = false,
+                        isStagingMode = saveFileManager.isStaging
+                    )
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) {
                     if (currentCoroutineContext().isActive) {
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            error = context.getString(R.string.error_steam_connection)
-                        )
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                error = context.getString(R.string.error_steam_connection)
+                            )
+                        }
                     }
                     throw e
                 }
                 AppLogger.e(TAG, "Failed to load saves", e)
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    isRefreshing = false,
-                    error = context.getString(R.string.error_load_saves_failed, e.message ?: "Unknown error")
-                )
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        error = context.getString(R.string.error_load_saves_failed, e.message ?: "Unknown error")
+                    )
+                }
             }
         }
     }
@@ -210,75 +243,86 @@ class DashboardViewModel(
             try {
                 val inputStream = context.contentResolver.openInputStream(uri)
                 if (inputStream == null) {
-                    _state.value =
-                        _state.value.copy(importResult = context.getString(R.string.import_error, "Cannot read file"))
+                    _state.update {
+                        it.copy(importResult = context.getString(R.string.import_error, "Cannot read file"))
+                    }
                     return@launch
                 }
                 val manifest = inputStream.use { bundleManager.readManifest(it) }
                 if (manifest == null) {
-                    _state.value =
-                        _state.value.copy(importResult = context.getString(R.string.import_error, "Invalid bundle"))
+                    _state.update { it.copy(importResult = context.getString(R.string.import_error, "Invalid bundle")) }
                     return@launch
                 }
-                _state.value = _state.value.copy(importPreview = manifest, importUri = uri)
+                _state.update { it.copy(importPreview = manifest, importUri = uri) }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Preview import failed", e)
-                _state.value = _state.value.copy(
-                    importResult = context.getString(R.string.import_error, e.message ?: "Unknown error")
-                )
+                _state.update {
+                    it.copy(
+                        importResult = context.getString(R.string.import_error, e.message ?: "Unknown error")
+                    )
+                }
             }
         }
     }
 
     fun confirmImport() {
+        if (_state.value.isImporting) return
         val uri = _state.value.importUri ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = _state.value.copy(isImporting = true, importPreview = null)
+            _state.update { it.copy(isImporting = true, importPreview = null) }
             try {
                 val inputStream = context.contentResolver.openInputStream(uri)
                 if (inputStream == null) {
-                    _state.value = _state.value.copy(
-                        isImporting = false,
-                        importResult = context.getString(R.string.import_error, "Cannot read file")
-                    )
+                    _state.update {
+                        it.copy(
+                            isImporting = false,
+                            importResult = context.getString(R.string.import_error, "Cannot read file")
+                        )
+                    }
                     return@launch
                 }
                 val result = inputStream.use { bundleManager.importBundle(it, null) }
                 when (result) {
                     is ImportResult.Success -> {
-                        _state.value = _state.value.copy(
-                            isImporting = false,
-                            importUri = null,
-                            importResult = context.getString(R.string.import_success)
-                        )
+                        _state.update {
+                            it.copy(
+                                isImporting = false,
+                                importUri = null,
+                                importResult = context.getString(R.string.import_success)
+                            )
+                        }
                         // Refresh saves list
                         refresh()
                     }
                     is ImportResult.Error -> {
-                        _state.value = _state.value.copy(
-                            isImporting = false,
-                            importUri = null,
-                            importResult = context.getString(R.string.import_error, result.message)
-                        )
+                        _state.update {
+                            it.copy(
+                                isImporting = false,
+                                importUri = null,
+                                importResult = context.getString(R.string.import_error, result.message)
+                            )
+                        }
                     }
                 }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Import failed", e)
-                _state.value = _state.value.copy(
-                    isImporting = false,
-                    importUri = null,
-                    importResult = context.getString(R.string.import_error, e.message ?: "Unknown error")
-                )
+                _state.update {
+                    it.copy(
+                        isImporting = false,
+                        importUri = null,
+                        importResult = context.getString(R.string.import_error, e.message ?: "Unknown error")
+                    )
+                }
             }
         }
     }
 
     fun dismissImportPreview() {
-        _state.value = _state.value.copy(importPreview = null, importUri = null)
+        _state.update { it.copy(importPreview = null, importUri = null) }
     }
 
     fun clearImportResult() {
-        _state.value = _state.value.copy(importResult = null)
+        _state.update { it.copy(importResult = null) }
     }
 
     /**
@@ -289,7 +333,7 @@ class DashboardViewModel(
      * takes up to ~1s to be processed by the callback loop, and auto-reconnect adds a 2s delay.
      * So we must wait long enough for the full disconnect→reconnect cycle to complete.
      */
-    private suspend fun <T> retryOnDisconnect(maxRetries: Int = 5, block: suspend () -> T): T {
+    private suspend fun <T> retryOnDisconnect(maxRetries: Int = 3, block: suspend () -> T): T {
         var lastException: Exception? = null
         repeat(maxRetries) { attempt ->
             try {
@@ -302,6 +346,7 @@ class DashboardViewModel(
                 // AsyncJobManager also throws when it cancels pending futures on disconnect.
                 if (!currentCoroutineContext().isActive) throw e
 
+                if (attempt == maxRetries - 1) throw e
                 lastException = e
                 AppLogger.w(TAG, "Cloud request failed (attempt ${attempt + 1}/$maxRetries): ${e::class.simpleName}")
 

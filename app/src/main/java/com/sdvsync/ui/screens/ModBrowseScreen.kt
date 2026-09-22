@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.ui.components.AppButton
 import com.sdvsync.ui.components.AppCard
@@ -34,7 +35,7 @@ fun ModBrowseScreen(
     onBack: () -> Unit,
     onModClick: (modId: String, source: String) -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val browseError = state.error
     val loadMoreError = state.loadMoreError

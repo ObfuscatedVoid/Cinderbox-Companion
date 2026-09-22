@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.BuildConfig
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
@@ -66,9 +67,9 @@ private fun SettingsSectionGap() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(onLogout: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val migrationViewModel: CinderboxMigrationViewModel = koinViewModel()
-    val migrationState by migrationViewModel.state.collectAsState()
+    val migrationState by migrationViewModel.state.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
 

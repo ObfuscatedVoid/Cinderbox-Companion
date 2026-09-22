@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.ui.components.AppButton
 import com.sdvsync.ui.components.AppCard
@@ -38,7 +39,7 @@ import java.util.Locale
 
 @Composable
 fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () -> Unit) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
 
     LaunchedEffect(state.removed) {

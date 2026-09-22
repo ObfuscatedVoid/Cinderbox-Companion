@@ -17,12 +17,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -321,9 +321,9 @@ fun SdvSyncNavGraph(navController: NavHostController) {
 @Composable
 fun MainScreen(parentNavController: NavHostController) {
     val updateViewModel: AppUpdateViewModel = koinViewModel()
-    val updateState by updateViewModel.state.collectAsState()
+    val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     val migrationViewModel: CinderboxMigrationViewModel = koinViewModel()
-    val migrationState by migrationViewModel.state.collectAsState()
+    val migrationState by migrationViewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { updateViewModel.checkForUpdate() }
     LifecycleResumeEffect(Unit) {

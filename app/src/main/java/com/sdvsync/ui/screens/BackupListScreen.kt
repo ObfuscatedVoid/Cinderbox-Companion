@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.saves.BackupInfo
 import com.sdvsync.saves.SaveMetadata
@@ -31,7 +32,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun BackupListScreen(saveFolderName: String, onBack: () -> Unit, viewModel: BackupListViewModel = koinViewModel()) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var confirmRestore by remember { mutableStateOf<File?>(null) }
 

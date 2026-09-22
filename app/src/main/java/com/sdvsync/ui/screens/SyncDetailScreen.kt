@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.sync.SyncDirection
 import com.sdvsync.sync.SyncResult
@@ -44,7 +45,7 @@ fun SyncDetailScreen(
     onNavigateToSettings: () -> Unit = {},
     viewModel: SyncDetailViewModel = koinViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val hasDeviceSave =
         hasLocal ||
             (state.result is SyncResult.Success && state.lastOperation == com.sdvsync.ui.viewmodels.SyncOperation.PULL)

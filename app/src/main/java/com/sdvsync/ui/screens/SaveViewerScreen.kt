@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.saves.AnimalEntry
 import com.sdvsync.saves.CraftingRecipeEntry
@@ -30,7 +31,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun SaveViewerScreen(saveFolderName: String, onBack: () -> Unit, viewModel: SaveViewerViewModel = koinViewModel()) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(saveFolderName) {
         viewModel.loadSave(saveFolderName)

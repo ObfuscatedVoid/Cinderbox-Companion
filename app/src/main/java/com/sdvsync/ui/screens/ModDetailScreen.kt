@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.sdvsync.R
 import com.sdvsync.mods.models.ModDownloadState
@@ -49,7 +50,7 @@ private fun formatCount(count: Int): String {
 
 @Composable
 fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
 
     Scaffold(
