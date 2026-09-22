@@ -2,116 +2,87 @@ package com.sdvsync.fileaccess
 
 import com.sdvsync.logging.AppLogger
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * File access using root (su) shell commands.
- * Bypasses Android 13+ scoped storage restrictions.
- */
-class RootFileAccess : FileAccessStrategy {
-
+class RootFileAccess(private val shell: List<String> = listOf("su", "-c")) : FileAccessStrategy {
     override val name = "Root"
 
     override suspend fun exists(file: File): Boolean = withContext(Dispatchers.IO) {
-        execRoot("test -e '${file.absolutePath}' && echo 'yes' || echo 'no'")
-            .trim() == "yes"
+        runCatching { execute("test -e ${shellQuote(file.absolutePath)}").successful }.getOrDefault(false)
     }
 
-    override suspend fun listDirectories(dir: File): List<String>? = withContext(Dispatchers.IO) {
-        val output = execRoot("ls -1 '${dir.absolutePath}' 2>/dev/null")
-        if (output.isBlank()) return@withContext null
+    override suspend fun listDirectories(dir: File): List<String>? = listEntries(dir, "d")
 
-        // Filter to only directories
-        output.lines()
-            .filter { it.isNotBlank() }
-            .filter { name ->
-                val check = execRoot("test -d '${dir.absolutePath}/$name' && echo 'yes' || echo 'no'")
-                check.trim() == "yes"
-            }
-    }
+    override suspend fun listFiles(dir: File): List<String>? = listEntries(dir, "f")
 
-    override suspend fun listFiles(dir: File): List<String>? = withContext(Dispatchers.IO) {
-        val output = execRoot("ls -1 '${dir.absolutePath}' 2>/dev/null")
-        if (output.isBlank()) return@withContext null
-
-        output.lines()
-            .filter { it.isNotBlank() }
-            .filter { name ->
-                val check = execRoot("test -f '${dir.absolutePath}/$name' && echo 'yes' || echo 'no'")
-                check.trim() == "yes"
-            }
-    }
-
-    override suspend fun readFile(file: File): ByteArray? = withContext(Dispatchers.IO) {
+    private suspend fun listEntries(dir: File, type: String): List<String>? = withContext(Dispatchers.IO) {
         try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat '${file.absolutePath}'"))
-            val data = process.inputStream.readBytes()
-            val exitCode = process.waitFor()
-            if (exitCode == 0 && data.isNotEmpty()) data else null
+            val result = execute("ls -1A ${shellQuote(dir.absolutePath)}")
+            if (!result.successful) return@withContext null
+            result.bytes.decodeToString().lineSequence().filter { it.isNotEmpty() }.filter { name ->
+                execute("test -$type ${shellQuote(File(dir, name).absolutePath)}").successful
+            }.toList()
         } catch (e: Exception) {
-            AppLogger.e(TAG, "readFile failed: ${file.absolutePath}", e)
+            if (e is CancellationException) throw e
+            AppLogger.e(TAG, "Cannot list directory", e)
             null
         }
     }
 
-    override suspend fun writeFile(file: File, data: ByteArray): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun readFile(file: File): ByteArray? = withContext(Dispatchers.IO) {
         try {
-            // Write to a temp location first, then move with su
-            val tempFile = File.createTempFile("sdvsync_", ".tmp")
-            tempFile.writeBytes(data)
-
-            val result = execRoot(
-                "cp '${tempFile.absolutePath}' '${file.absolutePath}' && " +
-                    "chmod 660 '${file.absolutePath}'"
-            )
-            tempFile.delete()
-
-            // Verify write
-            exists(file)
+            val result = execute("cat ${shellQuote(file.absolutePath)}")
+            if (result.successful) result.bytes else null
         } catch (e: Exception) {
-            AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)
+            if (e is CancellationException) throw e
+            AppLogger.e(TAG, "Cannot read file", e)
+            null
+        }
+    }
+
+    override suspend fun writeFile(file: File, data: ByteArray): Boolean = mutate {
+        val temporary = File.createTempFile("sdvsync_", ".tmp")
+        try {
+            temporary.writeBytes(data)
+            execute("cp ${shellQuote(temporary.absolutePath)} ${shellQuote(file.absolutePath)}").successful
+        } finally {
+            temporary.delete()
+        }
+    }
+
+    override suspend fun deleteFile(file: File): Boolean = mutate {
+        execute("rm -f ${shellQuote(file.absolutePath)}").successful
+    }
+
+    override suspend fun renameFile(from: File, to: File): Boolean = mutate {
+        execute("mv ${shellQuote(from.absolutePath)} ${shellQuote(to.absolutePath)}").successful
+    }
+
+    override suspend fun mkdirs(dir: File): Boolean = mutate {
+        execute("mkdir -p ${shellQuote(dir.absolutePath)}").successful
+    }
+
+    private suspend fun mutate(operation: () -> Boolean): Boolean = withContext(Dispatchers.IO) {
+        try {
+            operation()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            AppLogger.e(TAG, "File operation failed", e)
             false
         }
     }
 
-    override suspend fun deleteFile(file: File): Boolean = withContext(Dispatchers.IO) {
-        execRoot("rm -f '${file.absolutePath}'")
-        !exists(file)
-    }
-
-    override suspend fun renameFile(from: File, to: File): Boolean = withContext(Dispatchers.IO) {
-        execRoot("mv '${from.absolutePath}' '${to.absolutePath}'")
-        exists(to)
-    }
-
-    override suspend fun mkdirs(dir: File): Boolean = withContext(Dispatchers.IO) {
-        execRoot("mkdir -p '${dir.absolutePath}' && chmod 770 '${dir.absolutePath}'")
-        exists(dir)
-    }
-
-    private fun execRoot(command: String): String = try {
-        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-        val output = process.inputStream.bufferedReader().readText()
-        process.waitFor()
-        output
-    } catch (e: Exception) {
-        AppLogger.e(TAG, "execRoot failed: $command", e)
-        ""
-    }
+    private fun execute(command: String): ShellResult = runFileCommand(shell, command)
 
     companion object {
         private const val TAG = "RootFileAccess"
 
-        /**
-         * Check if root access is available.
-         */
         fun isAvailable(): Boolean = try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor()
-            output.contains("uid=0")
-        } catch (e: Exception) {
+            val result = runFileCommand(listOf("su", "-c"), "id", timeoutSeconds = 2)
+            result.successful && result.bytes.decodeToString().contains("uid=0")
+        } catch (_: Exception) {
             false
         }
     }

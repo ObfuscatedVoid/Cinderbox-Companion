@@ -119,7 +119,6 @@ class ShizukuFileAccess : FileAccessStrategy {
             val entries = requireService().listDirectory(dir.absolutePath)
             entries.filter { it.startsWith("D|") }
                 .map { it.removePrefix("D|") }
-                .ifEmpty { null }
         } catch (e: Exception) {
             AppLogger.e(TAG, "listDirectories failed: ${dir.absolutePath}", e)
             null
@@ -131,7 +130,6 @@ class ShizukuFileAccess : FileAccessStrategy {
             val entries = requireService().listDirectory(dir.absolutePath)
             entries.filter { it.startsWith("F|") }
                 .map { it.removePrefix("F|") }
-                .ifEmpty { null }
         } catch (e: Exception) {
             AppLogger.e(TAG, "listFiles failed: ${dir.absolutePath}", e)
             null
@@ -142,13 +140,15 @@ class ShizukuFileAccess : FileAccessStrategy {
         try {
             val service = requireService()
             val size = service.getFileSize(file.absolutePath)
-            if (size <= 0) return@withContext null
+            if (size < 0) return@withContext null
+            check(size <= Int.MAX_VALUE) { "File is too large" }
 
             val result = ByteArray(size.toInt())
             var offset = 0L
             while (offset < size) {
                 val chunkLen = minOf(CHUNK_SIZE.toLong(), size - offset).toInt()
                 val chunk = service.readFileChunk(file.absolutePath, offset, chunkLen)
+                check(chunk.isNotEmpty() && chunk.size <= chunkLen) { "File changed while reading" }
                 chunk.copyInto(result, offset.toInt())
                 offset += chunk.size
             }
