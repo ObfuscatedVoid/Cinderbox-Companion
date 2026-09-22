@@ -15,47 +15,49 @@ val NunitoFamily = FontFamily(
     Font(R.font.nunito_bold, FontWeight.Bold)
 )
 
+val PixelHeadingFamily = FontFamily(Font(R.font.press_start_2p))
+
 val Typography = Typography(
     displayLarge = TextStyle(
-        fontFamily = NunitoFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 40.sp,
+        fontFamily = PixelHeadingFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 18.sp,
+        lineHeight = 30.sp,
         letterSpacing = 0.sp
     ),
     displayMedium = TextStyle(
-        fontFamily = NunitoFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp,
+        fontFamily = PixelHeadingFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.sp
     ),
     displaySmall = TextStyle(
-        fontFamily = NunitoFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 32.sp,
+        fontFamily = PixelHeadingFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 14.sp,
+        lineHeight = 26.sp,
         letterSpacing = 0.sp
     ),
     headlineLarge = TextStyle(
-        fontFamily = NunitoFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp,
+        fontFamily = PixelHeadingFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = NunitoFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 32.sp,
+        fontFamily = PixelHeadingFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 14.sp,
+        lineHeight = 26.sp,
         letterSpacing = 0.sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = NunitoFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 20.sp,
-        lineHeight = 28.sp,
+        fontFamily = PixelHeadingFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.sp
     ),
     titleLarge = TextStyle(

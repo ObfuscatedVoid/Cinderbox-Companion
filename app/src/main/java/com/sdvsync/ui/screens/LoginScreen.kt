@@ -42,6 +42,7 @@ import com.sdvsync.ui.components.AppIcons
 import com.sdvsync.ui.components.AppOutlinedButton
 import com.sdvsync.ui.components.AppTopBar
 import com.sdvsync.ui.components.ButtonVariant
+import com.sdvsync.ui.components.CinderboxMark
 import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.viewmodels.LoginViewModel
 import kotlinx.coroutines.Dispatchers
@@ -89,25 +90,20 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
         ) {
             Spacer(Modifier.weight(1f))
 
-            Box(
-                contentAlignment = Alignment.Center
-            ) {
-                AppIcon(
-                    imageVector = AppIcons.Home,
-                    size = 64.dp
-                )
-            }
+            CinderboxMark(Modifier.size(96.dp))
             Spacer(Modifier.height(12.dp))
 
             Text(
-                stringResource(R.string.app_name),
+                stringResource(R.string.app_name).replace("-", "-\u200B"),
                 style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
             )
             Text(
                 stringResource(R.string.login_brand_tagline),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(32.dp))
 

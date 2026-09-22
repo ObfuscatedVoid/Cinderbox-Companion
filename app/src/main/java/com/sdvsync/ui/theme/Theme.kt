@@ -1,7 +1,6 @@
 package com.sdvsync.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -18,10 +17,10 @@ private val LightColorScheme = lightColorScheme(
     onPrimary = Color.White,
     primaryContainer = GreenContainerLight,
     onPrimaryContainer = OnGreenContainerLight,
-    secondary = ForestGreenLight,
+    secondary = BrownLight,
     onSecondary = Color.White,
-    secondaryContainer = GreenContainerLight,
-    onSecondaryContainer = OnGreenContainerLight,
+    secondaryContainer = BrownContainerLight,
+    onSecondaryContainer = OnBrownContainerLight,
     tertiary = Color(0xFF795A25),
     onTertiary = Color.White,
     tertiaryContainer = GoldContainerLight,
@@ -33,10 +32,10 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = SurfaceContainerLight,
     onSurfaceVariant = OnSurfaceVariantLight,
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFF4F5F0),
+    surfaceContainerLow = Color(0xFFEEE3CF),
     surfaceContainer = SurfaceContainerLight,
     surfaceContainerHigh = SurfaceContainerHighLight,
-    surfaceContainerHighest = Color(0xFFE2E6DE),
+    surfaceContainerHighest = Color(0xFFDAC9AD),
     outline = OutlineLight,
     outlineVariant = OutlineVariantLight,
     error = ErrorLight,
@@ -54,10 +53,10 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary = Color(0xFF102E22),
     primaryContainer = GreenContainerDark,
     onPrimaryContainer = OnGreenContainerDark,
-    secondary = ForestGreenDark,
-    onSecondary = Color(0xFF1A3800),
-    secondaryContainer = GreenContainerDark,
-    onSecondaryContainer = OnGreenContainerDark,
+    secondary = BrownDark,
+    onSecondary = Color(0xFF382510),
+    secondaryContainer = BrownContainerDark,
+    onSecondaryContainer = OnBrownContainerDark,
     tertiary = GoldAmber,
     onTertiary = Color(0xFF3D2800),
     tertiaryContainer = GoldContainerDark,
@@ -68,11 +67,11 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = OnWarmBlack,
     surfaceVariant = SurfaceContainerDark,
     onSurfaceVariant = OnSurfaceVariantDark,
-    surfaceContainerLowest = Color(0xFF101410),
-    surfaceContainerLow = Color(0xFF19201B),
+    surfaceContainerLowest = Color(0xFF191712),
+    surfaceContainerLow = Color(0xFF25221C),
     surfaceContainer = SurfaceContainerDark,
     surfaceContainerHigh = SurfaceContainerHighDark,
-    surfaceContainerHighest = Color(0xFF303B33),
+    surfaceContainerHighest = Color(0xFF413A2E),
     outline = OutlineDark,
     outlineVariant = OutlineVariantDark,
     error = ErrorDark,
@@ -137,11 +136,11 @@ private val DarkStardewColors = StardewColors(
 )
 
 val StardewShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(12.dp),
-    large = RoundedCornerShape(16.dp),
-    extraLarge = RoundedCornerShape(20.dp)
+    extraSmall = SteppedCornerShape(2.dp),
+    small = SteppedCornerShape(2.dp),
+    medium = SteppedCornerShape(4.dp),
+    large = SteppedCornerShape(4.dp),
+    extraLarge = SteppedCornerShape(6.dp)
 )
 
 object SdvSyncThemeExtras {

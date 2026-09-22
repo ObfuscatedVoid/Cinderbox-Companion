@@ -38,7 +38,7 @@
     <string name="login_copy_logs">Copy Logs</string>
 
     <!-- Dashboard -->
-    <string name="dashboard_title">Your saves</string>
+    <string name="dashboard_title">Saves</string>
     <string name="dashboard_no_saves">No saves found on Steam Cloud</string>
 
     <!-- Save info -->

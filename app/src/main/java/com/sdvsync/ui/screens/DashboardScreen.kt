@@ -110,6 +110,7 @@ fun DashboardScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.dashboard_title),
+                showBrand = true,
                 actions = {
                     AppIconButton(
                         imageVector = AppIcons.Import,
