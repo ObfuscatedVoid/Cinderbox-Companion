@@ -3,11 +3,14 @@ package com.sdvsync.saves
 import android.content.Context
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModFileManager
+import com.sdvsync.util.MAX_SAVE_BYTES
+import com.sdvsync.util.readLimited
 import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -97,19 +100,38 @@ class SaveBundleManager(
     /**
      * Read the manifest from a .sdvsync ZIP without full extraction.
      */
-    fun readManifest(inputStream: InputStream): BundleManifest? {
+    fun readManifest(inputStream: InputStream): BundleManifest? = readBundle(inputStream).first
+
+    private fun readBundle(inputStream: InputStream): Pair<BundleManifest?, Map<String, ByteArray>> {
+        var manifest: BundleManifest? = null
+        val files = mutableMapOf<String, ByteArray>()
+        val names = mutableSetOf<String>()
+        var remaining = MAX_SAVE_BYTES
         ZipInputStream(inputStream.buffered()).use { zip ->
-            var entry = zip.nextEntry
-            while (entry != null) {
-                if (entry.name == MANIFEST_FILENAME) {
-                    val json = zip.readBytes().toString(Charsets.UTF_8)
-                    return parseManifest(json)
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                check(names.size < 100 && names.add(entry.name)) { "Too many or duplicate bundle entries" }
+                val data = zip.readLimited(
+                    if (entry.name ==
+                        MANIFEST_FILENAME
+                    ) {
+                        minOf(remaining, 1024 * 1024)
+                    } else {
+                        remaining
+                    }
+                )
+                remaining -= data.size
+                when {
+                    entry.name == MANIFEST_FILENAME -> manifest = parseManifest(data.decodeToString())
+                    entry.name.startsWith(SAVE_DIR_PREFIX) && !entry.isDirectory -> {
+                        val name = entry.name.removePrefix(SAVE_DIR_PREFIX)
+                        saveFileManager.requireSafeName(name)
+                        files[name] = data
+                    }
                 }
-                zip.closeEntry()
-                entry = zip.nextEntry
             }
         }
-        return null
+        return manifest to files
     }
 
     /**
@@ -118,27 +140,7 @@ class SaveBundleManager(
      */
     suspend fun importBundle(inputStream: InputStream, targetFolderName: String?): ImportResult {
         try {
-            val saveFiles = mutableMapOf<String, ByteArray>()
-            var manifest: BundleManifest? = null
-
-            ZipInputStream(inputStream.buffered()).use { zip ->
-                var entry = zip.nextEntry
-                while (entry != null) {
-                    when {
-                        entry.name == MANIFEST_FILENAME -> {
-                            val json = zip.readBytes().toString(Charsets.UTF_8)
-                            manifest = parseManifest(json)
-                        }
-                        entry.name.startsWith(SAVE_DIR_PREFIX) && !entry.isDirectory -> {
-                            val filename = entry.name.removePrefix(SAVE_DIR_PREFIX)
-                            saveFileManager.requireSafeName(filename)
-                            saveFiles[filename] = zip.readBytes()
-                        }
-                    }
-                    zip.closeEntry()
-                    entry = zip.nextEntry
-                }
-            }
+            val (manifest, saveFiles) = readBundle(inputStream)
 
             if (manifest == null) {
                 return ImportResult.Error("No manifest found in bundle")
@@ -147,7 +149,10 @@ class SaveBundleManager(
                 return ImportResult.Error("No save files found in bundle")
             }
 
-            val folderName = targetFolderName ?: manifest!!.save.folderName
+            require(targetFolderName == null || targetFolderName == manifest.save.folderName) {
+                "Bundle folder renaming is not supported"
+            }
+            val folderName = manifest.save.folderName
 
             saveFileManager.requireSafeName(folderName)
             val validation = validator.validateSaveData(saveFiles[folderName], saveFiles["SaveGameInfo"])
@@ -162,8 +167,9 @@ class SaveBundleManager(
             }
 
             AppLogger.d(TAG, "Imported bundle for $folderName (${saveFiles.size} files)")
-            return ImportResult.Success(manifest!!)
+            return ImportResult.Success(manifest)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             AppLogger.e(TAG, "Import failed", e)
             return ImportResult.Error(e.message ?: "Unknown error")
         }
@@ -214,7 +220,9 @@ class SaveBundleManager(
 
     private fun parseManifest(json: String): BundleManifest? = try {
         val obj = JSONObject(json)
+        require(obj.optInt("version", 1) == 1) { "Unsupported bundle version" }
         val saveObj = obj.getJSONObject("save")
+        saveFileManager.requireSafeName(saveObj.getString("folderName"))
         val modsArray = obj.optJSONArray("mods") ?: JSONArray()
 
         BundleManifest(

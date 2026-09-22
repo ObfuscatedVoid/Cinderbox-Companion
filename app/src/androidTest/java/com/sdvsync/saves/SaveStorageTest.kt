@@ -135,6 +135,24 @@ class SaveStorageTest {
         assertTrue(backups.listBackups(folder).isEmpty())
     }
 
+    @Test
+    fun unsupportedBundleVersionPreservesExistingSave() = runBlocking {
+        assertTrue(manager.writeLocalSave(folder, files("original")))
+        val bytes = ByteArrayOutputStream()
+        ZipOutputStream(bytes).use { zip ->
+            zip.putNextEntry(ZipEntry("manifest.json"))
+            zip.write("""{"version":99,"save":{"folderName":"$folder"}}""".toByteArray())
+            zip.closeEntry()
+            for ((name, data) in files("changed")) {
+                zip.putNextEntry(ZipEntry("save/$name"))
+                zip.write(data)
+                zip.closeEntry()
+            }
+        }
+        assertTrue(bundles.importBundle(ByteArrayInputStream(bytes.toByteArray()), null) is ImportResult.Error)
+        assertEquals("original", manager.readLocalSave(folder).getValue("extra").decodeToString())
+    }
+
     private fun files(extra: String) = mapOf(
         folder to (
             "<SaveGame><player><name>StorageTest</name></player><locations/>" +

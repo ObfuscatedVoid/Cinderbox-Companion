@@ -20,7 +20,7 @@ class SaveFileParser {
     }
 
     fun parse(rawData: ByteArray): SaveFileData? = try {
-        val xmlData = GzipUtil.decompressIfGzip(rawData)
+        val xmlData = GzipUtil.decompressIfCompressed(rawData)
         AppLogger.d(TAG, "Parsing save data: ${xmlData.size} bytes")
 
         val parser = Xml.newPullParser()

@@ -86,36 +86,17 @@ class SaveValidator {
     fun validateSaveData(mainSaveData: ByteArray?, saveGameInfoData: ByteArray?): ValidationResult {
         val errors = mutableListOf<String>()
 
-        if (mainSaveData == null || mainSaveData.isEmpty()) {
-            errors.add("Main save data is empty")
-        } else {
-            // Stardew 1.6+ saves may be gzip-compressed — decompress before checking XML
-            AppLogger.d(TAG, "Validating main save: size=${mainSaveData.size}, isGzip=${GzipUtil.isGzip(mainSaveData)}")
-            val xmlData = GzipUtil.decompressIfGzip(mainSaveData)
-            AppLogger.d(TAG, "Main save after decompression: size=${xmlData.size}")
-            if (xmlData.size < 1024) {
-                errors.add("Main save data too small (${xmlData.size} bytes)")
-            }
-            val tail = String(xmlData.takeLast(100).toByteArray())
-            AppLogger.d(TAG, "Main save tail (last 100 chars): '$tail'")
-            if (!tail.contains("</SaveGame>")) {
-                errors.add("Main save data missing closing </SaveGame> tag")
-            }
-        }
-
-        if (saveGameInfoData == null || saveGameInfoData.isEmpty()) {
-            errors.add("SaveGameInfo data is empty")
-        } else {
-            AppLogger.d(
-                TAG,
-                "Validating SaveGameInfo: size=${saveGameInfoData.size}, isGzip=${GzipUtil.isGzip(saveGameInfoData)}"
-            )
-            val xmlData = GzipUtil.decompressIfGzip(saveGameInfoData)
-            AppLogger.d(TAG, "SaveGameInfo after decompression: size=${xmlData.size}")
-            val tail = String(xmlData.takeLast(100).toByteArray())
-            AppLogger.d(TAG, "SaveGameInfo tail (last 100 chars): '$tail'")
-            if (!tail.contains("</Farmer>")) {
-                errors.add("SaveGameInfo missing closing </Farmer> tag")
+        for ((name, data, root) in listOf(
+            Triple("Main save", mainSaveData, "SaveGame"),
+            Triple("SaveGameInfo", saveGameInfoData, "Farmer")
+        )) {
+            try {
+                require(data != null && data.isNotEmpty()) { "data is empty" }
+                val xml = GzipUtil.decompressIfCompressed(data)
+                if (root == "SaveGame") require(xml.size >= 1024) { "data is too small" }
+                validateXml(xml, root)
+            } catch (e: Exception) {
+                errors.add("$name: ${e.message ?: "invalid save data"}")
             }
         }
 
@@ -136,7 +117,7 @@ class SaveValidator {
 
         // Validate main save structure
         if (mainSaveData != null) {
-            val xmlData = GzipUtil.decompressIfGzip(mainSaveData)
+            val xmlData = GzipUtil.decompressIfCompressed(mainSaveData)
 
             if (xmlData.size < 100 * 1024) {
                 warnings.add("Main save is small (${xmlData.size / 1024}KB) — may be truncated")
@@ -186,7 +167,7 @@ class SaveValidator {
         // Validate SaveGameInfo structure
         if (saveGameInfoData != null) {
             try {
-                val xmlData = GzipUtil.decompressIfGzip(saveGameInfoData)
+                val xmlData = GzipUtil.decompressIfCompressed(saveGameInfoData)
                 val parser = Xml.newPullParser()
                 parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
                 parser.setInput(ByteArrayInputStream(xmlData), "UTF-8")
@@ -238,17 +219,25 @@ class SaveValidator {
     }
 
     private fun validateXmlEnding(file: File, expectedTag: String): Boolean = try {
-        val rawBytes = file.readBytes()
-        val xmlBytes = GzipUtil.decompressIfGzip(rawBytes)
-        val tailSize = minOf(xmlBytes.size, 200)
-        val tail = String(xmlBytes, xmlBytes.size - tailSize, tailSize)
-        val found = tail.contains(expectedTag)
-        if (!found) {
-            AppLogger.w(TAG, "validateXmlEnding: '$expectedTag' not found in ${file.name} tail: '$tail'")
-        }
-        found
+        validateXml(GzipUtil.decompressIfCompressed(file.readBytes()), expectedTag.removePrefix("</").removeSuffix(">"))
+        true
     } catch (e: Exception) {
-        AppLogger.e(TAG, "validateXmlEnding failed for ${file.name}", e)
+        AppLogger.e(TAG, "Invalid XML in ${file.name}", e)
         false
+    }
+
+    private fun validateXml(bytes: ByteArray, expectedRoot: String) {
+        val parser = Xml.newPullParser()
+        parser.setInput(ByteArrayInputStream(bytes), "UTF-8")
+        var rootSeen = false
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG && parser.depth == 1) {
+                require(!rootSeen && parser.name == expectedRoot) { "Expected a single $expectedRoot root element" }
+                rootSeen = true
+            }
+            require(parser.eventType != XmlPullParser.DOCDECL) { "Document declarations are not supported" }
+            parser.nextToken()
+        }
+        require(rootSeen) { "Missing $expectedRoot root element" }
     }
 }

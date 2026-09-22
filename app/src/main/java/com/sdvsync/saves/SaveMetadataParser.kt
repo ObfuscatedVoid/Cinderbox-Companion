@@ -42,21 +42,7 @@ class SaveMetadataParser {
      * SaveGameInfo is small (~2KB) and safe to fully parse.
      */
     fun parseFromBytes(data: ByteArray): SaveMetadata? = try {
-        AppLogger.d(TAG, "parseFromBytes: input size=${data.size}, isGzip=${GzipUtil.isGzip(data)}")
-        // Stardew 1.6+ saves may be gzip-compressed — decompress before parsing XML
-        val xmlData = GzipUtil.decompressIfGzip(data)
-        AppLogger.d(
-            TAG,
-            "parseFromBytes: after decompression size=${xmlData.size}, " +
-                "first50=${String(xmlData, 0, minOf(50, xmlData.size))}"
-        )
-        val result = parse(ByteArrayInputStream(xmlData))
-        AppLogger.d(
-            TAG,
-            "parseFromBytes: parsed farmer='${result.farmerName}', farm='${result.farmName}', " +
-                "day=${result.dayOfMonth}, season=${result.season}, year=${result.year}"
-        )
-        result
+        parse(ByteArrayInputStream(GzipUtil.decompressIfCompressed(data)))
     } catch (e: Exception) {
         AppLogger.e(TAG, "Failed to parse SaveGameInfo from bytes (size=${data.size})", e)
         null
@@ -73,7 +59,7 @@ class SaveMetadataParser {
         return try {
             val rawBytes = file.readBytes()
             AppLogger.d(TAG, "parseFromFile: ${file.name} size=${rawBytes.size}, isGzip=${GzipUtil.isGzip(rawBytes)}")
-            val xmlData = GzipUtil.decompressIfGzip(rawBytes)
+            val xmlData = GzipUtil.decompressIfCompressed(rawBytes)
             val result = parse(ByteArrayInputStream(xmlData))
             AppLogger.d(TAG, "parseFromFile: parsed farmer='${result.farmerName}', farm='${result.farmName}'")
             result
@@ -101,11 +87,12 @@ class SaveMetadataParser {
         while (parser.eventType != XmlPullParser.END_DOCUMENT) {
             when (parser.eventType) {
                 XmlPullParser.START_TAG -> {
+                    if (parser.depth == 1) require(parser.name == "Farmer") { "Invalid save info root" }
                     currentTag = parser.name
                 }
                 XmlPullParser.TEXT -> {
                     val text = parser.text?.trim() ?: ""
-                    if (text.isNotEmpty()) {
+                    if (text.isNotEmpty() && parser.depth == 2) {
                         when (currentTag) {
                             "name" -> if (farmerName.isEmpty()) farmerName = text
                             "farmName" -> farmName = text
@@ -125,6 +112,8 @@ class SaveMetadataParser {
             parser.next()
         }
 
+        require(farmerName.isNotBlank() && farmName.isNotBlank()) { "Missing farmer or farm name" }
+        require(dayOfMonth in 1..28 && season in 0..3 && year >= 1) { "Invalid save date" }
         return SaveMetadata(
             farmerName = farmerName,
             farmName = farmName,
@@ -145,6 +134,6 @@ class SaveMetadataParser {
         val lastUnderscore = folderName.lastIndexOf('_')
         if (lastUnderscore < 0) return null
         val id = folderName.substring(lastUnderscore + 1)
-        return if (id.all { it.isDigit() }) id else null
+        return if (id.isNotEmpty() && id.all { it.isDigit() }) id else null
     }
 }
