@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
 
 enum class DownloadState {
     IDLE,
@@ -167,63 +166,26 @@ class GameDownloadManager(
                     return@withContext
                 }
 
-                val destFile = File(context.cacheDir, releaseInfo.assetName)
-                val request = Request.Builder().url(releaseInfo.assetUrl).get().build()
-                val response = httpClient.newCall(request).execute()
-
-                if (!response.isSuccessful) {
-                    response.close()
-                    _cinderboxProgress.value =
-                        CinderboxDownloadProgress(errorMessage = "HTTP ${response.code}")
-                    return@withContext
-                }
-
-                val body = response.body
-                    ?: run {
-                        response.close()
-                        _cinderboxProgress.value =
-                            CinderboxDownloadProgress(errorMessage = "Empty response body")
-                        return@withContext
+                com.sdvsync.saves.requireSafeSaveName(releaseInfo.assetName)
+                val destFile =
+                    downloadToFile(httpClient, releaseInfo.assetUrl, File(context.cacheDir, releaseInfo.assetName)) {
+                            bytes,
+                            total
+                        ->
+                        _cinderboxProgress.value = CinderboxDownloadProgress(
+                            isDownloading = true,
+                            percent = if (total > 0) bytes.toFloat() / total else 0f,
+                            downloadedBytes = bytes,
+                            totalBytes = total.coerceAtLeast(0)
+                        )
                     }
-
-                val totalBytes = body.contentLength()
-                var downloadedBytes = 0L
-                val buffer = ByteArray(64 * 1024)
-
-                destFile.outputStream().buffered().use { output ->
-                    body.byteStream().use { input ->
-                        var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            coroutineContext.ensureActive()
-                            output.write(buffer, 0, bytesRead)
-                            downloadedBytes += bytesRead
-
-                            _cinderboxProgress.value =
-                                CinderboxDownloadProgress(
-                                    isDownloading = true,
-                                    percent =
-                                    if (totalBytes > 0) {
-                                        downloadedBytes.toFloat() / totalBytes
-                                    } else {
-                                        0f
-                                    },
-                                    downloadedBytes = downloadedBytes,
-                                    totalBytes = totalBytes
-                                )
-                        }
-                    }
-                }
-
-                AppLogger.i(TAG, "Cinderbox APK downloaded: ${destFile.length()} bytes")
-
-                _cinderboxProgress.value =
-                    CinderboxDownloadProgress(
-                        completed = true,
-                        percent = 1f,
-                        downloadedBytes = downloadedBytes,
-                        totalBytes = totalBytes,
-                        apkFile = destFile
-                    )
+                _cinderboxProgress.value = CinderboxDownloadProgress(
+                    completed = true,
+                    percent = 1f,
+                    downloadedBytes = destFile.length(),
+                    totalBytes = destFile.length(),
+                    apkFile = destFile
+                )
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "Cinderbox APK download failed", e)
@@ -252,56 +214,17 @@ class GameDownloadManager(
                     totalDownloadBytes = releaseInfo.assetSize
                 )
 
-                val request = Request.Builder().url(releaseInfo.assetUrl).get().build()
-                val response = httpClient.newCall(request).execute()
-
-                if (!response.isSuccessful) {
-                    response.close()
-                    _smapiProgress.value =
-                        SmapiSetupProgress(errorMessage = "HTTP ${response.code}")
-                    return@withContext null
+                downloadToFile(httpClient, releaseInfo.assetUrl, destFile) { bytes, total ->
+                    _smapiProgress.value = SmapiSetupProgress(
+                        isDownloading = true,
+                        downloadPercent = if (total > 0) bytes.toFloat() / total else 0f,
+                        downloadedBytes = bytes,
+                        totalDownloadBytes = total.coerceAtLeast(0)
+                    )
                 }
-
-                val body = response.body ?: run {
-                    response.close()
-                    _smapiProgress.value =
-                        SmapiSetupProgress(errorMessage = "Empty response body")
-                    return@withContext null
-                }
-
-                val totalBytes = body.contentLength()
-                var downloadedBytes = 0L
-                val buffer = ByteArray(64 * 1024)
-
-                destFile.outputStream().buffered().use { output ->
-                    body.byteStream().use { input ->
-                        var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            coroutineContext.ensureActive()
-                            output.write(buffer, 0, bytesRead)
-                            downloadedBytes += bytesRead
-
-                            _smapiProgress.value = SmapiSetupProgress(
-                                isDownloading = true,
-                                downloadPercent = if (totalBytes > 0) {
-                                    downloadedBytes.toFloat() / totalBytes
-                                } else {
-                                    0f
-                                },
-                                downloadedBytes = downloadedBytes,
-                                totalDownloadBytes = totalBytes
-                            )
-                        }
-                    }
-                }
-
-                AppLogger.i(TAG, "SMAPI zip downloaded: ${destFile.length()} bytes")
-
-                destFile
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "SMAPI zip download failed", e)
-                destFile.delete()
                 _smapiProgress.value =
                     SmapiSetupProgress(errorMessage = e.message ?: "Download failed")
                 null
@@ -442,7 +365,7 @@ class GameDownloadManager(
     }
 
     suspend fun downloadAndExtractSmapi() {
-        val file = downloadSmapiZip() ?: return
+        downloadSmapiZip() ?: return
         extractSmapiFromCache()
         // Only record installed version after successful extraction
         val smapiProgress = _smapiProgress.value

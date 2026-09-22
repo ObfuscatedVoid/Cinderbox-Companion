@@ -4,12 +4,9 @@ import android.content.Context
 import com.sdvsync.BuildConfig
 import com.sdvsync.logging.AppLogger
 import java.io.File
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
 
 class AppUpdateManager(
     private val context: Context,
@@ -50,52 +47,14 @@ class AppUpdateManager(
 
     suspend fun downloadUpdate(assetUrl: String, assetName: String, onProgress: (Float) -> Unit): File? =
         withContext(Dispatchers.IO) {
-            // Clean up old APKs from previous updates
-            context.cacheDir.listFiles()?.filter {
-                it.name.endsWith(".apk") && it.name != assetName
-            }?.forEach { it.delete() }
-
-            val destFile = File(context.cacheDir, assetName)
+            com.sdvsync.saves.requireSafeSaveName(assetName)
             try {
-                val request = Request.Builder().url(assetUrl).get().build()
-                val response = httpClient.newCall(request).execute()
-
-                if (!response.isSuccessful) {
-                    response.close()
-                    AppLogger.e(TAG, "HTTP ${response.code} downloading $assetName")
-                    return@withContext null
+                downloadToFile(httpClient, assetUrl, File(context.cacheDir, assetName)) { bytes, total ->
+                    if (total > 0) onProgress(bytes.toFloat() / total)
                 }
-
-                val body = response.body ?: run {
-                    response.close()
-                    AppLogger.e(TAG, "Empty response body for $assetName")
-                    return@withContext null
-                }
-
-                val totalBytes = body.contentLength()
-                var downloadedBytes = 0L
-                val buffer = ByteArray(64 * 1024)
-
-                destFile.outputStream().buffered().use { output ->
-                    body.byteStream().use { input ->
-                        var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            coroutineContext.ensureActive()
-                            output.write(buffer, 0, bytesRead)
-                            downloadedBytes += bytesRead
-                            if (totalBytes > 0) {
-                                onProgress(downloadedBytes.toFloat() / totalBytes)
-                            }
-                        }
-                    }
-                }
-
-                AppLogger.i(TAG, "App update downloaded: ${destFile.length()} bytes")
-                destFile
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "App update download failed", e)
-                destFile.delete()
                 null
             }
         }

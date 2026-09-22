@@ -86,13 +86,16 @@ class GameDownloadService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (downloadJob?.isActive == true) return START_NOT_STICKY
         val branch = intent?.getStringExtra(EXTRA_BRANCH) ?: "public"
         val password = intent?.getStringExtra(EXTRA_PASSWORD)
-        val installDir = intent?.getStringExtra(EXTRA_INSTALL_DIR) ?: return START_NOT_STICKY
+        val installDir = intent?.getStringExtra(EXTRA_INSTALL_DIR) ?: run {
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         val os = intent.getStringExtra(EXTRA_OS) ?: "windows"
         val verify = intent.getBooleanExtra(EXTRA_VERIFY, true)
 
-        downloadJob?.cancel()
         downloadJob = serviceScope.launch {
             runDownload(branch, password, installDir, os, verify)
         }
@@ -307,6 +310,10 @@ class GameDownloadService : Service() {
             downloader.finishAdding()
             downloader.awaitCompletion()
 
+            currentCoroutineContext().ensureActive()
+            check(GameDownloadManager._progress.value.state != DownloadState.ERROR) {
+                GameDownloadManager._progress.value.errorMessage ?: "Download failed"
+            }
             AppLogger.d(TAG, "Download pipeline finished")
 
             if (verify) {
@@ -399,11 +406,13 @@ class GameDownloadService : Service() {
             }
         }
 
+        if (allFiles.isEmpty()) errors.add("No downloaded files found")
         val passed = errors.isEmpty()
         AppLogger.d(TAG, "Verification ${if (passed) "PASSED" else "FAILED"}: $totalFiles files, ${errors.size} errors")
 
         GameDownloadManager._progress.value = DownloadProgress(
-            state = DownloadState.COMPLETED,
+            state = if (passed) DownloadState.COMPLETED else DownloadState.ERROR,
+            errorMessage = if (passed) null else "Some downloaded files could not be read",
             overallPercent = 1f,
             verifiedFiles = totalFiles,
             totalFilesToVerify = totalFiles,

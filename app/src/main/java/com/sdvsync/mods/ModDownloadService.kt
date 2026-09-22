@@ -12,6 +12,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.sdvsync.MainActivity
 import com.sdvsync.R
+import com.sdvsync.download.downloadToFile
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.models.InstallResult
 import com.sdvsync.mods.models.ModDownloadProgress
@@ -20,7 +21,6 @@ import java.io.File
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.update
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.koin.android.ext.android.inject
 
 class ModDownloadService : Service() {
@@ -70,12 +70,15 @@ class ModDownloadService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val url = intent?.getStringExtra(EXTRA_URL) ?: return START_NOT_STICKY
+        if (downloadJob?.isActive == true) return START_NOT_STICKY
+        val url = intent?.getStringExtra(EXTRA_URL) ?: run {
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         val modName = intent.getStringExtra(EXTRA_MOD_NAME) ?: "Unknown Mod"
         val modId = intent.getStringExtra(EXTRA_MOD_ID) ?: ""
         val source = intent.getStringExtra(EXTRA_SOURCE) ?: ""
 
-        downloadJob?.cancel()
         downloadJob = serviceScope.launch { runDownload(url, modName, modId, source) }
 
         return START_NOT_STICKY
@@ -86,7 +89,8 @@ class ModDownloadService : Service() {
         serviceScope.cancel()
         val currentState = ModDownloadManager._progress.value.state
         if (currentState == ModDownloadState.DOWNLOADING ||
-            currentState == ModDownloadState.EXTRACTING
+            currentState == ModDownloadState.EXTRACTING ||
+            currentState == ModDownloadState.INSTALLING
         ) {
             ModDownloadManager._progress.value =
                 ModDownloadProgress(
@@ -98,6 +102,7 @@ class ModDownloadService : Service() {
     }
 
     private suspend fun runDownload(url: String, modName: String, modId: String, source: String) {
+        val tempFile = File.createTempFile("mod-download-", ".zip", cacheDir)
         try {
             // Download
             ModDownloadManager._progress.value =
@@ -107,7 +112,6 @@ class ModDownloadService : Service() {
                 )
             updateNotification(getString(R.string.mods_download_downloading, modName))
 
-            val tempFile = File(cacheDir, "mod_download_${System.currentTimeMillis()}.zip")
             downloadFile(url, tempFile)
 
             // Extract + Install
@@ -119,7 +123,6 @@ class ModDownloadService : Service() {
             updateNotification(getString(R.string.mods_download_installing))
 
             val result = fileManager.installFromZip(tempFile)
-            tempFile.delete()
 
             when (result) {
                 is InstallResult.Success -> {
@@ -165,40 +168,15 @@ class ModDownloadService : Service() {
                 getString(R.string.mods_download_failed, e.message ?: "Unknown error")
             )
         } finally {
+            tempFile.delete()
             stopSelf()
         }
     }
 
-    private suspend fun downloadFile(url: String, destFile: File) {
-        withContext(Dispatchers.IO) {
-            val request = Request.Builder().url(url).get().build()
-            val response = httpClient.newCall(request).execute()
-
-            if (!response.isSuccessful) {
-                throw IllegalStateException("Download failed: HTTP ${response.code}")
-            }
-
-            val body = response.body ?: throw IllegalStateException("Empty response body")
-            val totalBytes = body.contentLength()
-            var downloadedBytes = 0L
-            val buffer = ByteArray(64 * 1024)
-
-            destFile.outputStream().buffered().use { output ->
-                body.byteStream().use { input ->
-                    var bytesRead: Int
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        ensureActive()
-                        output.write(buffer, 0, bytesRead)
-                        downloadedBytes += bytesRead
-
-                        ModDownloadManager._progress.update { current ->
-                            current.copy(
-                                downloadedBytes = downloadedBytes,
-                                totalBytes = totalBytes
-                            )
-                        }
-                    }
-                }
+    private suspend fun downloadFile(url: String, destination: File) {
+        downloadToFile(httpClient, url, destination) { bytes, total ->
+            ModDownloadManager._progress.update {
+                it.copy(downloadedBytes = bytes, totalBytes = total.coerceAtLeast(0))
             }
         }
     }
