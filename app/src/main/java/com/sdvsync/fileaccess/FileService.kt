@@ -41,12 +41,13 @@ class FileService : IFileService.Stub() {
     }
 
     override fun readFileChunk(path: String, offset: Long, length: Int): ByteArray = try {
-        val raf = RandomAccessFile(path, "r")
-        val bytes = ByteArray(length)
-        raf.seek(offset)
-        val bytesRead = raf.read(bytes, 0, length)
-        raf.close()
-        if (bytesRead < length) bytes.copyOf(bytesRead) else bytes
+        require(offset >= 0 && length in 0..(512 * 1024)) { "Invalid read range" }
+        RandomAccessFile(path, "r").use { raf ->
+            val bytes = ByteArray(length)
+            raf.seek(offset)
+            val bytesRead = raf.read(bytes)
+            if (bytesRead < 0) byteArrayOf() else bytes.copyOf(bytesRead)
+        }
     } catch (e: Exception) {
         Log.e(TAG, "readFileChunk failed: $path", e)
         throw RemoteException(e.message)
@@ -61,11 +62,12 @@ class FileService : IFileService.Stub() {
     override fun writeFileChunk(path: String, data: ByteArray, offset: Long) {
         try {
             File(path).parentFile?.mkdirs()
-            val raf = RandomAccessFile(path, "rw")
-            if (offset == 0L) raf.setLength(0) // Truncate if writing from start
-            raf.seek(offset)
-            raf.write(data)
-            raf.close()
+            require(offset >= 0) { "Invalid write offset" }
+            RandomAccessFile(path, "rw").use { raf ->
+                if (offset == 0L) raf.setLength(0)
+                raf.seek(offset)
+                raf.write(data)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "writeFileChunk failed: $path", e)
             throw RemoteException(e.message)

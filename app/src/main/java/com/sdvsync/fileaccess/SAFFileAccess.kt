@@ -90,7 +90,7 @@ class SAFFileAccess(
             val uri = Uri.parse(uriStr)
             // Verify the grant is still valid
             val validGrants = context.contentResolver.persistedUriPermissions
-            val valid = validGrants.any { it.uri == uri && it.isReadPermission }
+            val valid = validGrants.any { it.uri == uri && it.isReadPermission && it.isWritePermission }
             return if (valid) uri else null
         }
 
@@ -153,7 +153,6 @@ class SAFFileAccess(
                 .filter { it.isDirectory }
                 .map { it.name ?: "" }
                 .filter { it.isNotEmpty() }
-                .ifEmpty { null }
         } catch (e: Exception) {
             AppLogger.e(TAG, "listDirectories failed: ${dir.absolutePath}", e)
             null
@@ -167,7 +166,6 @@ class SAFFileAccess(
                 .filter { it.isFile }
                 .map { it.name ?: "" }
                 .filter { it.isNotEmpty() }
-                .ifEmpty { null }
         } catch (e: Exception) {
             AppLogger.e(TAG, "listFiles failed: ${dir.absolutePath}", e)
             null
@@ -189,12 +187,12 @@ class SAFFileAccess(
             val parent = resolveParentCreating(file) ?: return@withContext false
             val fileName = file.name
 
-            // If existing, delete first (SAF doesn't overwrite)
-            parent.findFile(fileName)?.delete()
-
-            val newDoc = parent.createFile("application/octet-stream", fileName)
+            val document = parent.findFile(fileName)
+                ?: parent.createFile("application/octet-stream", fileName)
                 ?: return@withContext false
-            context.contentResolver.openOutputStream(newDoc.uri)?.use { it.write(data) }
+            val output = context.contentResolver.openOutputStream(document.uri, "wt")
+                ?: return@withContext false
+            output.use { it.write(data) }
             true
         } catch (e: Exception) {
             AppLogger.e(TAG, "writeFile failed: ${file.absolutePath}", e)

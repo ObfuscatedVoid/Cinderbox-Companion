@@ -12,6 +12,9 @@ import com.sdvsync.saves.SaveMetadataParser
 import com.sdvsync.saves.SaveValidator
 import com.sdvsync.steam.SteamCloudService
 import com.sdvsync.widget.WidgetUpdateWorker
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 enum class SyncErrorCategory {
     NO_CLOUD_FILES,
@@ -53,7 +56,7 @@ class SyncEngine(
         saveFolderName: String,
         force: Boolean = false,
         onProgress: ((String) -> Unit)? = null
-    ): SyncResult {
+    ): SyncResult = withContext(Dispatchers.IO) {
         try {
             onProgress?.invoke(context.getString(R.string.sync_progress_downloading))
 
@@ -63,7 +66,7 @@ class SyncEngine(
             }
 
             if (cloudFiles.isEmpty()) {
-                return SyncResult.Error(
+                return@withContext SyncResult.Error(
                     context.getString(R.string.sync_error_no_cloud_files, saveFolderName),
                     SyncErrorCategory.NO_CLOUD_FILES
                 )
@@ -83,7 +86,7 @@ class SyncEngine(
             val validation = saveValidator.validateSaveData(mainSaveData, cloudInfoData)
             AppLogger.d(TAG, "pullSave: validation=${validation.valid}, errors=${validation.errors}")
             if (!validation.valid) {
-                return SyncResult.Error(
+                return@withContext SyncResult.Error(
                     context.getString(R.string.sync_error_invalid_download, validation.errors.joinToString(", ")),
                     SyncErrorCategory.INVALID_DOWNLOAD
                 )
@@ -96,18 +99,22 @@ class SyncEngine(
                 val localMeta = localSave?.metadata
 
                 if (localMeta != null && cloudMeta != null) {
-                    val comparison = conflictResolver.compare(cloudMeta, localMeta)
+                    val comparison = conflictResolver.compare(
+                        cloudMeta,
+                        localMeta,
+                        saveContentMatches(saveFileManager.readLocalSave(saveFolderName), cloudFiles)
+                    )
                     if (comparison.direction == SyncDirection.CONFLICT) {
-                        return SyncResult.NeedsConflictResolution(comparison)
+                        return@withContext SyncResult.NeedsConflictResolution(comparison)
                     }
                     if (comparison.direction == SyncDirection.PUSH) {
-                        return SyncResult.Error(
+                        return@withContext SyncResult.Error(
                             context.getString(R.string.sync_error_local_newer),
                             SyncErrorCategory.LOCAL_NEWER
                         )
                     }
                     if (comparison.direction == SyncDirection.SKIP) {
-                        return SyncResult.Success(context.getString(R.string.sync_already_in_sync))
+                        return@withContext SyncResult.Success(context.getString(R.string.sync_already_in_sync))
                     }
                 }
             }
@@ -135,7 +142,7 @@ class SyncEngine(
             onProgress?.invoke(context.getString(R.string.sync_progress_writing))
             val writeSuccess = saveFileManager.writeLocalSave(saveFolderName, cloudFiles)
             if (!writeSuccess) {
-                return SyncResult.Error(
+                return@withContext SyncResult.Error(
                     context.getString(R.string.sync_error_write_failed),
                     SyncErrorCategory.WRITE_FAILED
                 )
@@ -148,10 +155,11 @@ class SyncEngine(
                 context.getString(R.string.sync_pull_success)
             }
             enqueueWidgetUpdate()
-            return SyncResult.Success(successMsg, warning = versionWarning)
+            return@withContext SyncResult.Success(successMsg, warning = versionWarning)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             AppLogger.e(TAG, "Pull failed for $saveFolderName", e)
-            return SyncResult.Error(
+            return@withContext SyncResult.Error(
                 context.getString(R.string.sync_error_pull_failed, e.message ?: "Unknown error"),
                 categorizeException(e)
             )
@@ -166,14 +174,14 @@ class SyncEngine(
         saveFolderName: String,
         force: Boolean = false,
         onProgress: ((String) -> Unit)? = null
-    ): SyncResult {
+    ): SyncResult = withContext(Dispatchers.IO) {
         try {
             onProgress?.invoke(context.getString(R.string.sync_progress_reading))
 
             // Step 1: Read and validate local save files
             val localFiles = saveFileManager.readLocalSave(saveFolderName)
             if (localFiles.isEmpty()) {
-                return SyncResult.Error(
+                return@withContext SyncResult.Error(
                     context.getString(R.string.sync_error_no_local_files, saveFolderName),
                     SyncErrorCategory.NO_LOCAL_FILES
                 )
@@ -182,7 +190,7 @@ class SyncEngine(
             // Check for in-progress saves (temp files from game still writing)
             val tempFiles = localFiles.keys.filter { it.contains("_STARDEWVALLEYSAVETMP") }
             if (tempFiles.isNotEmpty()) {
-                return SyncResult.Error(
+                return@withContext SyncResult.Error(
                     context.getString(R.string.sync_error_save_in_progress),
                     SyncErrorCategory.SAVE_IN_PROGRESS
                 )
@@ -194,7 +202,7 @@ class SyncEngine(
             val mainSaveData = localFiles[saveFolderName]
             val validation = saveValidator.validateSaveData(mainSaveData, localInfoData)
             if (!validation.valid) {
-                return SyncResult.Error(
+                return@withContext SyncResult.Error(
                     context.getString(R.string.sync_error_invalid_local, validation.errors.joinToString(", ")),
                     SyncErrorCategory.INVALID_LOCAL
                 )
@@ -213,18 +221,22 @@ class SyncEngine(
                     val cloudMeta = metadataParser.parseFromBytes(cloudInfoData)
 
                     if (cloudMeta != null && localMeta != null) {
-                        val comparison = conflictResolver.compare(cloudMeta, localMeta)
+                        val comparison = conflictResolver.compare(
+                            cloudMeta,
+                            localMeta,
+                            saveContentMatches(localFiles, cloudFileList)
+                        )
                         if (comparison.direction == SyncDirection.CONFLICT) {
-                            return SyncResult.NeedsConflictResolution(comparison)
+                            return@withContext SyncResult.NeedsConflictResolution(comparison)
                         }
                         if (comparison.direction == SyncDirection.PULL) {
-                            return SyncResult.Error(
+                            return@withContext SyncResult.Error(
                                 context.getString(R.string.sync_error_cloud_newer),
                                 SyncErrorCategory.CLOUD_NEWER
                             )
                         }
                         if (comparison.direction == SyncDirection.SKIP) {
-                            return SyncResult.Success(context.getString(R.string.sync_already_in_sync))
+                            return@withContext SyncResult.Success(context.getString(R.string.sync_already_in_sync))
                         }
                     }
                 }
@@ -251,8 +263,9 @@ class SyncEngine(
                     backupManager.backupSaveData(saveFolderName, cloudFiles)
                     AppLogger.d(TAG, "pushSave: backed up ${cloudFiles.size} cloud files for $saveFolderName")
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     AppLogger.e(TAG, "pushSave: cloud backup failed for $saveFolderName, aborting push", e)
-                    return SyncResult.Error(
+                    return@withContext SyncResult.Error(
                         context.getString(R.string.sync_error_backup_failed, e.message ?: "Unknown error"),
                         SyncErrorCategory.BACKUP_FAILED
                     )
@@ -267,14 +280,15 @@ class SyncEngine(
 
             val dayInfo = localMeta?.let { formatDisplayDate(it) }
             enqueueWidgetUpdate()
-            return if (dayInfo != null) {
+            return@withContext if (dayInfo != null) {
                 SyncResult.Success(context.getString(R.string.sync_push_success_with_day, dayInfo))
             } else {
                 SyncResult.Success(context.getString(R.string.sync_push_success))
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             AppLogger.e(TAG, "Push failed for $saveFolderName", e)
-            return SyncResult.Error(
+            return@withContext SyncResult.Error(
                 context.getString(R.string.sync_error_push_failed, e.message ?: "Unknown error"),
                 categorizeException(e)
             )
@@ -300,6 +314,7 @@ class SyncEngine(
             val request = OneTimeWorkRequestBuilder<WidgetUpdateWorker>().build()
             WorkManager.getInstance(context).enqueue(request)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             AppLogger.w(TAG, "Widget update failed (non-critical)", e)
         }
     }

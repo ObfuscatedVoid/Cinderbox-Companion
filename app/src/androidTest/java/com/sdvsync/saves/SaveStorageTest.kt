@@ -120,6 +120,21 @@ class SaveStorageTest {
         assertFalse(manager.readLocalSave(folder).containsKey("extra.sdvsync_tmp"))
     }
 
+    @Test
+    fun backupTraversalIsRejectedBeforeWriting() {
+        for (name in listOf("../escape", "/escape", "a/b", "a\\b")) {
+            try {
+                backups.backupSaveData(name, files("original"))
+                fail("Accepted folder: $name")
+            } catch (_: IllegalArgumentException) { }
+            try {
+                backups.backupSaveData(folder, mapOf(name to byteArrayOf(1)))
+                fail("Accepted file: $name")
+            } catch (_: IllegalArgumentException) { }
+        }
+        assertTrue(backups.listBackups(folder).isEmpty())
+    }
+
     private fun files(extra: String) = mapOf(
         folder to (
             "<SaveGame><player><name>StorageTest</name></player><locations/>" +

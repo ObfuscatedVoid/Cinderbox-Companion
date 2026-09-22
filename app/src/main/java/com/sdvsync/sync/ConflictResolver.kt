@@ -28,7 +28,7 @@ class ConflictResolver(private val context: Context) {
     /**
      * Compare cloud and local save metadata to determine sync direction.
      */
-    fun compare(cloudMeta: SaveMetadata?, localMeta: SaveMetadata?): SyncComparison {
+    fun compare(cloudMeta: SaveMetadata?, localMeta: SaveMetadata?, contentMatches: Boolean = false): SyncComparison {
         // Cloud only
         if (cloudMeta != null && localMeta == null) {
             return SyncComparison(
@@ -67,6 +67,12 @@ class ConflictResolver(private val context: Context) {
         val localDays = local.daysPlayed
 
         val result = when {
+            contentMatches -> SyncComparison(
+                SyncDirection.SKIP,
+                cloud,
+                local,
+                context.getString(R.string.conflict_in_sync, cloudDays)
+            )
             cloudDays > localDays -> SyncComparison(
                 direction = SyncDirection.PULL,
                 cloudMeta = cloud,
@@ -79,26 +85,12 @@ class ConflictResolver(private val context: Context) {
                 localMeta = local,
                 message = context.getString(R.string.conflict_device_ahead, localDays, cloudDays)
             )
-            else -> {
-                // Same day - check if identical
-                if (cloud.gameVersion == local.gameVersion &&
-                    cloud.farmerName == local.farmerName
-                ) {
-                    SyncComparison(
-                        direction = SyncDirection.SKIP,
-                        cloudMeta = cloud,
-                        localMeta = local,
-                        message = context.getString(R.string.conflict_in_sync, cloudDays)
-                    )
-                } else {
-                    SyncComparison(
-                        direction = SyncDirection.CONFLICT,
-                        cloudMeta = cloud,
-                        localMeta = local,
-                        message = context.getString(R.string.conflict_same_progress_differ)
-                    )
-                }
-            }
+            else -> SyncComparison(
+                direction = SyncDirection.CONFLICT,
+                cloudMeta = cloud,
+                localMeta = local,
+                message = context.getString(R.string.conflict_same_progress_differ)
+            )
         }
         AppLogger.d(TAG, "compare: ${result.direction} — ${result.message}")
         return result

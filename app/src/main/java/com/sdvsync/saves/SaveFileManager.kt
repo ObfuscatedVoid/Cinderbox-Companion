@@ -119,16 +119,7 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
         return fileAccess.exists(File(basePath))
     }
 
-    internal fun requireSafeName(name: String) {
-        require(
-            name.isNotBlank() &&
-                name != "." &&
-                name != ".." &&
-                '/' !in name &&
-                '\\' !in name &&
-                '\u0000' !in name
-        ) { "Invalid save file name" }
-    }
+    internal fun requireSafeName(name: String) = requireSafeSaveName(name)
 }
 
 data class LocalSave(val folderName: String, val metadata: SaveMetadata, val directory: File)

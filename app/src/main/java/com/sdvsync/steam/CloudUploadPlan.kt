@@ -1,5 +1,6 @@
 package com.sdvsync.steam
 
+import com.sdvsync.saves.requireSafeSaveName
 import java.security.MessageDigest
 
 internal fun planCloudUploads(
@@ -7,13 +8,7 @@ internal fun planCloudUploads(
     files: Map<String, ByteArray>,
     existingFiles: List<CloudFile>
 ): Map<String, ByteArray> {
-    require(
-        saveFolderName.isNotBlank() &&
-            saveFolderName != "." &&
-            saveFolderName != ".." &&
-            '/' !in saveFolderName &&
-            '\\' !in saveFolderName
-    )
+    requireSafeSaveName(saveFolderName)
     val existing = existingFiles.filter { it.saveFolderName == saveFolderName }
         .groupBy { it.baseName }
         .mapValues { (_, copies) ->
@@ -25,7 +20,7 @@ internal fun planCloudUploads(
         ?: "%WinAppDataRoaming%StardewValley/Saves/$saveFolderName"
     return buildMap {
         for ((name, data) in files) {
-            require(name.isNotBlank() && name != "." && name != ".." && '/' !in name && '\\' !in name)
+            requireSafeSaveName(name)
             val remote = existing[name]
             val sha = MessageDigest.getInstance("SHA-1").digest(data)
             if (remote == null || !remote.sha.contentEquals(sha)) {

@@ -1,7 +1,6 @@
 package com.sdvsync.steam
 
 import com.sdvsync.logging.AppLogger
-import com.sdvsync.util.GzipUtil
 import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.*
 import java.security.MessageDigest
@@ -138,29 +137,11 @@ class SteamCloudService(private val clientManager: SteamClientManager, private v
             requestBuilder.addHeader(header.name, header.value)
         }
 
-        val response = httpClient.newCall(requestBuilder.build()).execute()
-        if (!response.isSuccessful) {
-            throw RuntimeException("Download failed: HTTP ${response.code}")
+        httpClient.newCall(requestBuilder.build()).execute().use { response ->
+            check(response.isSuccessful) { "Download failed: HTTP ${response.code}" }
+            // Preserve the exact payload for backups and SHA-1 comparisons; parsers decompress it.
+            response.body?.bytes() ?: error("Empty response body")
         }
-
-        val rawBytes = response.body?.bytes() ?: throw RuntimeException("Empty response body")
-
-        AppLogger.d(
-            TAG,
-            "Downloaded '$filename': ${rawBytes.size} bytes, " +
-                "isGzip=${GzipUtil.isGzip(rawBytes)}, " +
-                "first4=${rawBytes.take(4).joinToString(" ") { "%02x".format(it) }}"
-        )
-
-        // Stardew Valley 1.6+ saves are gzip-compressed XML.
-        // Steam Cloud stores them as-is, so decompress for all callers.
-        val result = GzipUtil.decompressIfGzip(rawBytes)
-        AppLogger.d(
-            TAG,
-            "After decompression: ${result.size} bytes, " +
-                "first50=${String(result, 0, minOf(50, result.size))}"
-        )
-        result
     }
 
     /**
@@ -253,13 +234,9 @@ class SteamCloudService(private val clientManager: SteamClientManager, private v
                         requestBuilder.addHeader(header.name, header.value)
                     }
 
-                    val response = httpClient.newCall(requestBuilder.build()).execute()
-                    if (!response.isSuccessful) {
-                        throw RuntimeException(
-                            "Upload failed for $fullPath block: HTTP ${response.code}"
-                        )
+                    httpClient.newCall(requestBuilder.build()).execute().use { response ->
+                        check(response.isSuccessful) { "Upload failed for $fullPath block: HTTP ${response.code}" }
                     }
-                    response.close()
                 }
 
                 // Commit the file upload

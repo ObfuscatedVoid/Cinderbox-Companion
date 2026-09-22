@@ -50,39 +50,14 @@ class SaveBackupManager(private val context: Context) {
     }
 
     /**
-     * Create a backup of a local save folder.
-     * Returns the backup directory path.
-     */
-    fun backupSave(saveDir: File): File? {
-        if (!saveDir.exists() || !saveDir.isDirectory) return null
-
-        AppLogger.d(TAG, "backupSave: starting backup of ${saveDir.name}")
-        val backupDir = createBackupDirectory(saveDir.name)
-
-        try {
-            saveDir.listFiles()?.forEach { file ->
-                if (file.isFile) {
-                    file.copyTo(File(backupDir, file.name), overwrite = true)
-                }
-            }
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "backupSave: failed for ${saveDir.name}", e)
-            backupDir.deleteRecursively()
-            throw e
-        }
-
-        pruneBackups(saveDir.name)
-        AppLogger.d(TAG, "backupSave: completed at ${backupDir.absolutePath}")
-        return backupDir
-    }
-
-    /**
      * Create a backup from in-memory save data.
      * Cleans up partial writes on failure.
      */
     fun backupSaveData(saveFolderName: String, files: Map<String, ByteArray>): File {
         AppLogger.d(TAG, "backupSaveData: starting backup of $saveFolderName (${files.size} files)")
         require(files.isNotEmpty()) { "Cannot back up an empty save" }
+        requireSafeSaveName(saveFolderName)
+        files.keys.forEach(::requireSafeSaveName)
         val backupDir = createBackupDirectory(saveFolderName)
 
         try {
@@ -111,6 +86,7 @@ class SaveBackupManager(private val context: Context) {
      * List available backups for a save, newest first.
      */
     fun listBackups(saveFolderName: String): List<File> {
+        requireSafeSaveName(saveFolderName)
         val saveBackupDir = File(backupRoot, saveFolderName)
         if (!saveBackupDir.exists()) return emptyList()
 
@@ -118,27 +94,6 @@ class SaveBackupManager(private val context: Context) {
             ?.filter { it.isDirectory }
             ?.sortedByDescending { it.name }
             ?: emptyList()
-    }
-
-    /**
-     * Restore a backup to a target directory.
-     */
-    fun restoreBackup(backupDir: File, targetDir: File): Boolean {
-        if (!backupDir.exists()) return false
-
-        targetDir.mkdirs()
-
-        // Clear existing files in target
-        targetDir.listFiles()?.forEach { it.delete() }
-
-        // Copy backup files to target
-        backupDir.listFiles()?.forEach { file ->
-            if (file.isFile) {
-                file.copyTo(File(targetDir, file.name), overwrite = true)
-            }
-        }
-
-        return true
     }
 
     private fun pruneBackups(saveFolderName: String) {
