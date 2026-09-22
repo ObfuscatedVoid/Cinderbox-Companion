@@ -27,7 +27,10 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
     suspend fun listLocalSaves(): List<LocalSave> {
         val (fileAccess, basePath) = resolveLocation()
         val savesDir = File(basePath)
-        val folders = fileAccess.listDirectories(savesDir) ?: return emptyList()
+        val folders = fileAccess.listDirectories(savesDir) ?: run {
+            check(!fileAccess.exists(savesDir)) { "Cannot read the save directory" }
+            return emptyList()
+        }
         AppLogger.d(TAG, "listLocalSaves: found ${folders.size} folders in $basePath")
 
         return folders.mapNotNull { folderName ->

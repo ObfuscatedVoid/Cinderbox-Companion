@@ -1,46 +1,32 @@
 package com.sdvsync.autosync
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.sdvsync.fileaccess.runFileCommand
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
-/**
- * Root-only monitor that detects when Stardew Valley is running.
- * Polls for the game process at regular intervals.
- */
 class GameProcessMonitor {
-
-    companion object {
-        private const val SDV_PACKAGE = "com.chucklefish.stardewvalley"
-        private const val POLL_INTERVAL_MS = 5000L
-    }
-
-    private val _isGameRunning = MutableStateFlow(false)
-    val isGameRunning: StateFlow<Boolean> = _isGameRunning.asStateFlow()
-
     private var monitorJob: Job? = null
 
-    fun start(onGameStarted: () -> Unit = {}, onGameStopped: () -> Unit = {}) {
-        if (monitorJob != null) return
-
-        monitorJob = CoroutineScope(Dispatchers.IO).launch {
+    fun start(scope: CoroutineScope, onGameStarted: suspend () -> Unit, onGameStopped: suspend () -> Unit) {
+        if (monitorJob?.isActive == true) return
+        monitorJob = scope.launch {
             var wasRunning = false
-
             while (isActive) {
                 val running = checkGameRunning()
-                _isGameRunning.value = running
-
-                if (running && !wasRunning) {
+                if (running == true && !wasRunning) {
                     onGameStarted()
-                } else if (!running && wasRunning) {
-                    // Wait briefly for save to finish writing
+                    wasRunning = true
+                } else if (running == false && wasRunning) {
                     delay(3000)
-                    onGameStopped()
+                    if (checkGameRunning() == false) {
+                        onGameStopped()
+                        wasRunning = false
+                    }
                 }
-
-                wasRunning = running
-                delay(POLL_INTERVAL_MS)
+                delay(5000)
             }
         }
     }
@@ -48,17 +34,17 @@ class GameProcessMonitor {
     fun stop() {
         monitorJob?.cancel()
         monitorJob = null
-        _isGameRunning.value = false
     }
 
-    private fun checkGameRunning(): Boolean = try {
-        val process = Runtime.getRuntime().exec(
-            arrayOf("su", "-c", "pidof $SDV_PACKAGE")
+    fun checkGameRunning(): Boolean? = try {
+        // A failed root request must not be mistaken for the game closing.
+        val result = runFileCommand(
+            listOf("su", "-c"),
+            "test \"\$(id -u)\" = 0 || exit 2; pidof com.chucklefish.stardewvalley com.game.cinderbox; test \$? -le 1",
+            timeoutSeconds = 2
         )
-        val output = process.inputStream.bufferedReader().readText().trim()
-        process.waitFor()
-        output.isNotEmpty()
-    } catch (e: Exception) {
-        false
+        if (result.successful) result.bytes.decodeToString().isNotBlank() else null
+    } catch (_: Exception) {
+        null
     }
 }
