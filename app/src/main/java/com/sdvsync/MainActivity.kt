@@ -10,11 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -39,10 +35,10 @@ import androidx.navigation.navArgument
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModDownloadManager
 import com.sdvsync.mods.api.NexusModSource
-import com.sdvsync.ui.components.AppBottomBar
+import com.sdvsync.ui.components.AppNavigationScaffold
 import com.sdvsync.ui.components.AppUpdateDialog
-import com.sdvsync.ui.components.BottomTab
 import com.sdvsync.ui.components.CinderboxMigrationDialog
+import com.sdvsync.ui.components.MainTab
 import com.sdvsync.ui.screens.BackupListScreen
 import com.sdvsync.ui.screens.DashboardScreen
 import com.sdvsync.ui.screens.GameDownloadScreen
@@ -360,24 +356,30 @@ fun MainScreen(parentNavController: NavHostController, mainEntry: NavBackStackEn
     val mainSelectedTab by remember(mainCurrentRoute) {
         derivedStateOf {
             when (mainCurrentRoute) {
-                "saves" -> BottomTab.SAVES
-                "mods" -> BottomTab.MODS
-                "game_download" -> BottomTab.DOWNLOAD
-                "settings" -> BottomTab.SETTINGS
-                else -> BottomTab.SAVES
+                "saves" -> MainTab.SAVES
+                "mods" -> MainTab.MODS
+                "game_download" -> MainTab.DOWNLOAD
+                "settings" -> MainTab.SETTINGS
+                else -> MainTab.SAVES
             }
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
+    AppNavigationScaffold(
+        selectedTab = mainSelectedTab,
+        showNavigation = isMainShowBottomBar,
+        onTabSelected = { tab ->
+            mainNavController.navigate(tab.route) {
+                popUpTo(mainNavController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    ) {
         NavHost(
             navController = mainNavController,
             startDestination = "saves",
-            modifier = Modifier
-                .weight(1f)
-                .consumeWindowInsets(
-                    if (isMainShowBottomBar) WindowInsets.navigationBars else WindowInsets(0, 0, 0, 0)
-                ),
+            modifier = Modifier.fillMaxSize(),
             enterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
             exitTransition = { fadeOut(tween(NAV_ANIM_DURATION)) },
             popEnterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
@@ -422,21 +424,6 @@ fun MainScreen(parentNavController: NavHostController, mainEntry: NavBackStackEn
                     }
                 )
             }
-        }
-
-        if (isMainShowBottomBar) {
-            AppBottomBar(
-                selectedTab = mainSelectedTab,
-                onTabSelected = { tab ->
-                    mainNavController.navigate(tab.route) {
-                        popUpTo(mainNavController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            )
         }
     }
 
