@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Keystore keys do not transfer with these encrypted credentials. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="steam_session.xml" />
+    <exclude domain="sharedpref" path="mod_encrypted_prefs.xml" />
+    <exclude domain="sharedpref" path="__androidx_security_crypto_encrypted_file_pref__.xml" />
+    <exclude domain="file" path="sentry/" />
+    <exclude domain="file" path="logs/" />
+</full-backup-content>

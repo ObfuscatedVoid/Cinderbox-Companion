@@ -41,11 +41,8 @@ class SteamContentService(private val clientManager: SteamClientManager) {
             }
         }
 
-        steamApps.picsGetProductInfo(
-            app = PICSRequest(STARDEW_APP_ID, accessToken)
-        )
-
         val productInfo = try {
+            steamApps.picsGetProductInfo(app = PICSRequest(STARDEW_APP_ID, accessToken))
             withTimeout(15_000) { deferred.await() }
         } finally {
             sub.close()

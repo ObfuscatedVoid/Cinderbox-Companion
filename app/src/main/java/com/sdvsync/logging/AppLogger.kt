@@ -15,14 +15,14 @@ import com.sdvsync.BuildConfig
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 object AppLogger {
 
     private const val MAX_LOG_SIZE = 1_000_000L
-    private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+    private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 
     private var logFile: File? = null
     private var prevLogFile: File? = null
@@ -37,7 +37,13 @@ object AppLogger {
         logDir.mkdirs()
         logFile = File(logDir, "sdvsync.log")
         prevLogFile = File(logDir, "sdvsync.prev.log")
-        openWriter()
+        synchronized(lock) {
+            try {
+                openWriter()
+            } catch (_: Exception) {
+                writer = null
+            }
+        }
     }
 
     private fun openWriter() {
@@ -57,7 +63,7 @@ object AppLogger {
 
     private fun writeLog(level: String, tag: String, message: String, throwable: Throwable? = null) {
         val sanitized = sanitize(message)
-        val timestamp = DATE_FORMAT.format(Date())
+        val timestamp = LocalDateTime.now().format(DATE_FORMAT)
         val line = "$timestamp $level/$tag: $sanitized"
 
         synchronized(lock) {
@@ -77,32 +83,35 @@ object AppLogger {
         }
     }
 
-    fun d(tag: String, message: String) {
-        Log.d(tag, message)
-        writeLog("D", tag, message)
-    }
+    fun d(tag: String, message: String) = log(Log.DEBUG, "D", tag, message)
+    fun i(tag: String, message: String) = log(Log.INFO, "I", tag, message)
+    fun w(tag: String, message: String, throwable: Throwable? = null) = log(Log.WARN, "W", tag, message, throwable)
+    fun e(tag: String, message: String, throwable: Throwable? = null) = log(Log.ERROR, "E", tag, message, throwable)
 
-    fun i(tag: String, message: String) {
-        Log.i(tag, message)
-        writeLog("I", tag, message)
-    }
-
-    fun w(tag: String, message: String, throwable: Throwable? = null) {
-        if (throwable != null) Log.w(tag, message, throwable) else Log.w(tag, message)
-        writeLog("W", tag, message, throwable)
-    }
-
-    fun e(tag: String, message: String, throwable: Throwable? = null) {
-        if (throwable != null) Log.e(tag, message, throwable) else Log.e(tag, message)
-        writeLog("E", tag, message, throwable)
+    private fun log(priority: Int, level: String, tag: String, message: String, throwable: Throwable? = null) {
+        val content = if (throwable == null) message else "$message\n${throwable.stackTraceToString()}"
+        Log.println(priority, tag, sanitize(content))
+        writeLog(level, tag, message, throwable)
     }
 
     internal fun sanitize(message: String): String {
         var result = message
 
         result = result.replace(
-            Regex("""(access_?[Tt]oken|refresh_?[Tt]oken|password|api_?[Kk]ey|apikey)\s*[=:]\s*["']?[^\s"',}\]]+"""),
+            Regex(
+                """(access_?token|refresh_?token|password|api_?key)["']?\s*[=:]\s*["']?[^\s"',}\]&]+""",
+                RegexOption.IGNORE_CASE
+            ),
             "$1=[REDACTED]"
+        )
+
+        result = result.replace(
+            Regex("""([?&](?:key|token|auth|sig|signature)=)[^&#\s]+""", RegexOption.IGNORE_CASE),
+            "$1[REDACTED]"
+        )
+        result = result.replace(
+            Regex("""(Authorization\s*[=:]\s*(?:Bearer|Basic)\s+)[^\s]+""", RegexOption.IGNORE_CASE),
+            "$1[REDACTED]"
         )
 
         result = result.replace(Regex("""\b76561\d{12}\b"""), "[STEAM_ID]")
@@ -142,7 +151,7 @@ object AppLogger {
     private fun buildDiagnosticHeader(): String = buildString {
         appendLine("=== SDV Sync Diagnostic Report ===")
         appendLine("App Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-        appendLine("Date: ${DATE_FORMAT.format(Date())}")
+        appendLine("Date: ${LocalDateTime.now().format(DATE_FORMAT)}")
         appendLine()
 
         appendLine("--- Device ---")
@@ -246,7 +255,11 @@ object AppLogger {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
-        context.startActivity(Intent.createChooser(intent, "Share SDV Sync Logs"))
+        context.startActivity(
+            Intent.createChooser(intent, "Share Cinderbox Companion Logs").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
     }
 
     fun copyLogs(context: Context) {

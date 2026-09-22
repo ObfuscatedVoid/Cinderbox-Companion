@@ -122,11 +122,13 @@ internal class StableWebSocketConnection : Connection() {
                 // Ktor's ping/pong timeout owns liveness instead of a payload-inactivity watchdog.
                 newSession.incoming.consumeEach { frame ->
                     when (frame) {
-                        is Frame.Binary -> onNetMsgReceived(
-                            NetMsgEventArgs(frame.readBytes(), currentEndPoint)
-                        )
+                        is Frame.Binary -> if (isCurrentGeneration(generation)) {
+                            onNetMsgReceived(
+                                NetMsgEventArgs(frame.readBytes(), currentEndPoint)
+                            )
+                        }
 
-                        is Frame.Close -> disconnectInternal(userInitiated = false)
+                        is Frame.Close -> disconnectInternal(userInitiated = false, expectedGeneration = generation)
                         is Frame.Ping -> logger.debug("Received WebSocket ping")
                         is Frame.Pong -> logger.debug("Received WebSocket pong")
                         is Frame.Text -> logger.debug(
@@ -203,15 +205,15 @@ internal class StableWebSocketConnection : Connection() {
     }
 
     override fun send(data: ByteArray) {
-        val currentSession = synchronized(lifecycleLock) {
-            session.takeUnless { disconnecting }
+        val (generation, currentSession) = synchronized(lifecycleLock) {
+            lifecycleGeneration to session.takeUnless { disconnecting }
         }
         scope.launch {
             try {
                 currentSession?.send(Frame.Binary(fin = true, data = data))
             } catch (e: Exception) {
                 logger.error("Stable WebSocket send failed", e)
-                disconnectInternal(userInitiated = false)
+                disconnectInternal(userInitiated = false, expectedGeneration = generation)
             }
         }
     }

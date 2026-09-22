@@ -1,7 +1,6 @@
 package com.sdvsync.steam
 
 import android.content.Context
-import androidx.security.crypto.EncryptedFile
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.io.File
@@ -40,38 +39,10 @@ class SteamSessionStore(private val context: Context) {
         get() = prefs.getInt("cell_id", 0)
         set(value) = prefs.edit().putInt("cell_id", value).apply()
 
-    var machineName: String
-        get() = prefs.getString("machine_name", null) ?: "SDV-Sync-Android"
-        set(value) = prefs.edit().putString("machine_name", value).apply()
-
-    val sentryDir: File
-        get() = File(context.filesDir, "sentry").also { it.mkdirs() }
-
-    fun getSentryFile(username: String): File = File(sentryDir, "$username.sentry")
-
-    fun saveSentryData(username: String, data: ByteArray) {
-        val file = getSentryFile(username)
-        if (file.exists()) file.delete()
-        getEncryptedFile(file).openFileOutput().use { it.write(data) }
-    }
-
-    fun loadSentryData(username: String): ByteArray? {
-        val file = getSentryFile(username)
-        if (!file.exists()) return null
-        return getEncryptedFile(file).openFileInput().use { it.readBytes() }
-    }
-
-    private fun getEncryptedFile(file: File): EncryptedFile = EncryptedFile.Builder(
-        context,
-        file,
-        masterKey,
-        EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
-    ).build()
-
     fun hasSession(): Boolean = !username.isNullOrEmpty() && !refreshToken.isNullOrEmpty()
 
     fun clear() {
         prefs.edit().clear().apply()
-        sentryDir.listFiles()?.forEach { it.delete() }
+        File(context.filesDir, "sentry").listFiles()?.forEach { it.delete() }
     }
 }

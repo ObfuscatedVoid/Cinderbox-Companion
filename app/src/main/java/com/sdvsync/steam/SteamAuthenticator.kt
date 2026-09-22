@@ -38,7 +38,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
 
 sealed class AuthState {
@@ -631,13 +633,14 @@ class SteamAuthenticator(
             _authState.value = AuthState.Connecting
             autoReconnectJob?.cancel()
             autoReconnectJob = scope.launch {
-                delay(2000)
-                if (clientManager.isLoggedIn) {
-                    return@launch
-                }
-                loginWithSavedSession()
-                if (_authState.value is AuthState.Error) {
-                    wasLoggedIn = false
+                var retryDelay = 2000L
+                while (isActive && wasLoggedIn && !isUserDisconnect && sessionStore.hasSession()) {
+                    delay(retryDelay)
+                    if (clientManager.isLoggedIn) return@launch
+                    if (isNetworkAvailable()) {
+                        supervisorScope { launch { loginWithSavedSession() }.join() }
+                    }
+                    retryDelay = (retryDelay * 2).coerceAtMost(30_000L)
                 }
             }
         } else if (!userInitiated && currentAuthState is AuthState.LoggedIn) {
