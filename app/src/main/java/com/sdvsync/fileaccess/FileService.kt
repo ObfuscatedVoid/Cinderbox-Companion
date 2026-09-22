@@ -33,7 +33,7 @@ class FileService : IFileService.Stub() {
         if (!dir.isDirectory) {
             throw RemoteException("Not a directory: $path")
         }
-        val files = dir.listFiles() ?: return emptyArray()
+        val files = dir.listFiles() ?: throw RemoteException("Cannot read directory: $path")
         return files.map { file ->
             val prefix = if (file.isDirectory) "D|" else "F|"
             "$prefix${file.name}"
@@ -77,7 +77,9 @@ class FileService : IFileService.Stub() {
     override fun deleteFile(path: String) {
         try {
             val file = File(path)
-            if (file.isDirectory) file.deleteRecursively() else file.delete()
+            check(!file.exists() || if (file.isDirectory) file.deleteRecursively() else file.delete()) {
+                "Cannot delete file"
+            }
         } catch (e: Exception) {
             Log.e(TAG, "deleteFile failed: $path", e)
             throw RemoteException(e.message)
@@ -86,7 +88,8 @@ class FileService : IFileService.Stub() {
 
     override fun createDirectory(path: String) {
         try {
-            File(path).mkdirs()
+            val directory = File(path)
+            check(directory.isDirectory || directory.mkdirs()) { "Cannot create directory" }
         } catch (e: Exception) {
             Log.e(TAG, "createDirectory failed: $path", e)
             throw RemoteException(e.message)

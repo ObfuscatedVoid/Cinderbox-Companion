@@ -4,8 +4,12 @@ import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.fileaccess.FileAccessStrategy
 import com.sdvsync.logging.AppLogger
 import java.io.File
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class SaveFileManager(private val metadataParser: SaveMetadataParser, private val resolveLocation: () -> SaveLocation) {
+    private val writeMutex = Mutex()
+
     companion object {
         private const val TAG = "SaveFileManager"
         const val SDV_SAVE_PATH =
@@ -54,6 +58,11 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
             return emptyMap()
         }
 
+        check(
+            files.none {
+                it.endsWith(".sdvsync_bak")
+            }
+        ) { "Interrupted save detected; restore its backup before syncing" }
         val result = mutableMapOf<String, ByteArray>()
         for (filename in files) {
             requireSafeName(filename)
@@ -75,40 +84,13 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
         val (fileAccess, basePath) = resolveLocation()
         val saveDir = File(basePath, saveFolderName)
 
-        files.keys.forEach(::requireSafeName)
+        files.keys.forEach {
+            requireSafeName(it)
+            require(!it.endsWith(".sdvsync_tmp") && !it.endsWith(".sdvsync_bak")) { "Reserved save filename" }
+        }
         require(files.isNotEmpty()) { "No save files to write" }
 
-        // Ensure directory exists
-        val mkdirsResult = fileAccess.mkdirs(saveDir)
-        AppLogger.d(
-            TAG,
-            "writeLocalSave($saveFolderName): mkdirs=${if (mkdirsResult) "created" else "already exists or failed"}"
-        )
-
-        // Write each file atomically (temp file then rename)
-        for ((filename, data) in files) {
-            val targetFile = File(saveDir, filename)
-            val tempFile = File(saveDir, "$filename.sdvsync_tmp")
-
-            // Write to temp file
-            if (!fileAccess.writeFile(tempFile, data)) {
-                AppLogger.e(TAG, "writeLocalSave: temp write failed for $filename (${data.size} bytes)")
-                return false
-            }
-
-            // Rename temp to target (atomic on same filesystem)
-            if (!fileAccess.renameFile(tempFile, targetFile)) {
-                AppLogger.w(TAG, "writeLocalSave: rename failed for $filename, falling back to direct write")
-                fileAccess.deleteFile(tempFile)
-                if (!fileAccess.writeFile(targetFile, data)) {
-                    AppLogger.e(TAG, "writeLocalSave: direct write also failed for $filename")
-                    return false
-                }
-            }
-        }
-
-        AppLogger.d(TAG, "writeLocalSave($saveFolderName): wrote ${files.size} files successfully")
-        return true
+        return writeMutex.withLock { writeSaveFiles(fileAccess, saveDir, files) }
     }
 
     /**
