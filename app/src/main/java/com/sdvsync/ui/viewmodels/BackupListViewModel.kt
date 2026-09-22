@@ -1,6 +1,5 @@
 package com.sdvsync.ui.viewmodels
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.logging.AppLogger
@@ -10,8 +9,10 @@ import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.saves.SaveMetadataParser
 import java.io.File
-import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,6 @@ data class BackupListState(
 )
 
 class BackupListViewModel(
-    private val context: Context,
     private val backupManager: SaveBackupManager,
     private val saveFileManager: SaveFileManager,
     private val metadataParser: SaveMetadataParser
@@ -38,8 +38,8 @@ class BackupListViewModel(
 
     companion object {
         private const val TAG = "BackupListVM"
-        private val BACKUP_DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US)
-        private val DISPLAY_DATE_FORMAT = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US)
+        private val BACKUP_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss", Locale.US)
+        private val DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a", Locale.US)
     }
 
     private val _state = MutableStateFlow(BackupListState())
@@ -66,6 +66,7 @@ class BackupListViewModel(
                     )
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Failed to load backups", e)
                 _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to load backups") }
             }
@@ -73,6 +74,7 @@ class BackupListViewModel(
     }
 
     fun restoreBackup(backupDir: File) {
+        if (_state.value.isRestoring) return
         val saveFolderName = _state.value.saveFolderName
         _state.update { it.copy(isRestoring = true, restoreResult = null) }
 
@@ -88,6 +90,12 @@ class BackupListViewModel(
                     _state.update { it.copy(isRestoring = false, restoreResult = "Backup is empty") }
                     return@launch
                 }
+
+                val validation = com.sdvsync.saves.SaveValidator().validateSaveData(
+                    backupFiles[saveFolderName],
+                    backupFiles["SaveGameInfo"]
+                )
+                check(validation.valid) { validation.errors.joinToString() }
 
                 // Backup current save first
                 val currentFiles = saveFileManager.readLocalSave(saveFolderName)
@@ -111,6 +119,7 @@ class BackupListViewModel(
                     loadBackups(saveFolderName)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Restore failed", e)
                 _state.update {
                     it.copy(isRestoring = false, restoreResult = "Restore failed: ${e.message}")
@@ -144,8 +153,8 @@ class BackupListViewModel(
     }
 
     private fun formatTimestamp(dirName: String): String = try {
-        val date = BACKUP_DATE_FORMAT.parse(dirName)
-        if (date != null) DISPLAY_DATE_FORMAT.format(date) else dirName
+        val date = LocalDateTime.parse(dirName.take(19), BACKUP_DATE_FORMAT)
+        date.format(DISPLAY_DATE_FORMAT)
     } catch (_: Exception) {
         dirName
     }

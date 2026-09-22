@@ -1,8 +1,9 @@
 package com.sdvsync.ui.viewmodels
 
+import android.app.Application
 import android.content.Context
 import android.os.Environment
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.cinderbox.CinderboxPaths
@@ -61,12 +62,14 @@ data class GameDownloadState(
 )
 
 class GameDownloadViewModel(
-    private val context: Context,
+    context: Context,
     private val contentService: SteamContentService,
     private val downloadManager: GameDownloadManager,
     private val fileAccessDetector: FileAccessDetector,
     private val releaseChecker: GitHubReleaseChecker
-) : ViewModel() {
+) : AndroidViewModel(context.applicationContext as Application) {
+
+    private val context get() = getApplication<Application>()
 
     companion object {
         private const val TAG = "GameDownloadVM"

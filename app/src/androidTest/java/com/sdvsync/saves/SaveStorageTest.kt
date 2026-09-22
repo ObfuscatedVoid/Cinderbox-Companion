@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sdvsync.fileaccess.AllFilesAccess
+import com.sdvsync.fileaccess.FileAccessStrategy
 import com.sdvsync.mods.ModFileManager
 import com.sdvsync.mods.ModManifestParser
 import java.io.ByteArrayInputStream
@@ -13,7 +14,12 @@ import java.io.File
 import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -151,6 +157,37 @@ class SaveStorageTest {
         }
         assertTrue(bundles.importBundle(ByteArrayInputStream(bytes.toByteArray()), null) is ImportResult.Error)
         assertEquals("original", manager.readLocalSave(folder).getValue("extra").decodeToString())
+    }
+
+    @Test
+    fun readersWaitUntilTheSaveReplacementFinishes() = runBlocking {
+        assertTrue(manager.writeLocalSave(folder, files("original")))
+        val staged = CompletableDeferred<Unit>()
+        val proceed = CompletableDeferred<Unit>()
+        val direct = AllFilesAccess()
+        val access = object : FileAccessStrategy by direct {
+            override suspend fun renameFile(from: File, to: File): Boolean {
+                if (from.name.endsWith(".sdvsync_tmp") && !staged.isCompleted) {
+                    staged.complete(Unit)
+                    proceed.await()
+                }
+                return direct.renameFile(from, to)
+            }
+        }
+        val concurrent = SaveFileManager(SaveMetadataParser()) { SaveLocation(access, saveRoot.path) }
+        withTimeout(5000) {
+            val writer = async(Dispatchers.IO) { concurrent.writeLocalSave(folder, files("updated")) }
+            staged.await()
+            val reader = async(Dispatchers.IO) { concurrent.readLocalSave(folder) }
+            try {
+                yield()
+                assertFalse(reader.isCompleted)
+            } finally {
+                proceed.complete(Unit)
+            }
+            assertTrue(writer.await())
+            assertEquals("updated", reader.await().getValue("extra").decodeToString())
+        }
     }
 
     private fun files(extra: String) = mapOf(

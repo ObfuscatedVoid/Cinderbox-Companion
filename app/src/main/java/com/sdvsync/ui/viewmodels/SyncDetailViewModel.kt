@@ -1,8 +1,9 @@
 package com.sdvsync.ui.viewmodels
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.fileaccess.FileAccessDetector
@@ -20,6 +21,7 @@ import com.sdvsync.sync.SyncEngine
 import com.sdvsync.sync.SyncHistoryStore
 import com.sdvsync.sync.SyncResult
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,7 +52,7 @@ data class SyncDetailState(
 )
 
 class SyncDetailViewModel(
-    private val context: Context,
+    context: Context,
     private val syncEngine: SyncEngine,
     private val historyStore: SyncHistoryStore,
     private val saveFileManager: SaveFileManager,
@@ -59,8 +61,10 @@ class SyncDetailViewModel(
     private val modDataStore: ModDataStore,
     private val bundleManager: SaveBundleManager,
     private val fileAccessDetector: FileAccessDetector
-) : ViewModel(),
+) : AndroidViewModel(context.applicationContext as Application),
     KoinComponent {
+
+    private val context get() = getApplication<Application>()
 
     companion object {
         private const val TAG = "SyncDetailVM"
@@ -69,89 +73,53 @@ class SyncDetailViewModel(
     private val _state = MutableStateFlow(SyncDetailState(isStagingMode = saveFileManager.isStaging))
     val state: StateFlow<SyncDetailState> = _state.asStateFlow()
 
-    fun pullSave(saveFolderName: String, force: Boolean = false, engine: SyncEngine = syncEngine) {
+    fun pullSave(saveFolderName: String, force: Boolean = false, engine: SyncEngine = syncEngine) =
+        startSync(saveFolderName, SyncOperation.PULL, force, engine)
+
+    fun pushSave(saveFolderName: String, force: Boolean = false, engine: SyncEngine = syncEngine) =
+        startSync(saveFolderName, SyncOperation.PUSH, force, engine)
+
+    private fun startSync(folder: String, operation: SyncOperation, force: Boolean, engine: SyncEngine) {
+        if (_state.value.isSyncing) return
         if (fileAccessDetector.needsStoragePermission()) {
             _state.update {
-                it.copy(
-                    lastOperation = SyncOperation.PULL,
-                    lastSaveFolderName = saveFolderName,
-                    showStoragePermissionPrompt = true
-                )
+                it.copy(lastOperation = operation, lastSaveFolderName = folder, showStoragePermissionPrompt = true)
             }
             return
         }
-        viewModelScope.launch {
-            _state.value = SyncDetailState(
+        _state.update {
+            it.copy(
                 isSyncing = true,
+                result = null,
+                progressMessage = "",
                 isStagingMode = saveFileManager.isStaging,
-                lastOperation = SyncOperation.PULL,
-                lastSaveFolderName = saveFolderName
+                lastOperation = operation,
+                lastSaveFolderName = folder
             )
-
-            val result = engine.pullSave(
-                saveFolderName = saveFolderName,
-                force = force,
-                onProgress = { msg ->
-                    _state.update { it.copy(progressMessage = msg) }
-                }
-            )
-
-            _state.update { it.copy(isSyncing = false, result = result) }
-
-            if (result is SyncResult.Success) {
-                captureModAssociation(saveFolderName)
-            }
-
-            val success = result is SyncResult.Success
-            val message = when (result) {
-                is SyncResult.Success -> result.message
-                is SyncResult.Error -> result.message
-                is SyncResult.NeedsConflictResolution -> context.getString(R.string.sync_conflict_detected)
-            }
-            historyStore.addEntry(saveFolderName, "pull", success, message)
-        }
-    }
-
-    fun pushSave(saveFolderName: String, force: Boolean = false, engine: SyncEngine = syncEngine) {
-        if (fileAccessDetector.needsStoragePermission()) {
-            _state.update {
-                it.copy(
-                    lastOperation = SyncOperation.PUSH,
-                    lastSaveFolderName = saveFolderName,
-                    showStoragePermissionPrompt = true
-                )
-            }
-            return
         }
         viewModelScope.launch {
-            _state.value = SyncDetailState(
-                isSyncing = true,
-                isStagingMode = saveFileManager.isStaging,
-                lastOperation = SyncOperation.PUSH,
-                lastSaveFolderName = saveFolderName
-            )
-
-            val result = engine.pushSave(
-                saveFolderName = saveFolderName,
-                force = force,
-                onProgress = { msg ->
-                    _state.update { it.copy(progressMessage = msg) }
+            try {
+                val progress: (String) -> Unit = { message -> _state.update { it.copy(progressMessage = message) } }
+                val result = when (operation) {
+                    SyncOperation.PULL -> engine.pullSave(folder, force, progress)
+                    SyncOperation.PUSH -> engine.pushSave(folder, force, progress)
                 }
-            )
-
-            _state.update { it.copy(isSyncing = false, result = result) }
-
-            if (result is SyncResult.Success) {
-                captureModAssociation(saveFolderName)
+                if (result is SyncResult.Success) captureModAssociation(folder)
+                val message = when (result) {
+                    is SyncResult.Success -> result.message
+                    is SyncResult.Error -> result.message
+                    is SyncResult.NeedsConflictResolution -> context.getString(R.string.sync_conflict_detected)
+                }
+                try {
+                    historyStore.addEntry(folder, operation.name.lowercase(), result is SyncResult.Success, message)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    AppLogger.e(TAG, "Could not record sync history", e)
+                }
+                _state.update { it.copy(result = result) }
+            } finally {
+                _state.update { it.copy(isSyncing = false) }
             }
-
-            val success = result is SyncResult.Success
-            val message = when (result) {
-                is SyncResult.Success -> result.message
-                is SyncResult.Error -> result.message
-                is SyncResult.NeedsConflictResolution -> context.getString(R.string.sync_conflict_detected)
-            }
-            historyStore.addEntry(saveFolderName, "push", success, message)
         }
     }
 
@@ -218,8 +186,9 @@ class SyncDetailViewModel(
     }
 
     fun checkSaveHealth(saveFolderName: String) {
+        if (_state.value.isCheckingHealth) return
+        _state.update { it.copy(isCheckingHealth = true, healthCheck = null) }
         viewModelScope.launch(Dispatchers.IO) {
-            _state.update { it.copy(isCheckingHealth = true, healthCheck = null) }
             try {
                 val files = saveFileManager.readLocalSave(saveFolderName)
                 val mainSaveData = files[saveFolderName]
@@ -227,6 +196,7 @@ class SyncDetailViewModel(
                 val result = saveValidator.deepValidateSaveData(mainSaveData, saveGameInfoData)
                 _state.update { it.copy(healthCheck = result, isCheckingHealth = false) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _state.update {
                     it.copy(
                         healthCheck = ValidationResult(
@@ -270,6 +240,7 @@ class SyncDetailViewModel(
                     _state.update { it.copy(modMismatch = null) }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.w(TAG, "Failed to load mod association", e)
             }
         }
@@ -296,6 +267,7 @@ class SyncDetailViewModel(
                 _state.update { it.copy(modMismatch = null) }
                 AppLogger.d(TAG, "Captured mod association for $saveFolderName: ${currentMods.size} mods")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.w(TAG, "Failed to capture mod association", e)
             }
         }
@@ -306,12 +278,14 @@ class SyncDetailViewModel(
     }
 
     fun exportSave(saveFolderName: String) {
+        if (_state.value.isExporting) return
+        _state.update { it.copy(isExporting = true, exportError = null, exportFile = null) }
         viewModelScope.launch(Dispatchers.IO) {
-            _state.update { it.copy(isExporting = true, exportError = null, exportFile = null) }
             try {
                 val file = bundleManager.exportBundle(saveFolderName)
                 _state.update { it.copy(isExporting = false, exportFile = file) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Export failed", e)
                 _state.update {
                     it.copy(

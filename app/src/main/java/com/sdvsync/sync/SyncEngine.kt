@@ -14,6 +14,8 @@ import com.sdvsync.steam.SteamCloudService
 import com.sdvsync.widget.WidgetUpdateWorker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 enum class SyncErrorCategory {
@@ -47,12 +49,19 @@ class SyncEngine(
 ) {
     companion object {
         private const val TAG = "SyncEngine"
+        private val syncMutex = Mutex()
     }
 
     /**
      * Pull a save from Steam Cloud to a local device.
      */
     suspend fun pullSave(
+        saveFolderName: String,
+        force: Boolean = false,
+        onProgress: ((String) -> Unit)? = null
+    ): SyncResult = syncMutex.withLock { pullLocked(saveFolderName, force, onProgress) }
+
+    private suspend fun pullLocked(
         saveFolderName: String,
         force: Boolean = false,
         onProgress: ((String) -> Unit)? = null
@@ -171,6 +180,12 @@ class SyncEngine(
      * Always backs up the existing cloud save before overwriting.
      */
     suspend fun pushSave(
+        saveFolderName: String,
+        force: Boolean = false,
+        onProgress: ((String) -> Unit)? = null
+    ): SyncResult = syncMutex.withLock { pushLocked(saveFolderName, force, onProgress) }
+
+    private suspend fun pushLocked(
         saveFolderName: String,
         force: Boolean = false,
         onProgress: ((String) -> Unit)? = null

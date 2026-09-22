@@ -115,8 +115,8 @@ val appModule = module {
     viewModel { ModBrowseViewModel(get(), get(), get()) }
     viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), modId, source) }
     viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), get(), get(), uniqueId) }
-    viewModel { BackupListViewModel(androidContext(), get(), get(), get()) }
-    viewModel { SaveViewerViewModel(androidContext(), get(), get()) }
+    viewModel { BackupListViewModel(get(), get(), get()) }
+    viewModel { SaveViewerViewModel(get(), get()) }
     viewModel { AppUpdateViewModel(get(), get()) }
     viewModel { CinderboxMigrationViewModel(get()) }
 }

@@ -7,8 +7,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sdvsync.logging.AppLogger
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -30,14 +30,14 @@ class SyncHistoryStore(private val context: Context) {
     companion object {
         private val HISTORY_KEY = stringPreferencesKey("history")
         private const val MAX_ENTRIES = 50
-        private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+        private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US)
     }
 
     suspend fun addEntry(saveName: String, direction: String, success: Boolean, message: String) {
         context.syncHistoryStore.edit { prefs ->
             val existing = prefs[HISTORY_KEY]?.let { parseEntries(it) } ?: emptyList()
             val entry = SyncHistoryEntry(
-                timestamp = DATE_FORMAT.format(Date()),
+                timestamp = LocalDateTime.now().format(DATE_FORMAT),
                 saveName = saveName,
                 direction = direction,
                 success = success,
@@ -84,7 +84,7 @@ class SyncHistoryStore(private val context: Context) {
             )
         }
     } catch (e: Exception) {
-        AppLogger.e("SyncHistoryStore", "Failed to parse history: $json", e)
+        AppLogger.e("SyncHistoryStore", "Failed to parse sync history", e)
         emptyList()
     }
 }

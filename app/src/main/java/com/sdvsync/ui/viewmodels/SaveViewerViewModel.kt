@@ -1,12 +1,12 @@
 package com.sdvsync.ui.viewmodels
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileData
 import com.sdvsync.saves.SaveFileManager
 import com.sdvsync.saves.SaveFileParser
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,11 +24,8 @@ data class SaveViewerState(
     val selectedTab: SaveViewerTab = SaveViewerTab.FARMER
 )
 
-class SaveViewerViewModel(
-    private val context: Context,
-    private val saveFileManager: SaveFileManager,
-    private val saveFileParser: SaveFileParser
-) : ViewModel() {
+class SaveViewerViewModel(private val saveFileManager: SaveFileManager, private val saveFileParser: SaveFileParser) :
+    ViewModel() {
 
     companion object {
         private const val TAG = "SaveViewerVM"
@@ -58,6 +55,7 @@ class SaveViewerViewModel(
 
                 _state.update { it.copy(data = data, isLoading = false) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e(TAG, "Failed to load save", e)
                 _state.update { it.copy(isLoading = false, error = e.message ?: "Unknown error") }
             }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sdvsync.R
 import com.sdvsync.ui.components.AppButton
@@ -48,16 +49,17 @@ fun DashboardScreen(
     }
 
     // Handle pending .sdvsync import from intent
-    LaunchedEffect(Unit) {
-        val activity = toastContext as? com.sdvsync.MainActivity
+    val activity = toastContext as? com.sdvsync.MainActivity
+    LaunchedEffect(activity?.pendingImportUri) {
         val pendingUri = activity?.consumePendingImportUri()
         if (pendingUri != null) {
             viewModel.previewImport(pendingUri)
         }
     }
 
-    LaunchedEffect(Unit) {
+    LifecycleResumeEffect(Unit) {
         viewModel.refresh()
+        onPauseOrDispose {}
     }
 
     // Import preview dialog

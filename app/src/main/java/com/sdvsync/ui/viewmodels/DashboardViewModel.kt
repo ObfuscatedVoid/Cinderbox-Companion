@@ -1,8 +1,9 @@
 package com.sdvsync.ui.viewmodels
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.cinderbox.CinderboxLayoutEvents
@@ -56,7 +57,7 @@ data class DashboardState(
 )
 
 class DashboardViewModel(
-    private val context: Context,
+    context: Context,
     private val clientManager: SteamClientManager,
     private val authenticator: SteamAuthenticator,
     private val cloudService: SteamCloudService,
@@ -65,7 +66,7 @@ class DashboardViewModel(
     private val conflictResolver: ConflictResolver,
     private val bundleManager: SaveBundleManager,
     private val sessionStore: SteamSessionStore
-) : ViewModel() {
+) : AndroidViewModel(context.applicationContext as Application) {
 
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
@@ -374,6 +375,8 @@ class DashboardViewModel(
         }
         throw lastException ?: RuntimeException("Failed after $maxRetries retries")
     }
+
+    private val context get() = getApplication<Application>()
 
     companion object {
         private const val TAG = "Dashboard"

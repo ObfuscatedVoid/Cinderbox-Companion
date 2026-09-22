@@ -1,8 +1,9 @@
 package com.sdvsync.ui.viewmodels
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.cinderbox.CinderboxLayoutEvents
 import com.sdvsync.logging.AppLogger
@@ -45,11 +46,13 @@ data class ModManagerState(
 )
 
 class ModManagerViewModel(
-    private val context: Context,
+    context: Context,
     private val fileManager: ModFileManager,
     private val dataStore: ModDataStore,
     private val updateChecker: SmapiUpdateChecker
-) : ViewModel() {
+) : AndroidViewModel(context.applicationContext as Application) {
+
+    private val context get() = getApplication<Application>()
 
     companion object {
         private const val TAG = "ModManagerVM"

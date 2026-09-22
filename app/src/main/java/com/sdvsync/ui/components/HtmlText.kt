@@ -108,12 +108,12 @@ fun HtmlText(html: String, textColor: Int, linkColor: Int, textSizeSp: Float, mo
         factory = { ctx ->
             TextView(ctx).apply {
                 movementMethod = LinkMovementMethod.getInstance()
-                setTextColor(textColor)
-                setLinkTextColor(linkColor)
-                textSize = textSizeSp
             }
         },
         update = { tv ->
+            tv.setTextColor(textColor)
+            tv.setLinkTextColor(linkColor)
+            tv.textSize = textSizeSp
             tv.text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT)
         }
     )

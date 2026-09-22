@@ -33,6 +33,7 @@ class SaveBackupManager(private val context: Context) {
     /**
      * Update the max backup count and immediately prune all save folders.
      */
+    @Synchronized
     fun setMaxBackupsAndPrune(count: Int) {
         maxBackups = count.coerceIn(MIN_MAX_BACKUPS, MAX_MAX_BACKUPS)
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -43,6 +44,7 @@ class SaveBackupManager(private val context: Context) {
     /**
      * Prune backups across all save folders to the current maxBackups limit.
      */
+    @Synchronized
     fun pruneAllSaves() {
         backupRoot.listFiles()?.filter { it.isDirectory }?.forEach { saveDir ->
             pruneBackups(saveDir.name)
@@ -53,6 +55,7 @@ class SaveBackupManager(private val context: Context) {
      * Create a backup from in-memory save data.
      * Cleans up partial writes on failure.
      */
+    @Synchronized
     fun backupSaveData(saveFolderName: String, files: Map<String, ByteArray>): File {
         AppLogger.d(TAG, "backupSaveData: starting backup of $saveFolderName (${files.size} files)")
         require(files.isNotEmpty()) { "Cannot back up an empty save" }
@@ -85,6 +88,7 @@ class SaveBackupManager(private val context: Context) {
     /**
      * List available backups for a save, newest first.
      */
+    @Synchronized
     fun listBackups(saveFolderName: String): List<File> {
         requireSafeSaveName(saveFolderName)
         val saveBackupDir = File(backupRoot, saveFolderName)

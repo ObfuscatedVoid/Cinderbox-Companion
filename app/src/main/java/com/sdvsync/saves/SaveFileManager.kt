@@ -24,16 +24,16 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
     /**
      * List all local saves with their metadata.
      */
-    suspend fun listLocalSaves(): List<LocalSave> {
+    suspend fun listLocalSaves(): List<LocalSave> = writeMutex.withLock {
         val (fileAccess, basePath) = resolveLocation()
         val savesDir = File(basePath)
         val folders = fileAccess.listDirectories(savesDir) ?: run {
             check(!fileAccess.exists(savesDir)) { "Cannot read the save directory" }
-            return emptyList()
+            return@withLock emptyList()
         }
         AppLogger.d(TAG, "listLocalSaves: found ${folders.size} folders in $basePath")
 
-        return folders.mapNotNull { folderName ->
+        folders.mapNotNull { folderName ->
             val saveDir = File(savesDir, folderName)
             val infoFile = File(saveDir, "SaveGameInfo")
 
@@ -52,13 +52,13 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
      * Read all files for a specific local save.
      * Returns map of filename -> bytes.
      */
-    suspend fun readLocalSave(saveFolderName: String): Map<String, ByteArray> {
+    suspend fun readLocalSave(saveFolderName: String): Map<String, ByteArray> = writeMutex.withLock {
         requireSafeName(saveFolderName)
         val (fileAccess, basePath) = resolveLocation()
         val saveDir = File(basePath, saveFolderName)
         val files = fileAccess.listFiles(saveDir) ?: run {
             check(!fileAccess.exists(saveDir)) { "Cannot read save folder: $saveFolderName" }
-            return emptyMap()
+            return@withLock emptyMap()
         }
 
         check(
@@ -75,7 +75,7 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
             }
         }
         AppLogger.d(TAG, "readLocalSave($saveFolderName): read ${result.size}/${files.size} files")
-        return result
+        result
     }
 
     /**

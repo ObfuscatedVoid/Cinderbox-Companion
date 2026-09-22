@@ -19,10 +19,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -56,7 +61,7 @@ import com.sdvsync.ui.viewmodels.CinderboxMigrationViewModel
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
 import com.sdvsync.ui.viewmodels.ModBrowseViewModel
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -69,7 +74,7 @@ class MainActivity : ComponentActivity() {
     private val downloadManager: ModDownloadManager by inject()
 
     /** URI from an incoming .sdvsync file intent, consumed by the DashboardScreen. */
-    var pendingImportUri: android.net.Uri? = null
+    var pendingImportUri by mutableStateOf<Uri?>(null)
         private set
 
     fun consumePendingImportUri(): android.net.Uri? {
@@ -98,7 +103,7 @@ class MainActivity : ComponentActivity() {
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return
         val uri = intent.data
-        if (uri != null && intent.action == Intent.ACTION_VIEW && uri.scheme != "nxm") {
+        if (uri != null && intent.action == Intent.ACTION_VIEW && uri.scheme in setOf("content", "file")) {
             // Likely a .sdvsync file opened via share/file manager
             pendingImportUri = uri
             intent.data = null
@@ -109,7 +114,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleNxmIntent(intent: Intent?) {
         val uri = intent?.data ?: return
-        if (uri.scheme != "nxm") return
+        if (uri.scheme in setOf("content", "file")) return
 
         val parsed = parseNxmUrl(uri)
         if (parsed == null) {
@@ -119,7 +124,7 @@ class MainActivity : ComponentActivity() {
 
         Toast.makeText(this, getString(R.string.nxm_starting_download), Toast.LENGTH_SHORT).show()
 
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val url = nexusSource.getDownloadUrl(
                     parsed.modId,
@@ -129,11 +134,13 @@ class MainActivity : ComponentActivity() {
                 )
                 val modName = try {
                     nexusSource.getModDetails(parsed.modId).name
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     "Mod #${parsed.modId}"
                 }
                 downloadManager.startDownload(url, modName, parsed.modId, "nexus")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 AppLogger.e("MainActivity", "NXM download failed", e)
                 launch(Dispatchers.Main) {
                     Toast.makeText(
@@ -148,25 +155,6 @@ class MainActivity : ComponentActivity() {
         // Clear the intent data so it doesn't re-trigger
         intent?.data = null
     }
-
-    /**
-     * Parse an nxm:// URL into its components.
-     * Format: nxm://stardewvalley/mods/{modId}/files/{fileId}?key={key}&expires={expires}
-     */
-    private fun parseNxmUrl(uri: Uri): NxmDownloadParams? {
-        val segments = uri.pathSegments ?: return null
-        // Expected: [mods, {modId}, files, {fileId}]
-        if (segments.size < 4 || segments[0] != "mods" || segments[2] != "files") return null
-
-        val modId = segments[1]
-        val fileId = segments[3]
-        val key = uri.getQueryParameter("key") ?: return null
-        val expires = uri.getQueryParameter("expires") ?: return null
-
-        return NxmDownloadParams(modId, fileId, key, expires)
-    }
-
-    private data class NxmDownloadParams(val modId: String, val fileId: String, val key: String, val expires: String)
 }
 
 private const val NAV_ANIM_DURATION = 160
@@ -177,6 +165,14 @@ private val BOTTOM_BAR_ROUTES = setOf("saves", "mods", "game_download", "setting
 
 @Composable
 fun SdvSyncNavGraph(navController: NavHostController) {
+    val activity = LocalContext.current as? MainActivity
+    val entry by navController.currentBackStackEntryAsState()
+    LaunchedEffect(activity?.pendingImportUri, entry?.destination?.route) {
+        if (activity?.pendingImportUri != null && entry?.destination?.route !in listOf(null, "login")) {
+            navController.popBackStack("main", inclusive = false)
+            navController.getBackStackEntry("main").savedStateHandle["switchToTab"] = "saves"
+        }
+    }
     NavHost(
         navController = navController,
         startDestination = "login",
@@ -209,8 +205,8 @@ fun SdvSyncNavGraph(navController: NavHostController) {
         }
 
         // Main section with bottom bar
-        composable("main") {
-            MainScreen(parentNavController = navController)
+        composable("main") { entry ->
+            MainScreen(parentNavController = navController, mainEntry = entry)
         }
 
         // Saves sub-screens (outside bottom bar scaffold for clean back stack)
@@ -230,8 +226,8 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 hasCloud = hasCloud,
                 hasLocal = hasLocal,
                 onBack = { navController.popBackStack() },
-                onBackupsClick = { navController.navigate("backups/$saveFolderName") },
-                onViewSaveClick = { navController.navigate("save_viewer/$saveFolderName") },
+                onBackupsClick = { navController.navigate("backups/${Uri.encode(saveFolderName)}") },
+                onViewSaveClick = { navController.navigate("save_viewer/${Uri.encode(saveFolderName)}") },
                 onNavigateToSettings = {
                     navController.previousBackStackEntry
                         ?.savedStateHandle?.set("switchToTab", "settings")
@@ -295,7 +291,7 @@ fun SdvSyncNavGraph(navController: NavHostController) {
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onModClick = { modId, source ->
-                    navController.navigate("mod_detail/$modId/$source")
+                    navController.navigate("mod_detail/${Uri.encode(modId)}/${Uri.encode(source)}")
                 }
             )
         }
@@ -319,7 +315,7 @@ fun SdvSyncNavGraph(navController: NavHostController) {
 }
 
 @Composable
-fun MainScreen(parentNavController: NavHostController) {
+fun MainScreen(parentNavController: NavHostController, mainEntry: NavBackStackEntry) {
     val updateViewModel: AppUpdateViewModel = koinViewModel()
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     val migrationViewModel: CinderboxMigrationViewModel = koinViewModel()
@@ -334,18 +330,21 @@ fun MainScreen(parentNavController: NavHostController) {
     val mainNavController = rememberNavController()
 
     // Handle tab switch requests from parent nav (e.g. SyncDetailScreen → Settings)
-    val switchToTab = parentNavController.currentBackStackEntry
-        ?.savedStateHandle?.get<String>("switchToTab")
+    val switchToTab by mainEntry.savedStateHandle.getStateFlow<String?>(
+        "switchToTab",
+        null
+    ).collectAsStateWithLifecycle()
     LaunchedEffect(switchToTab) {
-        if (switchToTab != null) {
-            mainNavController.navigate(switchToTab) {
+        val requestedTab = switchToTab
+        if (requestedTab != null) {
+            mainNavController.navigate(requestedTab) {
                 popUpTo(mainNavController.graph.findStartDestination().id) {
                     saveState = true
                 }
                 launchSingleTop = true
                 restoreState = true
             }
-            parentNavController.currentBackStackEntry?.savedStateHandle?.remove<String>("switchToTab")
+            mainEntry.savedStateHandle.set<String?>("switchToTab", null)
         }
     }
 
@@ -388,7 +387,7 @@ fun MainScreen(parentNavController: NavHostController) {
             composable("saves") {
                 DashboardScreen(
                     onSaveClick = { folderName, hasCloud, hasLocal ->
-                        parentNavController.navigate("sync_detail/$folderName/$hasCloud/$hasLocal")
+                        parentNavController.navigate("sync_detail/${Uri.encode(folderName)}/$hasCloud/$hasLocal")
                     },
                     onSyncLogClick = {
                         parentNavController.navigate("sync_log")
@@ -403,7 +402,7 @@ fun MainScreen(parentNavController: NavHostController) {
                         parentNavController.navigate("mods_browse")
                     },
                     onModClick = { uniqueId ->
-                        parentNavController.navigate("installed_mod/$uniqueId")
+                        parentNavController.navigate("installed_mod/${Uri.encode(uniqueId)}")
                     }
                 )
             }

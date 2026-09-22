@@ -1,9 +1,10 @@
 package com.sdvsync.ui.viewmodels
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.StringRes
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdvsync.R
 import com.sdvsync.autosync.AutoSyncService
@@ -65,7 +66,7 @@ data class SettingsState(
 )
 
 class SettingsViewModel(
-    private val context: Context,
+    context: Context,
     private val fileAccessDetector: FileAccessDetector,
     private val authenticator: SteamAuthenticator,
     private val backupManager: SaveBackupManager,
@@ -73,7 +74,9 @@ class SettingsViewModel(
     private val nexusSource: NexusModSource,
     private val releaseChecker: GitHubReleaseChecker,
     private val appUpdateManager: AppUpdateManager
-) : ViewModel() {
+) : AndroidViewModel(context.applicationContext as Application) {
+
+    private val context get() = getApplication<Application>()
 
     companion object {
         private const val TAG = "SettingsVM"
