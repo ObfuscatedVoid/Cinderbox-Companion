@@ -99,10 +99,13 @@ class InstalledModDetailViewModel(
         val mod = _state.value.mod ?: return
         runOperation {
             check(fileManager.removeMod(mod.folderName)) { "Could not remove the mod" }
-            run {
+            try {
                 dataStore.removeModMetadata(mod.manifest.uniqueID)
-                _state.update { it.copy(removed = true, showRemoveDialog = false) }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                AppLogger.w(TAG, "Mod removed but its cached metadata could not be cleared", e)
             }
+            _state.update { it.copy(removed = true, showRemoveDialog = false) }
         }
     }
 

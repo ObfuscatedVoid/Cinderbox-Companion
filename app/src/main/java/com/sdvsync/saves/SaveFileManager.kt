@@ -35,6 +35,7 @@ class SaveFileManager(private val metadataParser: SaveMetadataParser, private va
         AppLogger.d(TAG, "listLocalSaves: found ${folders.size} folders in $basePath")
 
         folders.mapNotNull { folderName ->
+            requireSafeName(folderName)
             val saveDir = File(savesDir, folderName)
             val infoFile = File(saveDir, "SaveGameInfo")
 

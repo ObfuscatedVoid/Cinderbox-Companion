@@ -293,7 +293,7 @@ fun SettingsScreen(onLogout: () -> Unit, viewModel: SettingsViewModel = koinView
             }
 
             // SAF
-            if (state.safEligible && !state.hasRoot) {
+            if (!state.hasRoot) {
                 Spacer(Modifier.height(12.dp))
                 SAFAccessSection(
                     configured = state.safConfigured,

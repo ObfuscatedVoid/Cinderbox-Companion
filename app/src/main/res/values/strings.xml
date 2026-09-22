@@ -198,10 +198,10 @@
     <string name="settings_saf_title">Storage Access Framework</string>
     <string name="settings_saf_configured">Save directory access configured.</string>
     <string name="settings_saf_revoke">Revoke Access</string>
-    <string name="settings_saf_instructions">Grant access to Stardew Valley saves without root or Shizuku. Navigate to: Android > data > com.chucklefish.stardewvalley > files > Saves</string>
+    <string name="settings_saf_instructions">Select a directory containing your save folders. Each save folder must contain its save file and SaveGameInfo.</string>
     <string name="settings_saf_select">Select Save Directory</string>
     <string name="settings_saf_staging_configured">Staging directory configured. Saves will be read/written here.</string>
-    <string name="settings_saf_staging_instructions">On Android 14+, direct access may be blocked. Pick any folder as a staging area \u2014 you\'ll manually copy saves between it and the game directory.</string>
+    <string name="settings_saf_staging_instructions">Android 11+ restricts access to Android/data. Select a separate staging folder and manually copy saves between it and the game directory.</string>
 
     <!-- Staging mode -->
     <string name="staging_mode_title">Staging Mode</string>

@@ -3,7 +3,6 @@ package com.sdvsync.fileaccess
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -15,12 +14,7 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * File access using SAF (Storage Access Framework).
- * Works on Android 11+ (API 30+) for accessing Android/data/ via user-granted tree URI.
- * On Android 14+ the system picker may block navigation into Android/data/ on some devices,
- * but it still works on emulators and some custom ROMs.
- */
+/** File access within a directory selected through the system document picker. */
 class SAFFileAccess(
     private val context: Context,
     private val treeUri: Uri,
@@ -38,14 +32,8 @@ class SAFFileAccess(
         /** Synthetic base path used when SAF points to a staging directory. */
         const val STAGING_BASE_PATH = "/staging"
 
-        /** SAF for Android/data/ works on API 30+. May be restricted on API 34+ on some devices. */
-        fun isDeviceEligible(): Boolean = Build.VERSION.SDK_INT >= 30
-
-        /** Check if a persisted URI grant exists and the device is eligible. */
-        fun isAvailable(context: Context): Boolean {
-            if (!isDeviceEligible()) return false
-            return getPersistedUri(context) != null
-        }
+        /** Check if a persisted URI grant exists. */
+        fun isAvailable(context: Context): Boolean = getPersistedUri(context) != null
 
         /**
          * Check if the persisted SAF URI points to a staging directory
@@ -112,12 +100,10 @@ class SAFFileAccess(
      * and walking the tree.
      */
     private fun resolveDocument(file: File): DocumentFile? {
-        val relativePath = file.absolutePath.removePrefix(basePath)
-            .trimStart('/')
-        if (relativePath.isEmpty()) return treeRoot
+        val segments = documentSegments(basePath, file)
 
         var current = treeRoot
-        for (segment in relativePath.split("/")) {
+        for (segment in segments) {
             current = current.findFile(segment) ?: return null
         }
         return current
@@ -128,13 +114,11 @@ class SAFFileAccess(
      * Returns the parent DocumentFile for the given file.
      */
     private fun resolveParentCreating(file: File): DocumentFile? {
-        val parentPath = file.parentFile?.absolutePath ?: return null
-        val relativePath = parentPath.removePrefix(basePath)
-            .trimStart('/')
-        if (relativePath.isEmpty()) return treeRoot
+        val segments = documentSegments(basePath, file)
+        require(segments.isNotEmpty()) { "Cannot overwrite the selected directory" }
 
         var current = treeRoot
-        for (segment in relativePath.split("/")) {
+        for (segment in segments.dropLast(1)) {
             current = current.findFile(segment)
                 ?: current.createDirectory(segment)
                 ?: return null
@@ -202,6 +186,7 @@ class SAFFileAccess(
 
     override suspend fun deleteFile(file: File): Boolean = withContext(Dispatchers.IO) {
         try {
+            require(documentSegments(basePath, file).isNotEmpty()) { "Cannot delete the selected directory" }
             resolveDocument(file)?.delete() ?: false
         } catch (e: Exception) {
             AppLogger.e(TAG, "deleteFile failed: ${file.absolutePath}", e)
@@ -211,6 +196,11 @@ class SAFFileAccess(
 
     override suspend fun renameFile(from: File, to: File): Boolean = withContext(Dispatchers.IO) {
         try {
+            val source = documentSegments(basePath, from)
+            val destination = documentSegments(basePath, to)
+            require(source.isNotEmpty() && destination.isNotEmpty()) { "Cannot rename the selected directory" }
+            require(source.dropLast(1) == destination.dropLast(1)) { "Document rename cannot change directories" }
+            if (resolveDocument(to) != null) return@withContext false
             val doc = resolveDocument(from) ?: return@withContext false
             doc.renameTo(to.name)
         } catch (e: Exception) {
@@ -221,15 +211,15 @@ class SAFFileAccess(
 
     override suspend fun mkdirs(dir: File): Boolean = withContext(Dispatchers.IO) {
         try {
-            val relativePath = dir.absolutePath.removePrefix(basePath)
-                .trimStart('/')
-            if (relativePath.isEmpty()) return@withContext treeRoot.exists()
+            val segments = documentSegments(basePath, dir)
+            if (segments.isEmpty()) return@withContext treeRoot.exists()
 
             var current = treeRoot
-            for (segment in relativePath.split("/")) {
+            for (segment in segments) {
                 current = current.findFile(segment)
                     ?: current.createDirectory(segment)
                     ?: return@withContext false
+                if (!current.isDirectory) return@withContext false
             }
             true
         } catch (e: Exception) {

@@ -100,6 +100,17 @@ class GameDownloadService : Service() {
         return START_NOT_STICKY
     }
 
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        GameDownloadManager._progress.update {
+            it.copy(
+                state = DownloadState.ERROR,
+                errorMessage = "Android stopped the background download. Open the app to retry."
+            )
+        }
+        downloadJob?.cancel()
+        stopSelf()
+    }
+
     override fun onDestroy() {
         AppLogger.d(TAG, "Service destroying, cancelling download")
         downloadJob?.cancel()
@@ -324,10 +335,16 @@ class GameDownloadService : Service() {
             }
         } catch (e: CancellationException) {
             AppLogger.d(TAG, "Download cancelled")
-            GameDownloadManager._progress.value = DownloadProgress(
-                state = DownloadState.CANCELLED,
-                errorMessage = getString(R.string.download_cancelled)
-            )
+            GameDownloadManager._progress.update {
+                if (it.state == DownloadState.ERROR) {
+                    it
+                } else {
+                    DownloadProgress(
+                        state = DownloadState.CANCELLED,
+                        errorMessage = getString(R.string.download_cancelled)
+                    )
+                }
+            }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Download error", e)
             GameDownloadManager._progress.value = DownloadProgress(
@@ -416,7 +433,7 @@ class GameDownloadService : Service() {
             verificationPassed = passed,
             verificationErrors = errors
         )
-        updateNotification(getString(R.string.download_complete))
+        updateNotification(getString(if (passed) R.string.download_complete else R.string.download_error))
     }
 
     private fun createNotificationChannel() {

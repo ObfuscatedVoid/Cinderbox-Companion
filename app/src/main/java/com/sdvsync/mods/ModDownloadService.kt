@@ -81,6 +81,17 @@ class ModDownloadService : Service() {
         return START_NOT_STICKY
     }
 
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        ModDownloadManager._progress.update {
+            it.copy(
+                state = ModDownloadState.ERROR,
+                errorMessage = "Android stopped the background download. Open the app to retry."
+            )
+        }
+        downloadJob?.cancel()
+        stopSelf()
+    }
+
     override fun onDestroy() {
         downloadJob?.cancel()
         serviceScope.cancel()

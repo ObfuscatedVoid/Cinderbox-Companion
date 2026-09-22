@@ -103,7 +103,7 @@ class FileAccessDetector(private val context: Context) {
             .edit { putBoolean(KEY_CINDERBOX_MODE, enabled) }
     }
 
-    // AllFilesAccess.isAvailable(context) probes the official SDV dir, which Android 14+ blocks.
+    // The official Android save directory may remain restricted even with all-files access.
     fun isAllFilesUsable(): Boolean = AllFilesAccess.isAvailable(context) ||
         (isCinderboxMode() && AllFilesAccess.isPermissionGranted(context))
 
