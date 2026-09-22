@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -43,8 +42,8 @@ fun StoragePermissionDialog(onPermissionResult: () -> Unit, onDismiss: () -> Uni
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            modifier = Modifier.fillMaxWidth().pixelBorder(),
-            shape = RectangleShape,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -61,11 +60,11 @@ fun StoragePermissionDialog(onPermissionResult: () -> Unit, onDismiss: () -> Uni
                 )
                 Spacer(Modifier.height(16.dp))
                 Row(modifier = Modifier.align(Alignment.End)) {
-                    StardewOutlinedButton(onClick = onDismiss) {
+                    AppOutlinedButton(onClick = onDismiss) {
                         Text(stringResource(R.string.action_cancel))
                     }
                     Spacer(Modifier.width(8.dp))
-                    StardewButton(
+                    AppButton(
                         onClick = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 try {
@@ -80,7 +79,7 @@ fun StoragePermissionDialog(onPermissionResult: () -> Unit, onDismiss: () -> Uni
                                 }
                             }
                         },
-                        variant = StardewButtonVariant.Action
+                        variant = ButtonVariant.Action
                     ) {
                         Text(stringResource(R.string.storage_permission_grant))
                     }

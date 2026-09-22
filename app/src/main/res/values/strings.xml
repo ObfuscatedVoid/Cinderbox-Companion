@@ -633,4 +633,6 @@
     <string name="settings_update_check_title">Check for app updates</string>
     <string name="settings_update_check_desc">Show update dialog on login when a new version is available</string>
     <string name="action_done">Done</string>
+    <string name="sync_download_device">Download to device</string>
+    <string name="sync_upload_steam">Upload to Steam Cloud</string>
 </resources>

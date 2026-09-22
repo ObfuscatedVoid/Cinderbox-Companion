@@ -14,17 +14,16 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.saves.BackupInfo
 import com.sdvsync.saves.SaveMetadata
-import com.sdvsync.ui.animation.StaggeredAnimatedItem
-import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDialog
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppOutlinedButton
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
 import com.sdvsync.ui.components.EmptyState
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewDialog
-import com.sdvsync.ui.components.StardewOutlinedButton
-import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.BackupListViewModel
 import java.io.File
@@ -49,11 +48,11 @@ fun BackupListScreen(saveFolderName: String, onBack: () -> Unit, viewModel: Back
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = stringResource(R.string.backups_title),
                 navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
+                    AppIconButton(
+                        imageVector = AppIcons.Back,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
                         tint = MaterialTheme.colorScheme.primary
@@ -69,7 +68,7 @@ fun BackupListScreen(saveFolderName: String, onBack: () -> Unit, viewModel: Back
                         .fillMaxSize()
                         .padding(padding)
                 ) {
-                    PixelLoadingSpinner(modifier = Modifier.align(Alignment.Center))
+                    LoadingIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             }
 
@@ -113,7 +112,7 @@ fun BackupListScreen(saveFolderName: String, onBack: () -> Unit, viewModel: Back
                     // Current save reference card
                     state.currentMetadata?.let { meta ->
                         item {
-                            StardewCard(modifier = Modifier.fillMaxWidth()) {
+                            AppCard(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(
                                         stringResource(R.string.backups_current_save),
@@ -130,14 +129,12 @@ fun BackupListScreen(saveFolderName: String, onBack: () -> Unit, viewModel: Back
                     }
 
                     itemsIndexed(state.backups, key = { _, b -> b.backupDir.absolutePath }) { index, backup ->
-                        StaggeredAnimatedItem(index = index) {
-                            BackupCard(
-                                backup = backup,
-                                currentMetadata = state.currentMetadata,
-                                isRestoring = state.isRestoring,
-                                onRestore = { confirmRestore = backup.backupDir }
-                            )
-                        }
+                        BackupCard(
+                            backup = backup,
+                            currentMetadata = state.currentMetadata,
+                            isRestoring = state.isRestoring,
+                            onRestore = { confirmRestore = backup.backupDir }
+                        )
                     }
                 }
             }
@@ -145,23 +142,23 @@ fun BackupListScreen(saveFolderName: String, onBack: () -> Unit, viewModel: Back
     }
 
     confirmRestore?.let { backupDir ->
-        StardewDialog(
+        AppDialog(
             onDismissRequest = { confirmRestore = null },
             title = stringResource(R.string.backups_restore_title),
             text = stringResource(R.string.backups_restore_message),
             confirmButton = {
-                StardewButton(
+                AppButton(
                     onClick = {
                         confirmRestore = null
                         viewModel.restoreBackup(backupDir)
                     },
-                    variant = StardewButtonVariant.Danger
+                    variant = ButtonVariant.Danger
                 ) {
                     Text(stringResource(R.string.backups_restore))
                 }
             },
             dismissButton = {
-                StardewOutlinedButton(onClick = { confirmRestore = null }) {
+                AppOutlinedButton(onClick = { confirmRestore = null }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }
@@ -176,7 +173,7 @@ private fun BackupCard(
     isRestoring: Boolean,
     onRestore: () -> Unit
 ) {
-    StardewCard(modifier = Modifier.fillMaxWidth()) {
+    AppCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 backup.timestamp,
@@ -221,9 +218,9 @@ private fun BackupCard(
 
             Spacer(Modifier.height(12.dp))
 
-            StardewButton(
+            AppButton(
                 onClick = onRestore,
-                variant = StardewButtonVariant.Danger,
+                variant = ButtonVariant.Danger,
                 enabled = !isRestoring,
                 modifier = Modifier.fillMaxWidth()
             ) {

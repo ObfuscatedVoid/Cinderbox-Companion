@@ -15,20 +15,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
-import com.sdvsync.ui.animation.StaggeredAnimatedItem
-import com.sdvsync.ui.components.ClockData
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDialog
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppOutlinedButton
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
 import com.sdvsync.ui.components.EmptyState
-import com.sdvsync.ui.components.ImportData
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.RefreshData
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.components.SaveCard
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewDialog
-import com.sdvsync.ui.components.StardewOutlinedButton
-import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.viewmodels.DashboardViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -79,7 +76,7 @@ fun DashboardScreen(
             3 -> stringResource(R.string.save_season_winter)
             else -> stringResource(R.string.save_season_unknown)
         }
-        StardewDialog(
+        AppDialog(
             onDismissRequest = { viewModel.dismissImportPreview() },
             title = stringResource(R.string.import_preview_title),
             text = buildString {
@@ -99,15 +96,15 @@ fun DashboardScreen(
                 }
             },
             confirmButton = {
-                StardewButton(
+                AppButton(
                     onClick = { viewModel.confirmImport() },
-                    variant = StardewButtonVariant.Action
+                    variant = ButtonVariant.Action
                 ) {
                     Text(stringResource(R.string.import_confirm))
                 }
             },
             dismissButton = {
-                StardewOutlinedButton(onClick = { viewModel.dismissImportPreview() }) {
+                AppOutlinedButton(onClick = { viewModel.dismissImportPreview() }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }
@@ -116,23 +113,23 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = stringResource(R.string.dashboard_title),
                 actions = {
-                    PixelIconButton(
-                        pixelData = ImportData,
+                    AppIconButton(
+                        imageVector = AppIcons.Import,
                         onClick = {
                             importLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
                         },
                         contentDescription = stringResource(R.string.import_button)
                     )
-                    PixelIconButton(
-                        pixelData = RefreshData,
+                    AppIconButton(
+                        imageVector = AppIcons.Refresh,
                         onClick = { viewModel.refresh(isUserRefresh = true) },
                         contentDescription = stringResource(R.string.action_refresh)
                     )
-                    PixelIconButton(
-                        pixelData = ClockData,
+                    AppIconButton(
+                        imageVector = AppIcons.History,
                         onClick = onSyncLogClick,
                         contentDescription = stringResource(R.string.sync_log_title)
                     )
@@ -150,7 +147,7 @@ fun DashboardScreen(
             when {
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        PixelLoadingSpinner(
+                        LoadingIndicator(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
@@ -169,7 +166,7 @@ fun DashboardScreen(
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Spacer(Modifier.height(16.dp))
-                            StardewButton(onClick = { viewModel.refresh() }) {
+                            AppButton(onClick = { viewModel.refresh() }) {
                                 Text(stringResource(R.string.action_retry))
                             }
                         }
@@ -194,7 +191,7 @@ fun DashboardScreen(
                     ) {
                         if (state.isStagingMode) {
                             item {
-                                StardewCard {
+                                AppCard {
                                     Column(modifier = Modifier.padding(12.dp)) {
                                         Text(
                                             stringResource(R.string.staging_mode_title),
@@ -211,13 +208,11 @@ fun DashboardScreen(
                                 }
                             }
                         }
-                        itemsIndexed(state.saves) { index, save ->
-                            StaggeredAnimatedItem(index = index) {
-                                SaveCard(
-                                    save = save,
-                                    onClick = { onSaveClick(save.folderName, save.hasCloud, save.hasLocal) }
-                                )
-                            }
+                        itemsIndexed(state.saves, key = { _, save -> save.folderName }) { _, save ->
+                            SaveCard(
+                                save = save,
+                                onClick = { onSaveClick(save.folderName, save.hasCloud, save.hasLocal) }
+                            )
                         }
                     }
                 }

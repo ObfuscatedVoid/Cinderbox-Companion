@@ -4,11 +4,6 @@ import android.content.Intent
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -24,18 +18,18 @@ import androidx.core.content.FileProvider
 import com.sdvsync.R
 import com.sdvsync.sync.SyncDirection
 import com.sdvsync.sync.SyncResult
-import com.sdvsync.ui.components.ArrowLeftData
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.PixelSyncIcon
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewDialog
-import com.sdvsync.ui.components.StardewOutlinedButton
-import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDialog
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppOutlinedButton
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.components.StoragePermissionDialog
 import com.sdvsync.ui.components.SyncErrorCard
+import com.sdvsync.ui.components.SyncIcon
 import com.sdvsync.ui.viewmodels.SyncDetailViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -51,6 +45,12 @@ fun SyncDetailScreen(
     viewModel: SyncDetailViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val hasDeviceSave =
+        hasLocal ||
+            (state.result is SyncResult.Success && state.lastOperation == com.sdvsync.ui.viewmodels.SyncOperation.PULL)
+    val hasSteamSave =
+        hasCloud ||
+            (state.result is SyncResult.Success && state.lastOperation == com.sdvsync.ui.viewmodels.SyncOperation.PUSH)
     var showPullConfirm by remember { mutableStateOf(false) }
     var showPushConfirm by remember { mutableStateOf(false) }
 
@@ -93,11 +93,11 @@ fun SyncDetailScreen(
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = saveFolderName.substringBefore("_"),
                 navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
+                    AppIconButton(
+                        imageVector = AppIcons.Back,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
                         tint = MaterialTheme.colorScheme.primary
@@ -116,13 +116,13 @@ fun SyncDetailScreen(
         ) {
             Text(
                 saveFolderName,
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.bodyMedium
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
 
             if (state.isStagingMode) {
-                StardewCard(modifier = Modifier.fillMaxWidth()) {
+                AppCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         stringResource(R.string.staging_push_reminder),
                         modifier = Modifier.padding(12.dp),
@@ -134,63 +134,63 @@ fun SyncDetailScreen(
             }
 
             // Action buttons
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StardewButton(
+                AppButton(
                     onClick = {
-                        if (hasLocal) {
+                        if (hasDeviceSave) {
                             showPullConfirm = true
                         } else {
                             viewModel.pullSave(saveFolderName)
                         }
                     },
-                    modifier = Modifier.weight(1f),
-                    variant = StardewButtonVariant.Primary,
-                    enabled = !state.isSyncing
+                    modifier = Modifier.fillMaxWidth(),
+                    variant = ButtonVariant.Primary,
+                    enabled = hasSteamSave && !state.isSyncing
                 ) {
-                    PixelSyncIcon(direction = SyncDirection.PULL, size = 18.dp)
+                    SyncIcon(direction = SyncDirection.PULL, size = 18.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_pull))
+                    Text(stringResource(R.string.sync_download_device))
                 }
 
-                StardewButton(
+                AppButton(
                     onClick = {
-                        if (hasCloud) {
+                        if (hasSteamSave) {
                             showPushConfirm = true
                         } else {
                             viewModel.pushSave(saveFolderName)
                         }
                     },
-                    modifier = Modifier.weight(1f),
-                    variant = StardewButtonVariant.Action,
-                    enabled = !state.isSyncing
+                    modifier = Modifier.fillMaxWidth(),
+                    variant = ButtonVariant.Action,
+                    enabled = hasDeviceSave && !state.isSyncing
                 ) {
-                    PixelSyncIcon(direction = SyncDirection.PUSH, size = 18.dp)
+                    SyncIcon(direction = SyncDirection.PUSH, size = 18.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_push))
+                    Text(stringResource(R.string.sync_upload_steam))
                 }
             }
 
             // Extra action buttons (View Save, View Backups, Export)
-            if (hasLocal) {
+            if (hasDeviceSave) {
                 Spacer(Modifier.height(16.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StardewButton(
+                    AppButton(
                         onClick = onViewSaveClick,
                         modifier = Modifier.weight(1f),
-                        variant = StardewButtonVariant.Gold,
+                        variant = ButtonVariant.Gold,
                         enabled = !state.isSyncing
                     ) {
                         Text(stringResource(R.string.save_viewer_button))
                     }
 
-                    StardewOutlinedButton(
+                    AppOutlinedButton(
                         onClick = onBackupsClick,
                         modifier = Modifier.weight(1f),
                         enabled = !state.isSyncing
@@ -201,7 +201,7 @@ fun SyncDetailScreen(
 
                 Spacer(Modifier.height(8.dp))
 
-                StardewOutlinedButton(
+                AppOutlinedButton(
                     onClick = { viewModel.exportSave(saveFolderName) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isSyncing && !state.isExporting
@@ -233,7 +233,7 @@ fun SyncDetailScreen(
             if (mismatch != null && hasLocal) {
                 Spacer(Modifier.height(16.dp))
                 val ctx = LocalContext.current
-                StardewCard(modifier = Modifier.fillMaxWidth()) {
+                AppCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             stringResource(R.string.mod_mismatch_title),
@@ -280,7 +280,7 @@ fun SyncDetailScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(8.dp))
-                        StardewOutlinedButton(
+                        AppOutlinedButton(
                             onClick = { viewModel.updateModAssociation(saveFolderName) }
                         ) {
                             Text(stringResource(R.string.mod_mismatch_update))
@@ -291,21 +291,9 @@ fun SyncDetailScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Sync status with pulsing pixel spinner
+            // Sync progress
             if (state.isSyncing) {
-                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                val pulseAlpha by infiniteTransition.animateFloat(
-                    initialValue = 0.5f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(800),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "pulseAlpha"
-                )
-                PixelLoadingSpinner(
-                    modifier = Modifier.alpha(pulseAlpha)
-                )
+                LoadingIndicator()
                 Spacer(Modifier.height(12.dp))
                 Text(state.progressMessage, style = MaterialTheme.typography.bodyMedium)
             }
@@ -320,7 +308,7 @@ fun SyncDetailScreen(
                         )
                         if (result.warning != null) {
                             Spacer(Modifier.height(12.dp))
-                            StardewCard(modifier = Modifier.fillMaxWidth()) {
+                            AppCard(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     result.warning,
                                     modifier = Modifier.padding(12.dp),
@@ -331,7 +319,7 @@ fun SyncDetailScreen(
                         }
                         if (state.isStagingMode) {
                             Spacer(Modifier.height(12.dp))
-                            StardewCard(modifier = Modifier.fillMaxWidth()) {
+                            AppCard(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     stringResource(R.string.staging_pull_reminder),
                                     modifier = Modifier.padding(12.dp),
@@ -354,7 +342,7 @@ fun SyncDetailScreen(
                         )
                     }
                     is SyncResult.NeedsConflictResolution -> {
-                        StardewCard {
+                        AppCard {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     stringResource(R.string.sync_conflict_title),
@@ -370,7 +358,7 @@ fun SyncDetailScreen(
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    StardewOutlinedButton(
+                                    AppOutlinedButton(
                                         onClick = {
                                             viewModel.clearResult()
                                             viewModel.pullSave(saveFolderName, force = true)
@@ -378,12 +366,12 @@ fun SyncDetailScreen(
                                     ) {
                                         Text(stringResource(R.string.sync_keep_cloud))
                                     }
-                                    StardewButton(
+                                    AppButton(
                                         onClick = {
                                             viewModel.clearResult()
                                             viewModel.pushSave(saveFolderName, force = true)
                                         },
-                                        variant = StardewButtonVariant.Action
+                                        variant = ButtonVariant.Action
                                     ) {
                                         Text(stringResource(R.string.sync_keep_local))
                                     }
@@ -395,10 +383,10 @@ fun SyncDetailScreen(
             }
 
             // Health Check section
-            if (hasLocal) {
+            if (hasDeviceSave) {
                 Spacer(Modifier.height(24.dp))
 
-                StardewCard(modifier = Modifier.fillMaxWidth()) {
+                AppCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -409,7 +397,7 @@ fun SyncDetailScreen(
                                 stringResource(R.string.health_check_title),
                                 style = MaterialTheme.typography.titleSmall
                             )
-                            StardewOutlinedButton(
+                            AppOutlinedButton(
                                 onClick = { viewModel.checkSaveHealth(saveFolderName) },
                                 enabled = !state.isCheckingHealth && !state.isSyncing
                             ) {
@@ -477,12 +465,12 @@ fun SyncDetailScreen(
     }
 
     if (showPullConfirm) {
-        StardewDialog(
+        AppDialog(
             onDismissRequest = { showPullConfirm = false },
             title = stringResource(R.string.sync_confirm_pull_title),
             text = stringResource(R.string.sync_confirm_pull_message),
             confirmButton = {
-                StardewButton(onClick = {
+                AppButton(onClick = {
                     showPullConfirm = false
                     viewModel.pullSave(saveFolderName)
                 }) {
@@ -490,7 +478,7 @@ fun SyncDetailScreen(
                 }
             },
             dismissButton = {
-                StardewOutlinedButton(onClick = { showPullConfirm = false }) {
+                AppOutlinedButton(onClick = { showPullConfirm = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }
@@ -498,12 +486,12 @@ fun SyncDetailScreen(
     }
 
     if (showPushConfirm) {
-        StardewDialog(
+        AppDialog(
             onDismissRequest = { showPushConfirm = false },
             title = stringResource(R.string.sync_confirm_push_title),
             text = stringResource(R.string.sync_confirm_push_message),
             confirmButton = {
-                StardewButton(onClick = {
+                AppButton(onClick = {
                     showPushConfirm = false
                     viewModel.pushSave(saveFolderName)
                 }) {
@@ -511,7 +499,7 @@ fun SyncDetailScreen(
                 }
             },
             dismissButton = {
-                StardewOutlinedButton(onClick = { showPushConfirm = false }) {
+                AppOutlinedButton(onClick = { showPushConfirm = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }

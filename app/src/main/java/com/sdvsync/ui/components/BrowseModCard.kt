@@ -13,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -31,7 +30,7 @@ private fun formatCount(count: Int): String {
 
 @Composable
 fun BrowseModCard(mod: RemoteMod, isInstalled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    StardewCard(
+    AppCard(
         onClick = onClick,
         modifier = modifier
     ) {
@@ -51,10 +50,9 @@ fun BrowseModCard(mod: RemoteMod, isInstalled: Boolean, onClick: () -> Unit, mod
                     contentScale = ContentScale.Crop
                 )
             } else {
-                // Pixel art placeholder
-                PixelIcon(
-                    pixelData = PuzzleData,
-                    palette = listOf(Color.Transparent, MaterialTheme.colorScheme.onSurfaceVariant),
+                AppIcon(
+                    imageVector = AppIcons.Mods,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(56.dp),
                     size = 56.dp
                 )

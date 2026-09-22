@@ -13,23 +13,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
-import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDialog
+import com.sdvsync.ui.components.AppDivider
+import com.sdvsync.ui.components.AppIcon
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppOutlinedButton
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
 import com.sdvsync.ui.components.HtmlText
-import com.sdvsync.ui.components.PixelDivider
-import com.sdvsync.ui.components.PixelIcon
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewDialog
-import com.sdvsync.ui.components.StardewOutlinedButton
-import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.toHtmlIfFormatted
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
@@ -50,11 +49,11 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = mod?.manifest?.name ?: stringResource(R.string.mods_title),
                 navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
+                    AppIconButton(
+                        imageVector = AppIcons.Back,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
                         tint = MaterialTheme.colorScheme.primary
@@ -89,7 +88,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
             // Info card
             SectionHeader(stringResource(R.string.mods_info))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         mod.manifest.name,
@@ -138,7 +137,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
             if (updateInfo != null) {
                 Spacer(Modifier.height(16.dp))
                 val uriHandler = LocalUriHandler.current
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             stringResource(R.string.mods_update_available),
@@ -156,9 +155,9 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                         )
                         updateInfo.updateUrl?.let { url ->
                             Spacer(Modifier.height(8.dp))
-                            StardewButton(
+                            AppButton(
                                 onClick = { uriHandler.openUri(url) },
-                                variant = StardewButtonVariant.Gold
+                                variant = ButtonVariant.Gold
                             ) {
                                 Text(stringResource(R.string.mods_view_update))
                             }
@@ -167,7 +166,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                         // Changelog section
                         if (updateInfo.changelogHtml != null) {
                             Spacer(Modifier.height(12.dp))
-                            PixelDivider()
+                            AppDivider()
                             Spacer(Modifier.height(8.dp))
 
                             var changelogExpanded by remember { mutableStateOf(false) }
@@ -188,12 +187,9 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.weight(1f)
                                 )
-                                PixelIcon(
-                                    pixelData = ArrowLeftData,
-                                    palette = listOf(
-                                        Color.Transparent,
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    ),
+                                AppIcon(
+                                    imageVector = AppIcons.Back,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     size = 16.dp,
                                     modifier = Modifier.rotate(chevronRotation)
                                 )
@@ -226,7 +222,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
             if (nexusModId != null) {
                 Spacer(Modifier.height(12.dp))
                 val uriHandler = LocalUriHandler.current
-                StardewOutlinedButton(
+                AppOutlinedButton(
                     onClick = {
                         uriHandler.openUri("https://www.nexusmods.com/stardewvalley/mods/$nexusModId")
                     }
@@ -236,13 +232,13 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
             }
 
             Spacer(Modifier.height(24.dp))
-            PixelDivider()
+            AppDivider()
             Spacer(Modifier.height(24.dp))
 
             // Actions card
             SectionHeader(stringResource(R.string.mods_actions))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -269,7 +265,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                         )
                     }
                     Spacer(Modifier.height(12.dp))
-                    StardewOutlinedButton(
+                    AppOutlinedButton(
                         onClick = { viewModel.checkForUpdate() },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !state.isCheckingUpdate
@@ -286,9 +282,9 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    StardewButton(
+                    AppButton(
                         onClick = { viewModel.showRemoveDialog() },
-                        variant = StardewButtonVariant.Danger,
+                        variant = ButtonVariant.Danger,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.mods_remove))
@@ -299,12 +295,12 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
             // Dependencies
             if (mod.manifest.dependencies.isNotEmpty()) {
                 Spacer(Modifier.height(24.dp))
-                PixelDivider()
+                AppDivider()
                 Spacer(Modifier.height(24.dp))
 
                 SectionHeader(stringResource(R.string.mods_dependencies))
                 Spacer(Modifier.height(8.dp))
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         mod.manifest.dependencies.forEach { dep ->
                             Row(
@@ -338,12 +334,12 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
 
             // Technical details
             Spacer(Modifier.height(24.dp))
-            PixelDivider()
+            AppDivider()
             Spacer(Modifier.height(24.dp))
 
             SectionHeader(stringResource(R.string.mods_details))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     mod.manifest.entryDll?.let {
                         Text(
@@ -379,20 +375,20 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
 
         // Remove confirmation dialog
         if (state.showRemoveDialog) {
-            StardewDialog(
+            AppDialog(
                 onDismissRequest = { viewModel.dismissRemoveDialog() },
                 title = stringResource(R.string.mods_remove_confirm_title, mod.manifest.name),
                 text = stringResource(R.string.mods_remove_confirm_message),
                 confirmButton = {
-                    StardewButton(
+                    AppButton(
                         onClick = { viewModel.confirmRemove() },
-                        variant = StardewButtonVariant.Danger
+                        variant = ButtonVariant.Danger
                     ) {
                         Text(stringResource(R.string.mods_remove_confirm))
                     }
                 },
                 dismissButton = {
-                    StardewButton(onClick = { viewModel.dismissRemoveDialog() }) {
+                    AppButton(onClick = { viewModel.dismissRemoveDialog() }) {
                         Text(stringResource(R.string.action_cancel))
                     }
                 }

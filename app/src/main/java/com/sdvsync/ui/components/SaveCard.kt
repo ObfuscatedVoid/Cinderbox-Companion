@@ -10,15 +10,15 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.saves.SaveMetadata
 import com.sdvsync.sync.SyncDirection
-import com.sdvsync.ui.animation.PulseOnChange
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
 import com.sdvsync.ui.viewmodels.SaveEntry
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SaveCard(save: SaveEntry, onClick: () -> Unit) {
-    val meta = save.cloudMeta ?: save.localMeta
+    val meta = listOfNotNull(save.cloudMeta, save.localMeta).maxByOrNull { it.daysPlayed }
 
-    StardewCard(onClick = onClick) {
+    AppCard(onClick = onClick) {
         if (meta != null) {
             SeasonAccentBar(season = meta.season)
         }
@@ -45,25 +45,20 @@ fun SaveCard(save: SaveEntry, onClick: () -> Unit) {
                         )
                     }
                 }
-                PulseOnChange(key = save.syncDirection) {
-                    SyncStatusBadge(save)
-                }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
+            SyncStatusBadge(save)
+            Spacer(Modifier.height(12.dp))
 
             if (meta != null) {
-                Row(
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         formatDisplayDate(meta),
                         style = MaterialTheme.typography.bodyMedium
-                    )
-                    SeasonBadge(
-                        season = meta.season,
-                        seasonName = seasonName(meta.season)
                     )
                     if (meta.millisecondsPlayed > 0) {
                         val hours = meta.millisecondsPlayed / 3_600_000
@@ -130,14 +125,15 @@ fun SyncStatusBadge(save: SaveEntry) {
 
     Surface(
         shape = MaterialTheme.shapes.small,
-        color = color.copy(alpha = 0.12f)
+        color = color.copy(alpha = 0.10f),
+        contentColor = color
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            PixelSyncIcon(
+            SyncIcon(
                 direction = direction,
                 size = 14.dp
             )

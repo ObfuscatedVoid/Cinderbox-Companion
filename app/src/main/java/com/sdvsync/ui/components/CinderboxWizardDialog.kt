@@ -143,9 +143,8 @@ fun CinderboxWizardDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = screenHeight * 0.85f)
-                .pixelBorder(),
-            shape = RectangleShape,
+                .heightIn(max = screenHeight * 0.85f),
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(
@@ -236,7 +235,7 @@ private fun SetupChoiceStep(onChooseCinderbox: () -> Unit, onChooseOther: () -> 
                 .fillMaxWidth()
                 .border(2.dp, GoldAmber, RectangleShape)
                 .clickable(onClick = onChooseCinderbox),
-            shape = RectangleShape,
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainer
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
@@ -267,7 +266,7 @@ private fun SetupChoiceStep(onChooseCinderbox: () -> Unit, onChooseOther: () -> 
                     RectangleShape
                 )
                 .clickable(onClick = onChooseOther),
-            shape = RectangleShape,
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainer
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
@@ -326,7 +325,7 @@ private fun PermissionsStep(
 private fun PermissionRow(title: String, description: String, granted: Boolean, onGrant: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RectangleShape,
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
@@ -355,9 +354,9 @@ private fun PermissionRow(title: String, description: String, granted: Boolean, 
                     fontWeight = FontWeight.Bold
                 )
             } else {
-                StardewButton(
+                AppButton(
                     onClick = onGrant,
-                    variant = StardewButtonVariant.Action
+                    variant = ButtonVariant.Action
                 ) {
                     Text(stringResource(R.string.wizard_grant_button))
                 }
@@ -381,7 +380,7 @@ private fun DownloadApkStep(cinderboxProgress: CinderboxDownloadProgress) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                LoadingIndicator(modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(12.dp))
                 Text(
                     stringResource(R.string.cinderbox_downloading),
@@ -405,7 +404,7 @@ private fun DownloadApkStep(cinderboxProgress: CinderboxDownloadProgress) {
             )
 
             Spacer(Modifier.height(8.dp))
-            PixelProgressBar(progress = cinderboxProgress.percent)
+            DownloadProgressBar(progress = cinderboxProgress.percent)
             Spacer(Modifier.height(4.dp))
             Text(
                 "${(cinderboxProgress.percent * 100).toInt()}%",
@@ -426,7 +425,7 @@ private fun DownloadApkStep(cinderboxProgress: CinderboxDownloadProgress) {
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                PixelLoadingSpinner()
+                LoadingIndicator()
             }
         }
     }
@@ -448,9 +447,9 @@ private fun InstallApkStep(apkFile: File?, onInstall: (File) -> Unit, onInstalle
         )
         Spacer(Modifier.height(16.dp))
 
-        StardewButton(
+        AppButton(
             onClick = { apkFile?.let { onInstall(it) } },
-            variant = StardewButtonVariant.Action,
+            variant = ButtonVariant.Action,
             modifier = Modifier.fillMaxWidth(),
             enabled = apkFile != null
         ) {
@@ -459,7 +458,7 @@ private fun InstallApkStep(apkFile: File?, onInstall: (File) -> Unit, onInstalle
 
         Spacer(Modifier.height(8.dp))
 
-        StardewOutlinedButton(
+        AppOutlinedButton(
             onClick = onInstalled,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -486,11 +485,11 @@ private fun VerifyLaunchedStep(onCheckAgain: () -> Unit, onSkip: () -> Unit) {
         )
         Spacer(Modifier.height(16.dp))
 
-        PixelLoadingSpinner(size = 40.dp)
+        LoadingIndicator(size = 40.dp)
 
         Spacer(Modifier.height(16.dp))
 
-        StardewOutlinedButton(
+        AppOutlinedButton(
             onClick = { onCheckAgain() },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -533,20 +532,13 @@ private fun ReadyStep(onStartDownload: () -> Unit) {
             )
             Spacer(Modifier.height(20.dp))
 
-            StardewButton(
+            AppButton(
                 onClick = onStartDownload,
-                variant = StardewButtonVariant.Gold,
+                variant = ButtonVariant.Gold,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.wizard_start_download))
             }
         }
-
-        // Sparkle overlay on top
-        SparkleOverlay(
-            modifier = Modifier
-                .matchParentSize(),
-            particleCount = 5
-        )
     }
 }

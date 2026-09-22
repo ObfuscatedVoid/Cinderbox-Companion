@@ -11,14 +11,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.sync.SyncHistoryEntry
-import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppTopBar
 import com.sdvsync.ui.components.EmptyState
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.PixelSyncLogIcon
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewTopAppBar
-import com.sdvsync.ui.components.TrashData
+import com.sdvsync.ui.components.LoadingIndicator
+import com.sdvsync.ui.components.SyncLogIcon
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
 import com.sdvsync.ui.viewmodels.SyncLogViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -33,11 +32,11 @@ fun SyncLogScreen(onBack: () -> Unit, viewModel: SyncLogViewModel = koinViewMode
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = stringResource(R.string.sync_log_title),
                 navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
+                    AppIconButton(
+                        imageVector = AppIcons.Back,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
                         tint = MaterialTheme.colorScheme.primary
@@ -45,8 +44,8 @@ fun SyncLogScreen(onBack: () -> Unit, viewModel: SyncLogViewModel = koinViewMode
                 },
                 actions = {
                     if (state.entries.isNotEmpty()) {
-                        PixelIconButton(
-                            pixelData = TrashData,
+                        AppIconButton(
+                            imageVector = AppIcons.Delete,
                             onClick = { viewModel.clearHistory() },
                             contentDescription = stringResource(R.string.sync_log_clear)
                         )
@@ -62,7 +61,7 @@ fun SyncLogScreen(onBack: () -> Unit, viewModel: SyncLogViewModel = koinViewMode
         ) {
             when {
                 state.isLoading -> {
-                    PixelLoadingSpinner(
+                    LoadingIndicator(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -100,12 +99,12 @@ private fun SyncLogEntryCard(entry: SyncHistoryEntry) {
         extras.syncError
     }
 
-    StardewCard {
+    AppCard {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PixelSyncLogIcon(
+            SyncLogIcon(
                 direction = entry.direction,
                 success = entry.success,
                 size = 24.dp

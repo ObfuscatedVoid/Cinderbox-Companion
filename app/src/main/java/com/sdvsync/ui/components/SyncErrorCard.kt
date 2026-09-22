@@ -39,7 +39,7 @@ fun SyncErrorCard(
     val (title, description) = errorContent(category)
     var showDetails by remember { mutableStateOf(false) }
 
-    StardewCard(modifier = modifier.fillMaxWidth()) {
+    AppCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
@@ -101,20 +101,20 @@ fun SyncErrorCard(
                     when (category) {
                         SyncErrorCategory.WRITE_FAILED -> {
                             if (onSwitchToCinderbox != null) {
-                                StardewButton(
+                                AppButton(
                                     onClick = onSwitchToCinderbox,
-                                    variant = StardewButtonVariant.Primary
+                                    variant = ButtonVariant.Primary
                                 ) {
                                     Text(stringResource(R.string.sync_error_action_cinderbox))
                                 }
                             }
                             if (onSelectSafFolder != null) {
-                                StardewOutlinedButton(onClick = onSelectSafFolder) {
+                                AppOutlinedButton(onClick = onSelectSafFolder) {
                                     Text(stringResource(R.string.sync_error_action_saf))
                                 }
                             }
                             if (onNavigateToSettings != null) {
-                                StardewOutlinedButton(onClick = onNavigateToSettings) {
+                                AppOutlinedButton(onClick = onNavigateToSettings) {
                                     Text(stringResource(R.string.sync_error_action_settings))
                                 }
                             }
@@ -125,9 +125,9 @@ fun SyncErrorCard(
                         SyncErrorCategory.SAVE_IN_PROGRESS,
                         SyncErrorCategory.BACKUP_FAILED -> {
                             if (onRetry != null) {
-                                StardewButton(
+                                AppButton(
                                     onClick = onRetry,
-                                    variant = StardewButtonVariant.Primary
+                                    variant = ButtonVariant.Primary
                                 ) {
                                     Text(stringResource(R.string.sync_error_action_retry))
                                 }
@@ -136,9 +136,9 @@ fun SyncErrorCard(
 
                         SyncErrorCategory.INVALID_LOCAL -> {
                             if (onRunHealthCheck != null) {
-                                StardewButton(
+                                AppButton(
                                     onClick = onRunHealthCheck,
-                                    variant = StardewButtonVariant.Primary
+                                    variant = ButtonVariant.Primary
                                 ) {
                                     Text(stringResource(R.string.sync_error_action_health_check))
                                 }
@@ -148,9 +148,9 @@ fun SyncErrorCard(
                         SyncErrorCategory.LOCAL_NEWER,
                         SyncErrorCategory.CLOUD_NEWER -> {
                             if (onForceSync != null) {
-                                StardewButton(
+                                AppButton(
                                     onClick = onForceSync,
-                                    variant = StardewButtonVariant.Danger
+                                    variant = ButtonVariant.Danger
                                 ) {
                                     Text(stringResource(R.string.sync_error_action_force_sync))
                                 }
@@ -159,15 +159,15 @@ fun SyncErrorCard(
 
                         SyncErrorCategory.UNKNOWN -> {
                             if (onRetry != null) {
-                                StardewButton(
+                                AppButton(
                                     onClick = onRetry,
-                                    variant = StardewButtonVariant.Primary
+                                    variant = ButtonVariant.Primary
                                 ) {
                                     Text(stringResource(R.string.sync_error_action_retry))
                                 }
                             }
                             if (onNavigateToSettings != null) {
-                                StardewOutlinedButton(onClick = onNavigateToSettings) {
+                                AppOutlinedButton(onClick = onNavigateToSettings) {
                                     Text(stringResource(R.string.sync_error_action_settings))
                                 }
                             }

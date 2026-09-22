@@ -17,13 +17,12 @@ import com.sdvsync.saves.CraftingRecipeEntry
 import com.sdvsync.saves.FarmerStats
 import com.sdvsync.saves.RelationshipEntry
 import com.sdvsync.saves.SaveFileData
-import com.sdvsync.ui.animation.StaggeredAnimatedItem
-import com.sdvsync.ui.components.ArrowLeftData
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.PixelProgressBar
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.DownloadProgressBar
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.theme.GoldAmber
 import com.sdvsync.ui.viewmodels.SaveViewerTab
 import com.sdvsync.ui.viewmodels.SaveViewerViewModel
@@ -39,11 +38,11 @@ fun SaveViewerScreen(saveFolderName: String, onBack: () -> Unit, viewModel: Save
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = state.data?.farmer?.name ?: stringResource(R.string.save_viewer_title),
                 navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
+                    AppIconButton(
+                        imageVector = AppIcons.Back,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
                         tint = MaterialTheme.colorScheme.primary
@@ -60,7 +59,7 @@ fun SaveViewerScreen(saveFolderName: String, onBack: () -> Unit, viewModel: Save
                         .padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
-                    PixelLoadingSpinner()
+                    LoadingIndicator()
                 }
             }
 
@@ -129,7 +128,7 @@ private fun FarmerTab(farmer: FarmerStats) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            StardewCard(modifier = Modifier.fillMaxWidth()) {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(farmer.name, style = MaterialTheme.typography.headlineSmall)
                     Text(
@@ -149,7 +148,7 @@ private fun FarmerTab(farmer: FarmerStats) {
         }
 
         item {
-            StardewCard(modifier = Modifier.fillMaxWidth()) {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         stringResource(R.string.save_viewer_money),
@@ -172,7 +171,7 @@ private fun FarmerTab(farmer: FarmerStats) {
         }
 
         item {
-            StardewCard(modifier = Modifier.fillMaxWidth()) {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         stringResource(R.string.save_viewer_skills),
@@ -209,7 +208,7 @@ private fun SkillRow(name: String, level: Int) {
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold
         )
-        PixelProgressBar(
+        DownloadProgressBar(
             progress = level / 10f,
             modifier = Modifier.weight(1f)
         )
@@ -228,27 +227,25 @@ private fun RelationshipsTab(relationships: List<RelationshipEntry>) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         itemsIndexed(relationships, key = { _, r -> r.npcName }) { index, rel ->
-            StaggeredAnimatedItem(index = index) {
-                StardewCard(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(rel.npcName, style = MaterialTheme.typography.titleSmall)
-                            if (rel.status.isNotEmpty()) {
-                                Text(
-                                    rel.status,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(rel.npcName, style = MaterialTheme.typography.titleSmall)
+                        if (rel.status.isNotEmpty()) {
+                            Text(
+                                rel.status,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Text(
-                            buildHeartsString(rel.hearts),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
                     }
+                    Text(
+                        buildHeartsString(rel.hearts),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }
@@ -274,27 +271,25 @@ private fun AnimalsTab(animals: List<AnimalEntry>) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         itemsIndexed(animals, key = { i, a -> "${a.name}_$i" }) { index, animal ->
-            StaggeredAnimatedItem(index = index) {
-                StardewCard(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(animal.name, style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                animal.type,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (animal.building.isNotEmpty()) {
-                            Text(
-                                animal.building,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(animal.name, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            animal.type,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (animal.building.isNotEmpty()) {
+                        Text(
+                            animal.building,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -309,7 +304,7 @@ private fun BundlesTab(data: SaveFileData) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            StardewCard(modifier = Modifier.fillMaxWidth()) {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         stringResource(R.string.save_viewer_bundles_title),
@@ -326,7 +321,7 @@ private fun BundlesTab(data: SaveFileData) {
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(Modifier.height(8.dp))
-                        PixelProgressBar(
+                        DownloadProgressBar(
                             progress = data.bundles.completedBundles.toFloat() / data.bundles.totalBundles
                         )
                     } else {
@@ -351,7 +346,7 @@ private fun MuseumTab(donatedItems: Int) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            StardewCard(modifier = Modifier.fillMaxWidth()) {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         stringResource(R.string.save_viewer_museum_title),
@@ -363,7 +358,7 @@ private fun MuseumTab(donatedItems: Int) {
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(8.dp))
-                    PixelProgressBar(
+                    DownloadProgressBar(
                         progress = donatedItems.toFloat() / totalMuseumItems
                     )
                 }

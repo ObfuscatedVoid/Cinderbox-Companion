@@ -29,7 +29,7 @@ fun ModCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    StardewCard(
+    AppCard(
         onClick = onClick,
         modifier = modifier
     ) {

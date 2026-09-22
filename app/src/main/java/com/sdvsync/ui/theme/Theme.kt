@@ -14,15 +14,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 private val LightColorScheme = lightColorScheme(
-    primary = BrownLight,
+    primary = ForestGreenLight,
     onPrimary = Color.White,
-    primaryContainer = BrownContainerLight,
-    onPrimaryContainer = OnBrownContainerLight,
+    primaryContainer = GreenContainerLight,
+    onPrimaryContainer = OnGreenContainerLight,
     secondary = ForestGreenLight,
     onSecondary = Color.White,
     secondaryContainer = GreenContainerLight,
     onSecondaryContainer = OnGreenContainerLight,
-    tertiary = GoldAmber,
+    tertiary = Color(0xFF795A25),
     onTertiary = Color.White,
     tertiaryContainer = GoldContainerLight,
     onTertiaryContainer = OnGoldContainerLight,
@@ -32,11 +32,11 @@ private val LightColorScheme = lightColorScheme(
     onSurface = OnWarmWhite,
     surfaceVariant = SurfaceContainerLight,
     onSurfaceVariant = OnSurfaceVariantLight,
-    surfaceContainerLowest = Color(0xFFFFFBF5),
-    surfaceContainerLow = Color(0xFFFFF6EA),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF4F5F0),
     surfaceContainer = SurfaceContainerLight,
     surfaceContainerHigh = SurfaceContainerHighLight,
-    surfaceContainerHighest = Color(0xFFFFE6C4),
+    surfaceContainerHighest = Color(0xFFE2E6DE),
     outline = OutlineLight,
     outlineVariant = OutlineVariantLight,
     error = ErrorLight,
@@ -50,10 +50,10 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = BrownDark,
-    onPrimary = Color(0xFF3D1E00),
-    primaryContainer = BrownContainerDark,
-    onPrimaryContainer = OnBrownContainerDark,
+    primary = ForestGreenDark,
+    onPrimary = Color(0xFF102E22),
+    primaryContainer = GreenContainerDark,
+    onPrimaryContainer = OnGreenContainerDark,
     secondary = ForestGreenDark,
     onSecondary = Color(0xFF1A3800),
     secondaryContainer = GreenContainerDark,
@@ -68,11 +68,11 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = OnWarmBlack,
     surfaceVariant = SurfaceContainerDark,
     onSurfaceVariant = OnSurfaceVariantDark,
-    surfaceContainerLowest = Color(0xFF120E0A),
-    surfaceContainerLow = Color(0xFF201A14),
+    surfaceContainerLowest = Color(0xFF101410),
+    surfaceContainerLow = Color(0xFF19201B),
     surfaceContainer = SurfaceContainerDark,
     surfaceContainerHigh = SurfaceContainerHighDark,
-    surfaceContainerHighest = Color(0xFF48392C),
+    surfaceContainerHighest = Color(0xFF303B33),
     outline = OutlineDark,
     outlineVariant = OutlineVariantDark,
     error = ErrorDark,
@@ -95,11 +95,7 @@ data class StardewColors(
     val seasonSpring: Color,
     val seasonSummer: Color,
     val seasonFall: Color,
-    val seasonWinter: Color,
-    val pixelBorderDark: Color,
-    val pixelBorderPlank: Color,
-    val pixelBorderHighlight: Color,
-    val pixelBorderShadow: Color
+    val seasonWinter: Color
 )
 
 val LocalStardewColors = staticCompositionLocalOf {
@@ -112,11 +108,7 @@ val LocalStardewColors = staticCompositionLocalOf {
         seasonSpring = SeasonSpring,
         seasonSummer = SeasonSummer,
         seasonFall = SeasonFall,
-        seasonWinter = SeasonWinter,
-        pixelBorderDark = PixelBorderDark,
-        pixelBorderPlank = PixelBorderPlank,
-        pixelBorderHighlight = PixelBorderHighlight,
-        pixelBorderShadow = PixelBorderShadow
+        seasonWinter = SeasonWinter
     )
 }
 
@@ -129,27 +121,19 @@ private val LightStardewColors = StardewColors(
     seasonSpring = SeasonSpring,
     seasonSummer = SeasonSummer,
     seasonFall = SeasonFall,
-    seasonWinter = SeasonWinter,
-    pixelBorderDark = PixelBorderDark,
-    pixelBorderPlank = PixelBorderPlank,
-    pixelBorderHighlight = PixelBorderHighlight,
-    pixelBorderShadow = PixelBorderShadow
+    seasonWinter = SeasonWinter
 )
 
 private val DarkStardewColors = StardewColors(
-    pullBlue = SyncPullBlue,
-    pushGreen = SyncPushGreen,
-    synced = SyncSynced,
-    conflict = SyncConflict,
-    syncError = SyncError,
-    seasonSpring = SeasonSpring,
-    seasonSummer = SeasonSummer,
-    seasonFall = SeasonFall,
-    seasonWinter = SeasonWinter,
-    pixelBorderDark = PixelBorderDarkDk,
-    pixelBorderPlank = PixelBorderPlankDk,
-    pixelBorderHighlight = PixelBorderHighlightDk,
-    pixelBorderShadow = PixelBorderShadowDk
+    pullBlue = Color(0xFF8FC9ED),
+    pushGreen = Color(0xFFA2CFAB),
+    synced = Color(0xFFA2CFAB),
+    conflict = Color(0xFFF3C77E),
+    syncError = Color(0xFFFFB4AB),
+    seasonSpring = Color(0xFFE4AEC4),
+    seasonSummer = Color(0xFFE4CC88),
+    seasonFall = Color(0xFFF0B484),
+    seasonWinter = Color(0xFF99D2E4)
 )
 
 val StardewShapes = Shapes(

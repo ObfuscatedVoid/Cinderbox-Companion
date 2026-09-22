@@ -16,7 +16,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -41,9 +40,8 @@ fun CinderboxMigrationDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .pixelBorder()
                 .padding(8.dp),
-            shape = RectangleShape,
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
@@ -81,7 +79,7 @@ fun CinderboxMigrationDialog(
 
                 if (state.isMigrating) {
                     Spacer(Modifier.height(16.dp))
-                    PixelLoadingSpinner(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    LoadingIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                     Spacer(Modifier.height(8.dp))
                     Text(
                         stringResource(R.string.cinderbox_migrate_running),
@@ -95,14 +93,14 @@ fun CinderboxMigrationDialog(
 
                 if (showOutcome) {
                     Row(modifier = Modifier.align(Alignment.End)) {
-                        StardewButton(onClick = onDismissResult) {
+                        AppButton(onClick = onDismissResult) {
                             Text(stringResource(R.string.action_done))
                         }
                         if (result.errors.isNotEmpty()) {
                             Spacer(Modifier.width(8.dp))
-                            StardewButton(
+                            AppButton(
                                 onClick = onMove,
-                                variant = StardewButtonVariant.Action
+                                variant = ButtonVariant.Action
                             ) {
                                 Text(stringResource(R.string.action_retry))
                             }
@@ -121,16 +119,16 @@ fun CinderboxMigrationDialog(
                     }
                     Spacer(Modifier.height(4.dp))
                     Row(modifier = Modifier.align(Alignment.End)) {
-                        StardewOutlinedButton(
+                        AppOutlinedButton(
                             onClick = onLater,
                             enabled = !state.isMigrating
                         ) {
                             Text(stringResource(R.string.cinderbox_migrate_later))
                         }
                         Spacer(Modifier.width(8.dp))
-                        StardewButton(
+                        AppButton(
                             onClick = onMove,
-                            variant = StardewButtonVariant.Gold,
+                            variant = ButtonVariant.Gold,
                             enabled = !state.isMigrating
                         ) {
                             Text(stringResource(R.string.cinderbox_migrate_move))

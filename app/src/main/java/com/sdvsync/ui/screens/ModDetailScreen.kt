@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
@@ -25,17 +24,16 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.sdvsync.R
 import com.sdvsync.mods.models.ModDownloadState
-import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDivider
+import com.sdvsync.ui.components.AppIcon
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
 import com.sdvsync.ui.components.HtmlText
-import com.sdvsync.ui.components.PixelDivider
-import com.sdvsync.ui.components.PixelIcon
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.PuzzleData
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.components.toHtmlIfFormatted
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
@@ -56,11 +54,11 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = state.mod?.name ?: "Mod Details",
                 navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
+                    AppIconButton(
+                        imageVector = AppIcons.Back,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
                         tint = MaterialTheme.colorScheme.primary
@@ -76,7 +74,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                PixelLoadingSpinner()
+                LoadingIndicator()
             }
             return@Scaffold
         }
@@ -95,7 +93,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Spacer(Modifier.height(16.dp))
-                    StardewButton(onClick = onBack) {
+                    AppButton(onClick = onBack) {
                         Text(stringResource(R.string.action_back))
                     }
                 }
@@ -113,7 +111,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                 .padding(16.dp)
         ) {
             // Header card
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row {
                         if (mod.pictureUrl != null) {
@@ -126,9 +124,9 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-                            PixelIcon(
-                                pixelData = PuzzleData,
-                                palette = listOf(Color.Transparent, MaterialTheme.colorScheme.onSurfaceVariant),
+                            AppIcon(
+                                imageVector = AppIcons.Mods,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 size = 80.dp
                             )
                         }
@@ -184,7 +182,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
             // Description card
             if (mod.summary.isNotBlank()) {
                 Spacer(Modifier.height(16.dp))
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             stringResource(R.string.mods_detail_description),
@@ -216,7 +214,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
             val progress = state.downloadProgress
             if (progress.state != ModDownloadState.IDLE) {
                 Spacer(Modifier.height(16.dp))
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         when (progress.state) {
                             ModDownloadState.DOWNLOADING -> {
@@ -273,7 +271,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
             // Download error with browser fallback
             if (state.error != null && state.mod != null) {
                 Spacer(Modifier.height(16.dp))
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             state.error!!,
@@ -283,12 +281,12 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                         if (state.downloadErrorUrl != null) {
                             Spacer(Modifier.height(8.dp))
                             val uriHandler = LocalUriHandler.current
-                            StardewButton(
+                            AppButton(
                                 onClick = {
                                     uriHandler.openUri(state.downloadErrorUrl!!)
                                     viewModel.clearError()
                                 },
-                                variant = StardewButtonVariant.Gold
+                                variant = ButtonVariant.Gold
                             ) {
                                 Text(stringResource(R.string.mods_open_nexus))
                             }
@@ -300,7 +298,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
             // Files card
             if (state.files.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             stringResource(R.string.mods_detail_files),
@@ -312,7 +310,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                         state.files.forEachIndexed { index, file ->
                             if (index > 0) {
                                 Spacer(Modifier.height(8.dp))
-                                PixelDivider()
+                                AppDivider()
                                 Spacer(Modifier.height(8.dp))
                             }
 
@@ -374,20 +372,17 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                                             )
                                         }
                                         if (hasDetails) {
-                                            PixelIcon(
-                                                pixelData = ArrowLeftData,
-                                                palette = listOf(
-                                                    Color.Transparent,
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                                ),
+                                            AppIcon(
+                                                imageVector = AppIcons.Back,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 size = 16.dp,
                                                 modifier = Modifier.rotate(chevronRotation)
                                             )
                                             Spacer(Modifier.width(4.dp))
                                         }
-                                        StardewButton(
+                                        AppButton(
                                             onClick = { viewModel.installFile(file.fileId) },
-                                            variant = StardewButtonVariant.Action,
+                                            variant = ButtonVariant.Action,
                                             enabled =
                                             progress.state == ModDownloadState.IDLE ||
                                                 progress.state == ModDownloadState.COMPLETED ||

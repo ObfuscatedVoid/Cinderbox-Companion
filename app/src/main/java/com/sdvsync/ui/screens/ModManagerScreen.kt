@@ -13,28 +13,23 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.mods.models.ModProfile
-import com.sdvsync.ui.animation.StaggeredAnimatedItem
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDialog
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppOutlinedButton
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
 import com.sdvsync.ui.components.EmptyState
-import com.sdvsync.ui.components.FolderData
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.components.ModCard
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.RefreshData
-import com.sdvsync.ui.components.SearchData
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewDialog
-import com.sdvsync.ui.components.StardewOutlinedButton
-import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.UpdateBanner
-import com.sdvsync.ui.components.pixelBorder
 import com.sdvsync.ui.viewmodels.ModFilter
 import com.sdvsync.ui.viewmodels.ModManagerViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -81,21 +76,21 @@ fun ModManagerScreen(
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = stringResource(R.string.mods_title),
                 actions = {
-                    PixelIconButton(
-                        pixelData = RefreshData,
+                    AppIconButton(
+                        imageVector = AppIcons.Refresh,
                         onClick = { viewModel.checkForUpdates() },
                         contentDescription = stringResource(R.string.mods_check_update)
                     )
-                    PixelIconButton(
-                        pixelData = SearchData,
+                    AppIconButton(
+                        imageVector = AppIcons.Search,
                         onClick = onBrowseClick,
                         contentDescription = stringResource(R.string.mods_browse_title)
                     )
-                    PixelIconButton(
-                        pixelData = FolderData,
+                    AppIconButton(
+                        imageVector = AppIcons.Folder,
                         onClick = { importLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed")) },
                         contentDescription = stringResource(R.string.mods_import)
                     )
@@ -113,7 +108,7 @@ fun ModManagerScreen(
             when {
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        PixelLoadingSpinner(
+                        LoadingIndicator(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
@@ -133,7 +128,7 @@ fun ModManagerScreen(
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Spacer(Modifier.height(16.dp))
-                            StardewButton(onClick = { viewModel.loadInstalledMods() }) {
+                            AppButton(onClick = { viewModel.loadInstalledMods() }) {
                                 Text(stringResource(R.string.action_retry))
                             }
                         }
@@ -153,14 +148,14 @@ fun ModManagerScreen(
                                 subtitle = stringResource(R.string.mods_empty_subtitle)
                             )
                             Spacer(Modifier.height(24.dp))
-                            StardewButton(
+                            AppButton(
                                 onClick = onBrowseClick,
-                                variant = StardewButtonVariant.Gold
+                                variant = ButtonVariant.Gold
                             ) {
                                 Text(stringResource(R.string.mods_browse_button))
                             }
                             Spacer(Modifier.height(12.dp))
-                            StardewOutlinedButton(
+                            AppOutlinedButton(
                                 onClick = {
                                     importLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed"))
                                 }
@@ -198,7 +193,7 @@ fun ModManagerScreen(
                                 onValueChange = { viewModel.setSearchQuery(it) },
                                 placeholder = { Text(stringResource(R.string.mods_search_installed_hint)) },
                                 singleLine = true,
-                                shape = RectangleShape,
+                                shape = MaterialTheme.shapes.large,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -246,7 +241,7 @@ fun ModManagerScreen(
                         // Update checking indicator
                         if (state.isCheckingUpdates) {
                             item {
-                                StardewCard {
+                                AppCard {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -297,27 +292,25 @@ fun ModManagerScreen(
                         }
 
                         itemsIndexed(state.displayedMods, key = { _, mod -> mod.manifest.uniqueID }) { index, mod ->
-                            StaggeredAnimatedItem(index = index) {
-                                ModCard(
-                                    mod = mod,
-                                    hasUpdate = state.updates.containsKey(mod.manifest.uniqueID),
-                                    onToggle = { enabled ->
-                                        viewModel.toggleMod(
-                                            mod.folderName,
-                                            enabled
-                                        )
-                                    },
-                                    onClick = { onModClick(mod.manifest.uniqueID) }
-                                )
-                            }
+                            ModCard(
+                                mod = mod,
+                                hasUpdate = state.updates.containsKey(mod.manifest.uniqueID),
+                                onToggle = { enabled ->
+                                    viewModel.toggleMod(
+                                        mod.folderName,
+                                        enabled
+                                    )
+                                },
+                                onClick = { onModClick(mod.manifest.uniqueID) }
+                            )
                         }
 
                         // Browse mods button at bottom
                         item {
                             Spacer(Modifier.height(8.dp))
-                            StardewButton(
+                            AppButton(
                                 onClick = onBrowseClick,
-                                variant = StardewButtonVariant.Gold,
+                                variant = ButtonVariant.Gold,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(stringResource(R.string.mods_browse_button))
@@ -342,12 +335,12 @@ fun ModManagerScreen(
 
     // Apply profile confirmation
     showApplyProfileConfirm?.let { profile ->
-        StardewDialog(
+        AppDialog(
             onDismissRequest = { showApplyProfileConfirm = null },
             title = stringResource(R.string.profiles_apply_confirm_title),
             text = stringResource(R.string.profiles_apply_confirm_message, profile.name),
             confirmButton = {
-                StardewButton(onClick = {
+                AppButton(onClick = {
                     showApplyProfileConfirm = null
                     viewModel.applyProfile(profile)
                 }) {
@@ -355,7 +348,7 @@ fun ModManagerScreen(
                 }
             },
             dismissButton = {
-                StardewOutlinedButton(onClick = { showApplyProfileConfirm = null }) {
+                AppOutlinedButton(onClick = { showApplyProfileConfirm = null }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }
@@ -364,23 +357,23 @@ fun ModManagerScreen(
 
     // Delete profile confirmation
     showDeleteProfileConfirm?.let { name ->
-        StardewDialog(
+        AppDialog(
             onDismissRequest = { showDeleteProfileConfirm = null },
             title = stringResource(R.string.profiles_delete_title),
             text = stringResource(R.string.profiles_delete_message, name),
             confirmButton = {
-                StardewButton(
+                AppButton(
                     onClick = {
                         showDeleteProfileConfirm = null
                         viewModel.deleteProfile(name)
                     },
-                    variant = StardewButtonVariant.Danger
+                    variant = ButtonVariant.Danger
                 ) {
                     Text(stringResource(R.string.profiles_delete_button))
                 }
             },
             dismissButton = {
-                StardewOutlinedButton(onClick = { showDeleteProfileConfirm = null }) {
+                AppOutlinedButton(onClick = { showDeleteProfileConfirm = null }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }
@@ -398,7 +391,7 @@ private fun ProfileSection(
     onApply: (ModProfile) -> Unit,
     onDelete: (String) -> Unit
 ) {
-    StardewCard(modifier = Modifier.fillMaxWidth()) {
+    AppCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -409,7 +402,7 @@ private fun ProfileSection(
                     stringResource(R.string.profiles_title),
                     style = MaterialTheme.typography.titleSmall
                 )
-                StardewOutlinedButton(onClick = onSaveCurrent) {
+                AppOutlinedButton(onClick = onSaveCurrent) {
                     Text(stringResource(R.string.profiles_save_current))
                 }
             }
@@ -478,13 +471,13 @@ private fun SaveProfileDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
                     onValueChange = { name = it },
                     placeholder = { Text(stringResource(R.string.profiles_save_hint)) },
                     singleLine = true,
-                    shape = RectangleShape,
+                    shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            StardewButton(
+            AppButton(
                 onClick = { onSave(name.trim()) },
                 enabled = name.isNotBlank()
             ) {
@@ -492,11 +485,11 @@ private fun SaveProfileDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
             }
         },
         dismissButton = {
-            StardewOutlinedButton(onClick = onDismiss) {
+            AppOutlinedButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.pixelBorder()
+        modifier = Modifier
     )
 }

@@ -8,24 +8,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.sdvsync.R
-import com.sdvsync.ui.animation.StaggeredAnimatedItem
-import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppIcon
+import com.sdvsync.ui.components.AppIconButton
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppTopBar
 import com.sdvsync.ui.components.BrowseModCard
-import com.sdvsync.ui.components.PixelIcon
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.SearchData
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.ButtonVariant
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.viewmodels.BrowseCategory
 import com.sdvsync.ui.viewmodels.ModBrowseViewModel
 import com.sdvsync.ui.viewmodels.NexusErrorAction
@@ -52,11 +48,11 @@ fun ModBrowseScreen(
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
+            AppTopBar(
                 title = stringResource(R.string.mods_browse_title),
                 navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
+                    AppIconButton(
+                        imageVector = AppIcons.Back,
                         onClick = onBack,
                         contentDescription = stringResource(R.string.action_back),
                         tint = MaterialTheme.colorScheme.primary
@@ -74,7 +70,7 @@ fun ModBrowseScreen(
         ) {
             if (!state.hasApiKey) {
                 item {
-                    StardewCard {
+                    AppCard {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 stringResource(R.string.mods_api_key_title),
@@ -92,7 +88,7 @@ fun ModBrowseScreen(
                                 onValueChange = { apiKeyInput = it },
                                 label = { Text(stringResource(R.string.mods_api_key_hint)) },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RectangleShape,
+                                shape = MaterialTheme.shapes.large,
                                 singleLine = true
                             )
                             state.apiKeyErrorRes?.let { apiKeyErrorRes ->
@@ -104,10 +100,10 @@ fun ModBrowseScreen(
                                 )
                             }
                             Spacer(Modifier.height(12.dp))
-                            StardewButton(
+                            AppButton(
                                 onClick = { viewModel.validateAndSaveApiKey(apiKeyInput) },
                                 enabled = apiKeyInput.isNotBlank() && !state.isValidatingKey,
-                                variant = StardewButtonVariant.Action
+                                variant = ButtonVariant.Action
                             ) {
                                 if (state.isValidatingKey) {
                                     CircularProgressIndicator(
@@ -142,7 +138,7 @@ fun ModBrowseScreen(
                     onValueChange = { viewModel.search(it) },
                     placeholder = { Text(stringResource(R.string.mods_search_hint)) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RectangleShape,
+                    shape = MaterialTheme.shapes.large,
                     singleLine = true,
                     isError = state.searchNeedsMoreCharacters,
                     supportingText = if (state.searchNeedsMoreCharacters) {
@@ -151,12 +147,9 @@ fun ModBrowseScreen(
                         null
                     },
                     leadingIcon = {
-                        PixelIcon(
-                            pixelData = SearchData,
-                            palette = listOf(
-                                Color.Transparent,
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
+                        AppIcon(
+                            imageVector = AppIcons.Search,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             size = 16.dp
                         )
                     }
@@ -195,7 +188,7 @@ fun ModBrowseScreen(
                             .height(200.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        PixelLoadingSpinner()
+                        LoadingIndicator()
                     }
                 }
             } else if (browseError != null) {
@@ -214,14 +207,14 @@ fun ModBrowseScreen(
                         when (browseError.action) {
                             NexusErrorAction.RETRY -> {
                                 Spacer(Modifier.height(16.dp))
-                                StardewButton(onClick = viewModel::retry) {
+                                AppButton(onClick = viewModel::retry) {
                                     Text(stringResource(R.string.action_retry))
                                 }
                             }
 
                             NexusErrorAction.REPLACE_API_KEY -> {
                                 Spacer(Modifier.height(16.dp))
-                                StardewButton(onClick = viewModel::removeApiKey) {
+                                AppButton(onClick = viewModel::removeApiKey) {
                                     Text(stringResource(R.string.mods_api_key_replace))
                                 }
                             }
@@ -246,16 +239,14 @@ fun ModBrowseScreen(
                     }
                 }
             } else {
-                itemsIndexed(state.mods) { index, mod ->
-                    StaggeredAnimatedItem(index = index) {
-                        BrowseModCard(
-                            mod = mod,
-                            isInstalled = state.installedSourceIds.contains(
-                                remoteModSourceIdentifier(mod.sourceId, mod.modId)
-                            ),
-                            onClick = { onModClick(mod.modId, mod.sourceId) }
-                        )
-                    }
+                itemsIndexed(state.mods, key = { _, mod -> "${mod.sourceId}/${mod.modId}" }) { _, mod ->
+                    BrowseModCard(
+                        mod = mod,
+                        isInstalled = state.installedSourceIds.contains(
+                            remoteModSourceIdentifier(mod.sourceId, mod.modId)
+                        ),
+                        onClick = { onModClick(mod.modId, mod.sourceId) }
+                    )
                 }
             }
 
@@ -271,7 +262,7 @@ fun ModBrowseScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         when {
-                            state.isLoadingMore -> PixelLoadingSpinner(size = 24.dp)
+                            state.isLoadingMore -> LoadingIndicator(size = 24.dp)
                             loadMoreError != null -> {
                                 Text(
                                     stringResource(loadMoreError.messageRes),
@@ -281,14 +272,14 @@ fun ModBrowseScreen(
                                 when (loadMoreError.action) {
                                     NexusErrorAction.RETRY -> {
                                         Spacer(Modifier.height(8.dp))
-                                        StardewButton(onClick = viewModel::loadMore) {
+                                        AppButton(onClick = viewModel::loadMore) {
                                             Text(stringResource(R.string.action_retry))
                                         }
                                     }
 
                                     NexusErrorAction.REPLACE_API_KEY -> {
                                         Spacer(Modifier.height(8.dp))
-                                        StardewButton(onClick = viewModel::removeApiKey) {
+                                        AppButton(onClick = viewModel::removeApiKey) {
                                             Text(stringResource(R.string.mods_api_key_replace))
                                         }
                                     }
@@ -297,7 +288,7 @@ fun ModBrowseScreen(
                                 }
                             }
 
-                            else -> StardewButton(onClick = viewModel::loadMore) {
+                            else -> AppButton(onClick = viewModel::loadMore) {
                                 Text(stringResource(R.string.mods_load_more))
                             }
                         }

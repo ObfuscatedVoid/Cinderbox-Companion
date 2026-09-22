@@ -7,8 +7,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,10 +34,10 @@ import androidx.navigation.navArgument
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModDownloadManager
 import com.sdvsync.mods.api.NexusModSource
+import com.sdvsync.ui.components.AppBottomBar
 import com.sdvsync.ui.components.AppUpdateDialog
 import com.sdvsync.ui.components.BottomTab
 import com.sdvsync.ui.components.CinderboxMigrationDialog
-import com.sdvsync.ui.components.StardewBottomBar
 import com.sdvsync.ui.screens.BackupListScreen
 import com.sdvsync.ui.screens.DashboardScreen
 import com.sdvsync.ui.screens.GameDownloadScreen
@@ -171,61 +169,28 @@ class MainActivity : ComponentActivity() {
     private data class NxmDownloadParams(val modId: String, val fileId: String, val key: String, val expires: String)
 }
 
-private const val NAV_ANIM_DURATION = 300
-private const val FADE_ANIM_DURATION = 400
+private const val NAV_ANIM_DURATION = 160
+private const val FADE_ANIM_DURATION = 160
 
 // Routes that should show the bottom bar
 private val BOTTOM_BAR_ROUTES = setOf("saves", "mods", "game_download", "settings")
 
 @Composable
 fun SdvSyncNavGraph(navController: NavHostController) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute by remember(navBackStackEntry) {
-        derivedStateOf { navBackStackEntry?.destination?.route }
-    }
-
-    val showBottomBar by remember(currentRoute) {
-        derivedStateOf { currentRoute in BOTTOM_BAR_ROUTES }
-    }
-
-    val selectedTab by remember(currentRoute) {
-        derivedStateOf {
-            when (currentRoute) {
-                "saves" -> BottomTab.SAVES
-                "mods" -> BottomTab.MODS
-                "game_download" -> BottomTab.DOWNLOAD
-                "settings" -> BottomTab.SETTINGS
-                else -> BottomTab.SAVES
-            }
-        }
-    }
-
     NavHost(
         navController = navController,
         startDestination = "login",
         enterTransition = {
-            slideIntoContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            )
+            fadeIn(tween(NAV_ANIM_DURATION))
         },
         exitTransition = {
-            slideOutOfContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            )
+            fadeOut(tween(NAV_ANIM_DURATION))
         },
         popEnterTransition = {
-            slideIntoContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            )
+            fadeIn(tween(NAV_ANIM_DURATION))
         },
         popExitTransition = {
-            slideOutOfContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(NAV_ANIM_DURATION, easing = EaseInOut)
-            )
+            fadeOut(tween(NAV_ANIM_DURATION))
         }
     ) {
         // Login screen — outside the bottom bar
@@ -245,11 +210,7 @@ fun SdvSyncNavGraph(navController: NavHostController) {
 
         // Main section with bottom bar
         composable("main") {
-            MainScreen(
-                parentNavController = navController,
-                showBottomBar = showBottomBar,
-                selectedTab = selectedTab
-            )
+            MainScreen(parentNavController = navController)
         }
 
         // Saves sub-screens (outside bottom bar scaffold for clean back stack)
@@ -358,7 +319,7 @@ fun SdvSyncNavGraph(navController: NavHostController) {
 }
 
 @Composable
-fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, selectedTab: BottomTab) {
+fun MainScreen(parentNavController: NavHostController) {
     val updateViewModel: AppUpdateViewModel = koinViewModel()
     val updateState by updateViewModel.state.collectAsState()
     val migrationViewModel: CinderboxMigrationViewModel = koinViewModel()
@@ -449,31 +410,12 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
 
             // Download tab
             composable("game_download") {
-                GameDownloadScreen(
-                    onBack = {
-                        mainNavController.navigate("saves") {
-                            popUpTo(mainNavController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
+                GameDownloadScreen()
             }
 
             // Settings tab
             composable("settings") {
                 SettingsScreen(
-                    onBack = {
-                        mainNavController.navigate("saves") {
-                            popUpTo(mainNavController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
                     onLogout = {
                         parentNavController.navigate("login") {
                             popUpTo(0) { inclusive = true }
@@ -484,7 +426,7 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
         }
 
         if (isMainShowBottomBar) {
-            StardewBottomBar(
+            AppBottomBar(
                 selectedTab = mainSelectedTab,
                 onTabSelected = { tab ->
                     mainNavController.navigate(tab.route) {

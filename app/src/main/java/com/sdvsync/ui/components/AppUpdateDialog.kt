@@ -3,8 +3,6 @@ package com.sdvsync.ui.components
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,11 +17,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -46,15 +41,6 @@ fun AppUpdateDialog(
     onInstallPermissionGranted: () -> Unit
 ) {
     val context = LocalContext.current
-    val scale = remember { Animatable(0.92f) }
-
-    LaunchedEffect(Unit) {
-        scale.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f)
-        )
-    }
-
     // Re-check install permission on resume
     if (state.showInstallPermissionPrompt) {
         LifecycleResumeEffect(Unit) {
@@ -66,13 +52,8 @@ fun AppUpdateDialog(
     Dialog(onDismissRequest = { if (!state.isDownloading) onDismiss() }) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .pixelBorder()
-                .graphicsLayer {
-                    scaleX = scale.value
-                    scaleY = scale.value
-                },
-            shape = RectangleShape,
+                .fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -122,7 +103,7 @@ fun AppUpdateDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(6.dp))
-                    PixelProgressBar(progress = state.downloadProgress, modifier = Modifier.fillMaxWidth())
+                    DownloadProgressBar(progress = state.downloadProgress, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(12.dp))
                 }
 
@@ -154,18 +135,18 @@ fun AppUpdateDialog(
                             )
                         }
                         Spacer(Modifier.width(4.dp))
-                        StardewButton(onClick = onDismiss) {
+                        AppButton(onClick = onDismiss) {
                             Text(stringResource(R.string.update_later))
                         }
                         Spacer(Modifier.width(8.dp))
                         when {
                             state.downloadError != null -> {
-                                StardewButton(onClick = onUpdate, variant = StardewButtonVariant.Action) {
+                                AppButton(onClick = onUpdate, variant = ButtonVariant.Action) {
                                     Text(stringResource(R.string.update_retry))
                                 }
                             }
                             state.showInstallPermissionPrompt -> {
-                                StardewButton(
+                                AppButton(
                                     onClick = {
                                         val intent = Intent(
                                             Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
@@ -173,13 +154,13 @@ fun AppUpdateDialog(
                                         )
                                         context.startActivity(intent)
                                     },
-                                    variant = StardewButtonVariant.Action
+                                    variant = ButtonVariant.Action
                                 ) {
                                     Text(stringResource(R.string.update_allow_installs))
                                 }
                             }
                             else -> {
-                                StardewButton(onClick = onUpdate, variant = StardewButtonVariant.Action) {
+                                AppButton(onClick = onUpdate, variant = ButtonVariant.Action) {
                                     Text(stringResource(R.string.update_button))
                                 }
                             }

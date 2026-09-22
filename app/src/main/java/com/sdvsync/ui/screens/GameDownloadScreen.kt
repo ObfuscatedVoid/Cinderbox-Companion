@@ -7,7 +7,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -17,17 +16,15 @@ import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadState
 import com.sdvsync.download.SmapiSetupProgress
-import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDivider
+import com.sdvsync.ui.components.AppOutlinedButton
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
 import com.sdvsync.ui.components.CinderboxWizardDialog
-import com.sdvsync.ui.components.PixelDivider
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.PixelProgressBar
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewOutlinedButton
-import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.DownloadProgressBar
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.components.installCinderboxApk
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
@@ -52,7 +49,7 @@ private fun formatDate(epochSeconds: Long): String {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = koinViewModel()) {
+fun GameDownloadScreen(viewModel: GameDownloadViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
     val wizardState by viewModel.wizardState.collectAsState()
 
@@ -86,16 +83,8 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
-                title = stringResource(R.string.download_title),
-                navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
-                        onClick = onBack,
-                        contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+            AppTopBar(
+                title = stringResource(R.string.download_title)
             )
         }
     ) { padding ->
@@ -107,7 +96,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                 .padding(16.dp)
         ) {
             // App info card
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.download_app_name),
@@ -123,7 +112,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
             }
 
             Spacer(Modifier.height(24.dp))
-            PixelDivider()
+            AppDivider()
             Spacer(Modifier.height(24.dp))
 
             // Version / Branch selection
@@ -131,18 +120,18 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
             Spacer(Modifier.height(8.dp))
 
             if (state.isLoadingBranches) {
-                StardewCard {
+                AppCard {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        PixelLoadingSpinner()
+                        LoadingIndicator()
                     }
                 }
             } else if (state.branches.isNotEmpty()) {
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -185,7 +174,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                                     onValueChange = { viewModel.updateBranchPassword(it) },
                                     label = { Text(stringResource(R.string.download_branch_password)) },
                                     singleLine = true,
-                                    shape = RectangleShape,
+                                    shape = MaterialTheme.shapes.large,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -195,13 +184,13 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
             }
 
             Spacer(Modifier.height(24.dp))
-            PixelDivider()
+            AppDivider()
             Spacer(Modifier.height(24.dp))
 
             // Platform selection
             SectionHeader(stringResource(R.string.download_section_platform))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -224,7 +213,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
             }
 
             Spacer(Modifier.height(24.dp))
-            PixelDivider()
+            AppDivider()
             Spacer(Modifier.height(24.dp))
 
             // Download location
@@ -233,7 +222,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
 
             var editingPath by remember { mutableStateOf(false) }
 
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     if (editingPath) {
                         OutlinedTextField(
@@ -241,11 +230,11 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                             onValueChange = { viewModel.updateInstallDirectory(it) },
                             label = { Text(stringResource(R.string.download_install_path)) },
                             singleLine = true,
-                            shape = RectangleShape,
+                            shape = MaterialTheme.shapes.large,
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(Modifier.height(8.dp))
-                        StardewOutlinedButton(onClick = { editingPath = false }) {
+                        AppOutlinedButton(onClick = { editingPath = false }) {
                             Text(stringResource(R.string.download_done))
                         }
                     } else {
@@ -257,7 +246,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                             overflow = TextOverflow.Ellipsis
                         )
                         Spacer(Modifier.height(8.dp))
-                        StardewOutlinedButton(onClick = { editingPath = true }) {
+                        AppOutlinedButton(onClick = { editingPath = true }) {
                             Text(stringResource(R.string.download_change_folder))
                         }
                     }
@@ -265,7 +254,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
             }
 
             // Verification toggle
-            StardewCard {
+            AppCard {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -295,7 +284,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
 
             // Error
             if (state.error != null) {
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             state.error!!,
@@ -312,9 +301,9 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
 
             when (downloadState) {
                 DownloadState.IDLE -> {
-                    StardewButton(
+                    AppButton(
                         onClick = { viewModel.onDownloadButtonClicked() },
-                        variant = StardewButtonVariant.Gold,
+                        variant = ButtonVariant.Gold,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = state.branches.isNotEmpty()
                     ) {
@@ -323,14 +312,14 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                 }
 
                 DownloadState.PREPARING -> {
-                    StardewCard {
+                    AppCard {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            PixelLoadingSpinner()
+                            LoadingIndicator()
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 stringResource(R.string.download_preparing),
@@ -352,7 +341,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                 }
 
                 DownloadState.VERIFYING -> {
-                    StardewCard {
+                    AppCard {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -362,7 +351,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                             Row(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                                LoadingIndicator(modifier = Modifier.size(24.dp))
                                 Spacer(Modifier.width(12.dp))
                                 Text(
                                     stringResource(R.string.download_verifying),
@@ -393,7 +382,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                             )
                             Spacer(Modifier.height(8.dp))
 
-                            PixelProgressBar(progress = state.downloadProgress.overallPercent)
+                            DownloadProgressBar(progress = state.downloadProgress.overallPercent)
 
                             Spacer(Modifier.height(4.dp))
                             Text(
@@ -420,7 +409,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                     val copySucceeded = progress.copyCompleted && progress.copyErrors.isEmpty()
                     val showCopyButton = state.isCinderboxSetup && !copySucceeded
 
-                    StardewCard {
+                    AppCard {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 stringResource(R.string.download_complete),
@@ -490,9 +479,9 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                     Spacer(Modifier.height(12.dp))
 
                     if (showCopyButton) {
-                        StardewButton(
+                        AppButton(
                             onClick = { viewModel.copyCinderbox() },
-                            variant = if (copyFailed) StardewButtonVariant.Primary else StardewButtonVariant.Action,
+                            variant = if (copyFailed) ButtonVariant.Primary else ButtonVariant.Action,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
@@ -504,7 +493,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                         Spacer(Modifier.height(8.dp))
                     }
 
-                    StardewOutlinedButton(
+                    AppOutlinedButton(
                         onClick = { viewModel.resetDownload() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -513,7 +502,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                 }
 
                 DownloadState.ERROR -> {
-                    StardewCard {
+                    AppCard {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 stringResource(R.string.download_error),
@@ -529,7 +518,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    StardewButton(
+                    AppButton(
                         onClick = {
                             viewModel.resetDownload()
                             viewModel.startDownload()
@@ -541,7 +530,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                 }
 
                 DownloadState.CANCELLED -> {
-                    StardewCard {
+                    AppCard {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 stringResource(R.string.download_cancelled),
@@ -551,12 +540,12 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    StardewButton(
+                    AppButton(
                         onClick = {
                             viewModel.resetDownload()
                             viewModel.startDownload()
                         },
-                        variant = StardewButtonVariant.Gold,
+                        variant = ButtonVariant.Gold,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.download_button))
@@ -566,7 +555,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
 
             // SMAPI Setup section (always visible)
             Spacer(Modifier.height(24.dp))
-            PixelDivider()
+            AppDivider()
             Spacer(Modifier.height(24.dp))
 
             SmapiSetupSection(
@@ -580,7 +569,7 @@ fun GameDownloadScreen(onBack: () -> Unit, viewModel: GameDownloadViewModel = ko
             )
 
             Spacer(Modifier.height(24.dp))
-            PixelDivider()
+            AppDivider()
             Spacer(Modifier.height(24.dp))
 
             CinderboxSection(
@@ -613,13 +602,13 @@ private fun SmapiSetupSection(
     when {
         smapiProgress.isDownloading -> {
             // Download phase
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                        LoadingIndicator(modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(12.dp))
                         Text(
                             stringResource(R.string.smapi_downloading),
@@ -642,7 +631,7 @@ private fun SmapiSetupSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
-                    PixelProgressBar(progress = smapiProgress.downloadPercent)
+                    DownloadProgressBar(progress = smapiProgress.downloadPercent)
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "${(smapiProgress.downloadPercent * 100).toInt()}%",
@@ -655,13 +644,13 @@ private fun SmapiSetupSection(
 
         smapiProgress.isRunning -> {
             // Running state
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                        LoadingIndicator(modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(12.dp))
                         Text(
                             stringResource(R.string.smapi_extracting),
@@ -693,7 +682,7 @@ private fun SmapiSetupSection(
                     )
 
                     Spacer(Modifier.height(8.dp))
-                    PixelProgressBar(progress = smapiProgress.percent)
+                    DownloadProgressBar(progress = smapiProgress.percent)
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "${(smapiProgress.percent * 100).toInt()}%",
@@ -706,7 +695,7 @@ private fun SmapiSetupSection(
 
         smapiProgress.completed -> {
             // Completed state
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     if (smapiProgress.errorMessage != null) {
                         Text(
@@ -730,7 +719,7 @@ private fun SmapiSetupSection(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            StardewOutlinedButton(
+            AppOutlinedButton(
                 onClick = onReset,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -740,7 +729,7 @@ private fun SmapiSetupSection(
 
         else -> {
             // Idle state
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.smapi_setup_desc),
@@ -766,9 +755,9 @@ private fun SmapiSetupSection(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            StardewButton(
+            AppButton(
                 onClick = onExtract,
-                variant = StardewButtonVariant.Action,
+                variant = ButtonVariant.Action,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isCopying
             ) {
@@ -795,13 +784,13 @@ private fun DownloadProgressSection(
     overallPercent: Float,
     onCancel: () -> Unit
 ) {
-    StardewCard {
+    AppCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                LoadingIndicator(modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(12.dp))
                 Text(
                     stringResource(R.string.download_downloading),
@@ -843,7 +832,7 @@ private fun DownloadProgressSection(
 
             Spacer(Modifier.height(8.dp))
 
-            PixelProgressBar(progress = overallPercent)
+            DownloadProgressBar(progress = overallPercent)
 
             Spacer(Modifier.height(4.dp))
             Text(
@@ -854,7 +843,7 @@ private fun DownloadProgressSection(
 
             Spacer(Modifier.height(12.dp))
 
-            StardewOutlinedButton(
+            AppOutlinedButton(
                 onClick = onCancel,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -881,7 +870,7 @@ private fun CinderboxSection(
     when {
         cinderboxProgress.completed && cinderboxProgress.errorMessage == null -> {
             // Download complete — offer install
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.cinderbox_download_complete),
@@ -897,18 +886,18 @@ private fun CinderboxSection(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            StardewButton(
+            AppButton(
                 onClick = {
                     cinderboxProgress.apkFile?.let { installCinderboxApk(context, it) }
                 },
-                variant = StardewButtonVariant.Action,
+                variant = ButtonVariant.Action,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = cinderboxProgress.apkFile != null
             ) {
                 Text(stringResource(R.string.cinderbox_install_button))
             }
             Spacer(Modifier.height(8.dp))
-            StardewOutlinedButton(
+            AppOutlinedButton(
                 onClick = onReset,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -918,13 +907,13 @@ private fun CinderboxSection(
 
         cinderboxProgress.isDownloading -> {
             // Downloading
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                        LoadingIndicator(modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(12.dp))
                         Text(
                             stringResource(R.string.cinderbox_downloading),
@@ -947,7 +936,7 @@ private fun CinderboxSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
-                    PixelProgressBar(progress = cinderboxProgress.percent)
+                    DownloadProgressBar(progress = cinderboxProgress.percent)
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "${(cinderboxProgress.percent * 100).toInt()}%",
@@ -960,7 +949,7 @@ private fun CinderboxSection(
 
         cinderboxProgress.errorMessage != null -> {
             // Error
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.cinderbox_download_error, cinderboxProgress.errorMessage),
@@ -970,7 +959,7 @@ private fun CinderboxSection(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            StardewButton(
+            AppButton(
                 onClick = {
                     onReset()
                     onDownload()
@@ -983,7 +972,7 @@ private fun CinderboxSection(
 
         else -> {
             // Idle
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.cinderbox_section_desc),
@@ -1009,9 +998,9 @@ private fun CinderboxSection(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            StardewButton(
+            AppButton(
                 onClick = onDownload,
-                variant = StardewButtonVariant.Action,
+                variant = ButtonVariant.Action,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -1028,13 +1017,13 @@ private fun CinderboxSection(
 
 @Composable
 private fun CopyProgressSection(currentFile: String, copiedFiles: Int, totalFiles: Int, overallPercent: Float) {
-    StardewCard {
+    AppCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PixelLoadingSpinner(modifier = Modifier.size(24.dp))
+                LoadingIndicator(modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(12.dp))
                 Text(
                     stringResource(R.string.cinderbox_copying),
@@ -1063,7 +1052,7 @@ private fun CopyProgressSection(currentFile: String, copiedFiles: Int, totalFile
 
             Spacer(Modifier.height(8.dp))
 
-            PixelProgressBar(progress = overallPercent)
+            DownloadProgressBar(progress = overallPercent)
 
             Spacer(Modifier.height(4.dp))
             Text(

@@ -45,7 +45,7 @@ fun SeasonBadge(season: Int, seasonName: String, modifier: Modifier = Modifier) 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        PixelSeasonIcon(season = season, size = 14.dp)
+        SeasonIcon(season = season, size = 14.dp)
         Text(
             seasonName,
             style = MaterialTheme.typography.labelSmall,

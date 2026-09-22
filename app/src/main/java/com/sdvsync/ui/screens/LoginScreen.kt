@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
@@ -34,20 +33,15 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.steam.AuthState
-import com.sdvsync.ui.components.BarnData
-import com.sdvsync.ui.components.BarnPalette
-import com.sdvsync.ui.components.EyeClosedData
-import com.sdvsync.ui.components.EyeOpenData
-import com.sdvsync.ui.components.PixelDivider
-import com.sdvsync.ui.components.PixelIcon
-import com.sdvsync.ui.components.PixelLoadingSpinner
-import com.sdvsync.ui.components.QrCodeData
-import com.sdvsync.ui.components.SparkleOverlay
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewOutlinedButton
-import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDivider
+import com.sdvsync.ui.components.AppIcon
+import com.sdvsync.ui.components.AppIcons
+import com.sdvsync.ui.components.AppOutlinedButton
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
+import com.sdvsync.ui.components.LoadingIndicator
 import com.sdvsync.ui.viewmodels.LoginViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,7 +74,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(title = stringResource(R.string.login_title))
+            AppTopBar(title = stringResource(R.string.login_title))
         }
     ) { padding ->
         Column(
@@ -97,13 +91,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
             Box(
                 contentAlignment = Alignment.Center
             ) {
-                SparkleOverlay(
-                    modifier = Modifier
-                        .size(width = 200.dp, height = 100.dp)
-                )
-                PixelIcon(
-                    pixelData = BarnData,
-                    palette = BarnPalette,
+                AppIcon(
+                    imageVector = AppIcons.Home,
                     size = 64.dp
                 )
             }
@@ -163,7 +152,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(24.dp))
-                    StardewButton(
+                    AppButton(
                         onClick = viewModel::confirmDeviceApproval,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -171,7 +160,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
                     }
                     if (state.canUseCode) {
                         Spacer(Modifier.height(12.dp))
-                        StardewOutlinedButton(
+                        AppOutlinedButton(
                             onClick = viewModel::useSteamGuardCode,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -204,7 +193,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
                             null
                         },
                         colors = warmTextFieldColors,
-                        shape = RectangleShape,
+                        shape = MaterialTheme.shapes.large,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Ascii,
                             imeAction = ImeAction.Done
@@ -219,7 +208,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(16.dp))
-                    StardewButton(
+                    AppButton(
                         onClick = { viewModel.submit2FA() },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = twoFactorCode.isNotBlank()
@@ -252,13 +241,13 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        StardewOutlinedButton(
+                        AppOutlinedButton(
                             onClick = { AppLogger.copyLogs(context) },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(stringResource(R.string.login_copy_logs))
                         }
-                        StardewOutlinedButton(
+                        AppOutlinedButton(
                             onClick = { AppLogger.shareLogs(context) },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -268,7 +257,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
                 }
 
                 is AuthState.LoggedIn -> {
-                    PixelLoadingSpinner()
+                    LoadingIndicator()
                 }
             }
 
@@ -279,7 +268,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, viewModel: LoginViewModel = koinView
 
 @Composable
 private fun LoginProgress(@StringRes messageRes: Int) {
-    PixelLoadingSpinner()
+    LoadingIndicator()
     Spacer(Modifier.height(16.dp))
     Text(
         stringResource(messageRes),
@@ -302,13 +291,13 @@ private fun LoginOptions(
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val canLogin = username.isNotBlank() && password.isNotBlank()
 
-    StardewOutlinedButton(
+    AppOutlinedButton(
         onClick = onQRLogin,
         modifier = Modifier.fillMaxWidth()
     ) {
-        PixelIcon(
-            pixelData = QrCodeData,
-            palette = listOf(androidx.compose.ui.graphics.Color.Transparent, iconTint),
+        AppIcon(
+            imageVector = AppIcons.QrCode,
+            tint = iconTint,
             size = 20.dp
         )
         Spacer(Modifier.width(8.dp))
@@ -321,14 +310,14 @@ private fun LoginOptions(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        PixelDivider(Modifier.weight(1f))
+        AppDivider(Modifier.weight(1f))
         Text(
             stringResource(R.string.login_or_divider),
             modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        PixelDivider(Modifier.weight(1f))
+        AppDivider(Modifier.weight(1f))
     }
 
     Spacer(Modifier.height(24.dp))
@@ -339,7 +328,7 @@ private fun LoginOptions(
         label = { Text(stringResource(R.string.login_username_hint)) },
         singleLine = true,
         colors = textFieldColors,
-        shape = RectangleShape,
+        shape = MaterialTheme.shapes.large,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth()
     )
@@ -350,7 +339,7 @@ private fun LoginOptions(
         label = { Text(stringResource(R.string.login_password_hint)) },
         singleLine = true,
         colors = textFieldColors,
-        shape = RectangleShape,
+        shape = MaterialTheme.shapes.large,
         visualTransformation = if (passwordVisible) {
             VisualTransformation.None
         } else {
@@ -370,12 +359,9 @@ private fun LoginOptions(
                     contentDescription = visibilityDescription
                 }
             ) {
-                PixelIcon(
-                    pixelData = if (passwordVisible) EyeOpenData else EyeClosedData,
-                    palette = listOf(
-                        androidx.compose.ui.graphics.Color.Transparent,
-                        iconTint
-                    ),
+                AppIcon(
+                    imageVector = if (passwordVisible) AppIcons.Visibility else AppIcons.VisibilityOff,
+                    tint = iconTint,
                     size = 20.dp
                 )
             }
@@ -394,10 +380,10 @@ private fun LoginOptions(
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(Modifier.height(24.dp))
-    StardewButton(
+    AppButton(
         onClick = onLogin,
         modifier = Modifier.fillMaxWidth(),
-        variant = StardewButtonVariant.Action,
+        variant = ButtonVariant.Action,
         enabled = canLogin
     ) {
         Text(stringResource(R.string.login_button))
@@ -419,7 +405,7 @@ private fun QRLoginView(challengeUrl: String, onCancel: () -> Unit) {
     )
     Spacer(Modifier.height(24.dp))
 
-    StardewCard(modifier = Modifier.size(240.dp)) {
+    AppCard(modifier = Modifier.size(240.dp)) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -434,7 +420,7 @@ private fun QRLoginView(challengeUrl: String, onCancel: () -> Unit) {
     }
 
     Spacer(Modifier.height(24.dp))
-    StardewOutlinedButton(onClick = onCancel) {
+    AppOutlinedButton(onClick = onCancel) {
         Text(stringResource(R.string.action_cancel))
     }
 }
@@ -477,6 +463,6 @@ private fun QrCodeImage(data: String, modifier: Modifier = Modifier) {
             modifier = modifier
         )
     } ?: Box(modifier, contentAlignment = Alignment.Center) {
-        PixelLoadingSpinner(size = 48.dp)
+        LoadingIndicator(size = 48.dp)
     }
 }

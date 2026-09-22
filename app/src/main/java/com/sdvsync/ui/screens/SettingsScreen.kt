@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -24,15 +23,13 @@ import com.sdvsync.BuildConfig
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveBackupManager
-import com.sdvsync.ui.components.ArrowLeftData
+import com.sdvsync.ui.components.AppButton
+import com.sdvsync.ui.components.AppCard
+import com.sdvsync.ui.components.AppDivider
+import com.sdvsync.ui.components.AppOutlinedButton
+import com.sdvsync.ui.components.AppTopBar
+import com.sdvsync.ui.components.ButtonVariant
 import com.sdvsync.ui.components.CinderboxMigrationDialog
-import com.sdvsync.ui.components.PixelDivider
-import com.sdvsync.ui.components.PixelIconButton
-import com.sdvsync.ui.components.StardewButton
-import com.sdvsync.ui.components.StardewButtonVariant
-import com.sdvsync.ui.components.StardewCard
-import com.sdvsync.ui.components.StardewOutlinedButton
-import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.StoragePermissionDialog
 import com.sdvsync.ui.viewmodels.CinderboxMigrationViewModel
 import com.sdvsync.ui.viewmodels.SettingsViewModel
@@ -62,13 +59,13 @@ private fun SectionHeader(text: String) {
 @Composable
 private fun SettingsSectionGap() {
     Spacer(Modifier.height(16.dp))
-    PixelDivider()
+    AppDivider()
     Spacer(Modifier.height(16.dp))
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
+fun SettingsScreen(onLogout: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
     val migrationViewModel: CinderboxMigrationViewModel = koinViewModel()
     val migrationState by migrationViewModel.state.collectAsState()
@@ -127,16 +124,8 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
 
     Scaffold(
         topBar = {
-            StardewTopAppBar(
-                title = stringResource(R.string.settings_title),
-                navigationIcon = {
-                    PixelIconButton(
-                        pixelData = ArrowLeftData,
-                        onClick = onBack,
-                        contentDescription = stringResource(R.string.action_back),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+            AppTopBar(
+                title = stringResource(R.string.settings_title)
             )
         }
     ) { padding ->
@@ -150,7 +139,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
             // Game mode
             SectionHeader(stringResource(R.string.settings_game_mode_title))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -183,7 +172,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
 
             if (state.cinderboxMode && state.hasLegacyCinderboxFiles) {
                 Spacer(Modifier.height(12.dp))
-                StardewCard {
+                AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             stringResource(R.string.cinderbox_migrate_settings_title),
@@ -196,9 +185,9 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(12.dp))
-                        StardewButton(
+                        AppButton(
                             onClick = migrationViewModel::showPrompt,
-                            variant = StardewButtonVariant.Gold,
+                            variant = ButtonVariant.Gold,
                             enabled = !migrationState.isMigrating
                         ) {
                             Text(
@@ -218,7 +207,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
             // File access mode
             SectionHeader(stringResource(R.string.settings_file_access))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     val currentModeDisplay = strategyDisplayName(state.fileAccessMode)
                     val availableModesDisplay = state.availableModes.map { strategyDisplayName(it) }
@@ -250,7 +239,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                             onClick = { viewModel.setFileAccessMode(null) },
                             label = { Text(stringResource(R.string.settings_file_access_auto)) },
                             colors = filterChipColors,
-                            shape = RectangleShape
+                            shape = MaterialTheme.shapes.large
                         )
                         state.availableModes.forEach { mode ->
                             FilterChip(
@@ -258,7 +247,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                                 onClick = { viewModel.setFileAccessMode(mode) },
                                 label = { Text(strategyDisplayName(mode)) },
                                 colors = filterChipColors,
-                                shape = RectangleShape
+                                shape = MaterialTheme.shapes.large
                             )
                         }
                     }
@@ -311,7 +300,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
             // Backups
             SectionHeader(stringResource(R.string.settings_backups_title))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.settings_backups_description),
@@ -346,7 +335,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
             // Auto-sync
             SectionHeader(stringResource(R.string.settings_auto_sync_title))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     if (state.autoSyncAvailable) {
                         Row(
@@ -399,12 +388,12 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
             // Account
             SectionHeader(stringResource(R.string.settings_steam_account))
             Spacer(Modifier.height(8.dp))
-            StardewButton(
+            AppButton(
                 onClick = {
                     viewModel.logout()
                     onLogout()
                 },
-                variant = StardewButtonVariant.Danger
+                variant = ButtonVariant.Danger
             ) {
                 Text(stringResource(R.string.settings_logout))
             }
@@ -414,7 +403,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
             // About
             SectionHeader(stringResource(R.string.settings_about_title))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.settings_about, BuildConfig.VERSION_NAME),
@@ -501,7 +490,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
             // Diagnostics
             SectionHeader(stringResource(R.string.settings_diagnostics_title))
             Spacer(Modifier.height(8.dp))
-            StardewCard {
+            AppCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.settings_share_logs_desc),
@@ -509,7 +498,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogout: () -> Unit, viewModel: Settings
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(12.dp))
-                    StardewOutlinedButton(onClick = { AppLogger.shareLogs(context) }) {
+                    AppOutlinedButton(onClick = { AppLogger.shareLogs(context) }) {
                         Text(stringResource(R.string.settings_share_logs))
                     }
                 }
@@ -525,7 +514,7 @@ private fun SAFAccessSection(
     onSelectDirectory: () -> Unit,
     onRevoke: () -> Unit
 ) {
-    StardewCard {
+    AppCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_saf_title),
@@ -544,7 +533,7 @@ private fun SAFAccessSection(
                     color = MaterialTheme.colorScheme.secondary
                 )
                 Spacer(Modifier.height(8.dp))
-                StardewOutlinedButton(onClick = onRevoke) {
+                AppOutlinedButton(onClick = onRevoke) {
                     Text(stringResource(R.string.settings_saf_revoke))
                 }
             } else {
@@ -560,7 +549,7 @@ private fun SAFAccessSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
-                StardewOutlinedButton(onClick = onSelectDirectory) {
+                AppOutlinedButton(onClick = onSelectDirectory) {
                     Text(stringResource(R.string.settings_saf_select))
                 }
             }
@@ -576,7 +565,7 @@ private fun ShizukuStatusSection(
     onRequestPermission: () -> Unit,
     onBindService: () -> Unit
 ) {
-    StardewCard {
+    AppCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_shizuku_title),
@@ -605,7 +594,7 @@ private fun ShizukuStatusSection(
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(Modifier.height(8.dp))
-                    StardewOutlinedButton(onClick = onRequestPermission) {
+                    AppOutlinedButton(onClick = onRequestPermission) {
                         Text(stringResource(R.string.settings_shizuku_grant_permission))
                     }
                 }
@@ -616,7 +605,7 @@ private fun ShizukuStatusSection(
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Spacer(Modifier.height(8.dp))
-                    StardewOutlinedButton(onClick = onBindService) {
+                    AppOutlinedButton(onClick = onBindService) {
                         Text(stringResource(R.string.settings_shizuku_connect))
                     }
                 }
@@ -641,7 +630,7 @@ private fun NexusApiKeySection(
 
     SectionHeader(stringResource(R.string.settings_mods_title))
     Spacer(Modifier.height(8.dp))
-    StardewCard {
+    AppCard {
         Column(modifier = Modifier.padding(12.dp)) {
             if (hasKey) {
                 Text(
@@ -669,7 +658,7 @@ private fun NexusApiKeySection(
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StardewOutlinedButton(
+                    AppOutlinedButton(
                         onClick = {
                             keyInput = ""
                             onClearError()
@@ -679,9 +668,9 @@ private fun NexusApiKeySection(
                     ) {
                         Text(stringResource(R.string.settings_nexus_key_change))
                     }
-                    StardewButton(
+                    AppButton(
                         onClick = onRemoveKey,
-                        variant = StardewButtonVariant.Danger,
+                        variant = ButtonVariant.Danger,
                         enabled = !isValidating
                     ) {
                         Text(stringResource(R.string.settings_nexus_key_remove))
@@ -702,7 +691,7 @@ private fun NexusApiKeySection(
                     },
                     label = { Text(stringResource(R.string.mods_api_key_hint)) },
                     singleLine = true,
-                    shape = RectangleShape,
+                    shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                     isError = errorRes != null,
                     supportingText = if (errorRes != null) {
@@ -712,9 +701,9 @@ private fun NexusApiKeySection(
                     }
                 )
                 Spacer(Modifier.height(8.dp))
-                StardewButton(
+                AppButton(
                     onClick = { onSaveKey(keyInput) },
-                    variant = StardewButtonVariant.Action,
+                    variant = ButtonVariant.Action,
                     enabled = keyInput.isNotBlank() && !isValidating
                 ) {
                     if (isValidating) {
@@ -754,7 +743,7 @@ private fun NexusApiKeySection(
                         },
                         label = { Text(stringResource(R.string.mods_api_key_hint)) },
                         singleLine = true,
-                        shape = RectangleShape,
+                        shape = MaterialTheme.shapes.large,
                         modifier = Modifier.fillMaxWidth(),
                         isError = errorRes != null,
                         supportingText = if (errorRes != null) {
@@ -766,12 +755,12 @@ private fun NexusApiKeySection(
                 }
             },
             confirmButton = {
-                StardewButton(
+                AppButton(
                     onClick = {
                         onSaveKey(keyInput)
                         showChangeDialog = false
                     },
-                    variant = StardewButtonVariant.Action,
+                    variant = ButtonVariant.Action,
                     enabled = keyInput.isNotBlank() && !isValidating
                 ) {
                     if (isValidating) {
@@ -785,7 +774,7 @@ private fun NexusApiKeySection(
                 }
             },
             dismissButton = {
-                StardewButton(onClick = { showChangeDialog = false }) {
+                AppButton(onClick = { showChangeDialog = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }
@@ -795,7 +784,7 @@ private fun NexusApiKeySection(
 
 @Composable
 private fun AllFilesAccessSection(permissionGranted: Boolean, accessWorking: Boolean, onGrantPermission: () -> Unit) {
-    StardewCard {
+    AppCard {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 stringResource(R.string.settings_all_files_title),
@@ -825,7 +814,7 @@ private fun AllFilesAccessSection(permissionGranted: Boolean, accessWorking: Boo
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
-                    StardewOutlinedButton(onClick = onGrantPermission) {
+                    AppOutlinedButton(onClick = onGrantPermission) {
                         Text(stringResource(R.string.settings_all_files_grant))
                     }
                 }
