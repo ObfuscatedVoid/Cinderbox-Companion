@@ -15,6 +15,7 @@ import com.sdvsync.BuildConfig
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
+import java.nio.file.Files
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -149,7 +150,7 @@ object AppLogger {
     }
 
     private fun buildDiagnosticHeader(): String = buildString {
-        appendLine("=== SDV Sync Diagnostic Report ===")
+        appendLine("=== Cinderbox-Companion Diagnostic Report ===")
         appendLine("App Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         appendLine("Date: ${LocalDateTime.now().format(DATE_FORMAT)}")
         appendLine()
@@ -243,10 +244,7 @@ object AppLogger {
             return
         }
 
-        val logDir = File(ctx.cacheDir, "shared_logs").also { it.mkdirs() }
-        val reportFile = File(logDir, "sdvsync-diagnostic-${System.currentTimeMillis()}.log")
-        reportFile.writeText(readAllLogs())
-
+        val reportFile = createDiagnosticReport(ctx)
         val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", reportFile)
 
         val intent = Intent(Intent.ACTION_SEND).apply {
@@ -256,10 +254,18 @@ object AppLogger {
         }
 
         context.startActivity(
-            Intent.createChooser(intent, "Share Cinderbox Companion Logs").apply {
+            Intent.createChooser(intent, "Share Cinderbox-Companion Logs").apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         )
+    }
+
+    internal fun createDiagnosticReport(context: Context): File {
+        val directory = File(context.cacheDir, "exports/logs")
+        Files.createDirectories(directory.toPath())
+        return File(directory, "cinderbox-companion-diagnostic-${System.currentTimeMillis()}.log").apply {
+            writeText(readAllLogs())
+        }
     }
 
     fun copyLogs(context: Context) {
@@ -267,7 +273,7 @@ object AppLogger {
         val logText = readAllLogs()
 
         val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("SDV Sync Logs", logText))
+        clipboard.setPrimaryClip(ClipData.newPlainText("Cinderbox-Companion Logs", logText))
 
         Toast.makeText(ctx, "Logs copied to clipboard", Toast.LENGTH_SHORT).show()
     }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Cinderbox Companion</string>
+    <string name="app_name">Cinderbox-Companion</string>
 
     <!-- Common actions -->
     <string name="action_back">Back</string>
@@ -9,9 +9,9 @@
     <string name="action_refresh">Refresh</string>
 
     <!-- Login -->
-    <string name="login_brand_tagline">Stardew Valley Save Sync</string>
-    <string name="steam_device_name">Cinderbox Companion for Android</string>
-    <string name="login_title">Cinderbox Companion \u2014 Steam Login</string>
+    <string name="login_brand_tagline">Your saves, mods and game files</string>
+    <string name="steam_device_name">Cinderbox-Companion for Android</string>
+    <string name="login_title">Steam sign-in</string>
     <string name="login_username_hint">Steam Username</string>
     <string name="login_password_hint">Password</string>
     <string name="login_button">Log In</string>
@@ -38,7 +38,7 @@
     <string name="login_copy_logs">Copy Logs</string>
 
     <!-- Dashboard -->
-    <string name="dashboard_title">Stardew Saves</string>
+    <string name="dashboard_title">Your saves</string>
     <string name="dashboard_no_saves">No saves found on Steam Cloud</string>
 
     <!-- Save info -->
@@ -186,7 +186,7 @@
     <string name="settings_backups_description">A backup is created before every sync to protect your save data.</string>
     <string name="settings_backups_count">Backup limit per save: %1$d</string>
     <string name="settings_about_title">About</string>
-    <string name="settings_about">Cinderbox Companion v%1$s</string>
+    <string name="settings_about">Cinderbox-Companion v%1$s</string>
     <string name="settings_about_desc">Companion app for Cinderbox \u2014 sync saves, download game files, and manage mods.</string>
     <string name="settings_cinderbox_version">Cinderbox: v%1$s</string>
     <string name="settings_smapi_version">SMAPI: v%1$s</string>
@@ -530,7 +530,7 @@
     <string name="save_viewer_times_crafted">\u00d7%1$d</string>
 
     <!-- Widget -->
-    <string name="widget_title">Stardew Sync</string>
+    <string name="widget_title">Cinderbox-Companion</string>
     <string name="widget_description">Shows last sync status for each save</string>
     <string name="widget_no_syncs">No syncs yet</string>
 

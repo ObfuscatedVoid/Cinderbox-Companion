@@ -26,7 +26,7 @@ class NexusModSource(private val httpClient: OkHttpClient, private val dataStore
         private const val BASE_URL = "https://api.nexusmods.com/v1"
         private const val GRAPHQL_URL = "https://api.nexusmods.com/v2/graphql"
         private const val GAME_DOMAIN = "stardewvalley"
-        private const val APPLICATION_NAME = "Cinderbox Companion"
+        private const val APPLICATION_NAME = "Cinderbox-Companion"
         private const val CACHE_DURATION_MS = 60 * 60 * 1000L
     }
 

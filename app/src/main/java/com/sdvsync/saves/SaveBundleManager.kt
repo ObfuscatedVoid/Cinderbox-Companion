@@ -187,7 +187,7 @@ class SaveBundleManager(
         val obj = JSONObject().apply {
             put("version", manifest.version)
             put("exportedAt", manifest.exportedAt)
-            put("app", "SDV Sync")
+            put("app", "Cinderbox-Companion")
             put("appVersion", manifest.appVersion)
             put(
                 "save",
