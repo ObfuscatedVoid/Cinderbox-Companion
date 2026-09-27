@@ -1,6 +1,8 @@
 package com.sdvsync.saves
 
+import android.content.Context
 import android.util.Xml
+import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.util.GzipUtil
 import java.io.ByteArrayInputStream
@@ -14,7 +16,7 @@ data class ValidationResult(
     val warnings: List<String> = emptyList()
 )
 
-class SaveValidator {
+class SaveValidator(private val context: Context) {
 
     companion object {
         private const val TAG = "SaveValidator"
@@ -28,7 +30,7 @@ class SaveValidator {
         val warnings = mutableListOf<String>()
 
         if (!saveDir.exists() || !saveDir.isDirectory) {
-            return ValidationResult(false, listOf("Save directory does not exist"))
+            return ValidationResult(false, listOf(context.getString(R.string.health_dir_missing)))
         }
 
         val folderName = saveDir.name
@@ -37,18 +39,18 @@ class SaveValidator {
 
         // Check main save file
         if (!mainSaveFile.exists()) {
-            errors.add("Main save file missing: $folderName")
+            errors.add(context.getString(R.string.health_main_missing, folderName))
         } else if (mainSaveFile.length() < 1024) {
-            errors.add("Main save file too small (${mainSaveFile.length()} bytes)")
+            errors.add(context.getString(R.string.health_main_too_small, mainSaveFile.length()))
         } else if (mainSaveFile.length() > 200 * 1024 * 1024) {
-            warnings.add("Main save file unusually large (${mainSaveFile.length() / 1024 / 1024}MB)")
+            warnings.add(context.getString(R.string.health_main_too_large, mainSaveFile.length() / 1024 / 1024))
         }
 
         // Check SaveGameInfo
         if (!saveGameInfo.exists()) {
-            errors.add("SaveGameInfo file missing")
+            errors.add(context.getString(R.string.health_info_missing))
         } else if (saveGameInfo.length() < 100) {
-            errors.add("SaveGameInfo too small (${saveGameInfo.length()} bytes)")
+            errors.add(context.getString(R.string.health_info_too_small, saveGameInfo.length()))
         }
 
         // Check for in-progress saves
@@ -56,20 +58,20 @@ class SaveValidator {
             it.name.contains("_STARDEWVALLEYSAVETMP")
         } ?: emptyList()
         if (tempFiles.isNotEmpty()) {
-            errors.add("Save appears to be in progress (temp files found)")
+            errors.add(context.getString(R.string.health_temp_files))
         }
 
         // Validate XML structure of main save
         if (mainSaveFile.exists() && mainSaveFile.length() > 0) {
             if (!validateXmlEnding(mainSaveFile, "</SaveGame>")) {
-                errors.add("Main save file has invalid XML (missing closing tag)")
+                errors.add(context.getString(R.string.health_main_xml_end))
             }
         }
 
         // Validate XML structure of SaveGameInfo
         if (saveGameInfo.exists() && saveGameInfo.length() > 0) {
             if (!validateXmlEnding(saveGameInfo, "</Farmer>")) {
-                errors.add("SaveGameInfo has invalid XML (missing closing tag)")
+                errors.add(context.getString(R.string.health_info_xml_end))
             }
         }
 
@@ -87,24 +89,24 @@ class SaveValidator {
         val errors = mutableListOf<String>()
 
         if (mainSaveData == null || mainSaveData.isEmpty()) {
-            errors.add("Main save data is empty")
+            errors.add(context.getString(R.string.health_main_empty))
         } else {
             // Stardew 1.6+ saves may be gzip-compressed — decompress before checking XML
             AppLogger.d(TAG, "Validating main save: size=${mainSaveData.size}, isGzip=${GzipUtil.isGzip(mainSaveData)}")
             val xmlData = GzipUtil.decompressIfGzip(mainSaveData)
             AppLogger.d(TAG, "Main save after decompression: size=${xmlData.size}")
             if (xmlData.size < 1024) {
-                errors.add("Main save data too small (${xmlData.size} bytes)")
+                errors.add(context.getString(R.string.health_main_data_small, xmlData.size))
             }
             val tail = String(xmlData.takeLast(100).toByteArray())
             AppLogger.d(TAG, "Main save tail (last 100 chars): '$tail'")
             if (!tail.contains("</SaveGame>")) {
-                errors.add("Main save data missing closing </SaveGame> tag")
+                errors.add(context.getString(R.string.health_main_tag_missing))
             }
         }
 
         if (saveGameInfoData == null || saveGameInfoData.isEmpty()) {
-            errors.add("SaveGameInfo data is empty")
+            errors.add(context.getString(R.string.health_info_empty))
         } else {
             AppLogger.d(
                 TAG,
@@ -115,7 +117,7 @@ class SaveValidator {
             val tail = String(xmlData.takeLast(100).toByteArray())
             AppLogger.d(TAG, "SaveGameInfo tail (last 100 chars): '$tail'")
             if (!tail.contains("</Farmer>")) {
-                errors.add("SaveGameInfo missing closing </Farmer> tag")
+                errors.add(context.getString(R.string.health_info_tag_missing))
             }
         }
 
@@ -139,7 +141,7 @@ class SaveValidator {
             val xmlData = GzipUtil.decompressIfGzip(mainSaveData)
 
             if (xmlData.size < 100 * 1024) {
-                warnings.add("Main save is small (${xmlData.size / 1024}KB) — may be truncated")
+                warnings.add(context.getString(R.string.health_main_small_warning, xmlData.size / 1024))
             }
 
             try {
@@ -174,12 +176,12 @@ class SaveValidator {
 
                 val missing = requiredChildren - foundChildren
                 if (missing.isNotEmpty()) {
-                    errors.add("Missing required elements: ${missing.joinToString(", ")}")
+                    errors.add(context.getString(R.string.health_required_missing, missing.joinToString(", ")))
                 }
             } catch (e: XmlPullParserException) {
-                errors.add("XML parse error at line ${e.lineNumber}: ${e.message}")
+                errors.add(context.getString(R.string.health_xml_parse_line, e.lineNumber, e.message ?: context.getString(R.string.error_unknown)))
             } catch (e: Exception) {
-                errors.add("Failed to parse main save: ${e.message}")
+                errors.add(context.getString(R.string.health_main_parse_failed, e.message ?: context.getString(R.string.error_unknown)))
             }
         }
 
@@ -218,15 +220,15 @@ class SaveValidator {
                     parser.next()
                 }
 
-                if (!foundName) errors.add("SaveGameInfo: missing farmer name")
-                if (!foundFarmName) errors.add("SaveGameInfo: missing farm name")
-                if (season !in 0..3) errors.add("SaveGameInfo: invalid season ($season)")
-                if (day !in 1..28) errors.add("SaveGameInfo: invalid day ($day)")
-                if (year < 1) errors.add("SaveGameInfo: invalid year ($year)")
+                if (!foundName) errors.add(context.getString(R.string.health_farmer_missing))
+                if (!foundFarmName) errors.add(context.getString(R.string.health_farm_missing))
+                if (season !in 0..3) errors.add(context.getString(R.string.health_season_invalid, season))
+                if (day !in 1..28) errors.add(context.getString(R.string.health_day_invalid, day))
+                if (year < 1) errors.add(context.getString(R.string.health_year_invalid, year))
             } catch (e: XmlPullParserException) {
-                errors.add("SaveGameInfo XML error at line ${e.lineNumber}: ${e.message}")
+                errors.add(context.getString(R.string.health_info_xml_line, e.lineNumber, e.message ?: context.getString(R.string.error_unknown)))
             } catch (e: Exception) {
-                errors.add("Failed to parse SaveGameInfo: ${e.message}")
+                errors.add(context.getString(R.string.health_info_parse_failed, e.message ?: context.getString(R.string.error_unknown)))
             }
         }
 

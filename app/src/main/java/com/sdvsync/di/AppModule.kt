@@ -74,7 +74,7 @@ val appModule = module {
 
     // Saves
     single { SaveMetadataParser() }
-    single { SaveValidator() }
+    single { SaveValidator(androidContext()) }
     single { SaveBackupManager(androidContext()) }
     single { SaveFileParser() }
     single {
@@ -113,7 +113,7 @@ val appModule = module {
     viewModel { GameDownloadViewModel(androidContext(), get(), get(), get(), get()) }
     viewModel { ModManagerViewModel(androidContext(), get(), get(), get()) }
     viewModel { ModBrowseViewModel(get(), get(), get()) }
-    viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), modId, source) }
+    viewModel { (modId: String, source: String) -> ModDetailViewModel(get(), get(), get(), get(), modId, source) }
     viewModel { (uniqueId: String) -> InstalledModDetailViewModel(get(), get(), get(), get(), uniqueId) }
     viewModel { BackupListViewModel(androidContext(), get(), get(), get()) }
     viewModel { SaveViewerViewModel(androidContext(), get(), get()) }

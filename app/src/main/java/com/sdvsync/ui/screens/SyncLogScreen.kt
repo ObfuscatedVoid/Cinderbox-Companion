@@ -69,7 +69,7 @@ fun SyncLogScreen(onBack: () -> Unit, viewModel: SyncLogViewModel = koinViewMode
                 state.entries.isEmpty() -> {
                     EmptyState(
                         title = stringResource(R.string.sync_log_empty),
-                        subtitle = "Sync history will appear here",
+                        subtitle = stringResource(R.string.sync_log_empty_hint),
                         modifier = Modifier
                             .align(Alignment.Center)
                             .padding(24.dp)

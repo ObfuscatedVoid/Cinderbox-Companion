@@ -244,7 +244,7 @@ class GameDownloadViewModel(
                 throw e
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Cinderbox copy failed", e)
-                downloadManager.setCopyError(e.message ?: "Copy failed unexpectedly")
+                downloadManager.setCopyError(e.message ?: context.getString(R.string.download_copy_error))
             }
         }
     }

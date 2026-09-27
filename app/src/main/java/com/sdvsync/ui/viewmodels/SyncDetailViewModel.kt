@@ -316,7 +316,7 @@ class SyncDetailViewModel(
                 _state.update {
                     it.copy(
                         isExporting = false,
-                        exportError = e.message ?: "Export failed"
+                        exportError = e.message ?: context.getString(R.string.export_failed_generic)
                     )
                 }
             }

@@ -74,7 +74,7 @@ internal fun installCinderboxApk(context: Context, apkFile: File) {
     } catch (e: Exception) {
         android.widget.Toast.makeText(
             context,
-            "Failed to launch installer: ${e.message}",
+            context.getString(R.string.wizard_installer_failed, e.message ?: ""),
             android.widget.Toast.LENGTH_LONG
         ).show()
     }
@@ -202,7 +202,7 @@ fun CinderboxWizardDialog(
                                 if (!onCheckDirectory()) {
                                     android.widget.Toast.makeText(
                                         context,
-                                        "Cinderbox folder not found yet. Make sure you've opened Cinderbox at least once.",
+                                        context.getString(R.string.wizard_folder_missing),
                                         android.widget.Toast.LENGTH_SHORT
                                     ).show()
                                 }

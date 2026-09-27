@@ -1,6 +1,7 @@
 package com.sdvsync.mods
 
 import android.content.Context
+import com.sdvsync.R
 import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.models.InstallResult
@@ -119,7 +120,7 @@ class ModFileManager(
                 .toList()
 
             if (manifests.isEmpty()) {
-                return InstallResult.Error("No manifest.json found in archive")
+                return InstallResult.Error(context.getString(R.string.mods_error_no_manifest))
             }
 
             val installed = mutableListOf<InstalledMod>()
@@ -133,16 +134,16 @@ class ModFileManager(
                     ?: manifest.name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "")
 
                 require(targetName.isNotBlank() && targetName != "." && targetName != "..") {
-                    "Invalid mod folder name"
+                    context.getString(R.string.mods_folder_invalid)
                 }
                 val existing = listInstalledMods().firstOrNull { it.manifest.uniqueID == manifest.uniqueID }
                 val targetDir = existing?.let { File(it.folderPath) } ?: File(modsDir, targetName)
-                check(!targetDir.exists() || existing != null) { "A different mod already uses $targetName" }
+                check(!targetDir.exists() || existing != null) { context.getString(R.string.mods_target_in_use, targetName) }
                 Files.createDirectories(modsDir.toPath())
                 val staged = Files.createTempDirectory(modsDir.toPath(), ".install-").toFile()
                 val previous = File(modsDir, ".backup-${UUID.randomUUID()}")
                 try {
-                    check(modFolder.copyRecursively(staged, overwrite = true)) { "Could not stage mod files" }
+                    check(modFolder.copyRecursively(staged, overwrite = true)) { context.getString(R.string.mods_stage_failed) }
                     val config = File(targetDir, "config.json")
                     if (config.isFile) config.copyTo(File(staged, "config.json"), overwrite = true)
                     if (targetDir.exists()) Files.move(targetDir.toPath(), previous.toPath())
@@ -162,13 +163,13 @@ class ModFileManager(
             }
 
             return if (installed.isEmpty()) {
-                InstallResult.Error("Failed to install any mods from archive")
+                InstallResult.Error(context.getString(R.string.mods_import_none))
             } else {
                 InstallResult.Success(installed)
             }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to install from zip", e)
-            return InstallResult.Error(e.message ?: "Unknown error")
+            return InstallResult.Error(e.message ?: context.getString(R.string.error_unknown))
         } finally {
             tempDir.deleteRecursively()
         }

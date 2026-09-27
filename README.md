@@ -1,5 +1,7 @@
 # Cinderbox Companion
 
+[简体中文说明](README.zh-CN.md)
+
 A companion app for Stardew Valley on Android. Syncs save files with Steam Cloud, downloads game files, and manages SMAPI mods — all from your phone.
 
 Works with both the official Android port and [Cinderbox](https://www.nexusmods.com/stardewvalley/mods/43278) (the modded Android client).

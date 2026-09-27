@@ -39,7 +39,6 @@ import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.toHtmlIfFormatted
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.ModDetailViewModel
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
@@ -52,12 +51,12 @@ private fun formatCount(count: Int): String {
 @Composable
 fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsState()
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val dateFormat = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, Locale.getDefault()) }
 
     Scaffold(
         topBar = {
             StardewTopAppBar(
-                title = state.mod?.name ?: "Mod Details",
+                title = state.mod?.name ?: stringResource(R.string.mods_detail_title),
                 navigationIcon = {
                     PixelIconButton(
                         pixelData = ArrowLeftData,
@@ -405,14 +404,14 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                                         Column(modifier = Modifier.padding(top = 8.dp)) {
                                             file.modVersion?.let { ver ->
                                                 Text(
-                                                    "Mod version: $ver",
+                                                    stringResource(R.string.mods_file_version, ver),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
                                             if (file.uploadedAt > 0) {
                                                 Text(
-                                                    "Uploaded: ${dateFormat.format(Date(file.uploadedAt))}",
+                                                    stringResource(R.string.mods_file_uploaded, dateFormat.format(Date(file.uploadedAt))),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
@@ -438,7 +437,7 @@ fun ModDetailScreen(viewModel: ModDetailViewModel, onBack: () -> Unit) {
                                             file.changelogHtml?.let { changelog ->
                                                 Spacer(Modifier.height(4.dp))
                                                 Text(
-                                                    "Changelog:",
+                                                    stringResource(R.string.mods_file_changelog),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.primary
                                                 )

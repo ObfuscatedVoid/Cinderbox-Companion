@@ -1,6 +1,7 @@
 package com.sdvsync.download
 
 import android.content.Context
+import com.sdvsync.R
 import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.logging.AppLogger
 import java.io.File
@@ -163,7 +164,7 @@ class GameDownloadManager(
                 )
                 if (releaseInfo == null) {
                     _cinderboxProgress.value =
-                        CinderboxDownloadProgress(errorMessage = "Could not find Cinderbox release")
+                        CinderboxDownloadProgress(errorMessage = context.getString(R.string.cinderbox_release_missing))
                     return@withContext
                 }
 
@@ -182,7 +183,7 @@ class GameDownloadManager(
                     ?: run {
                         response.close()
                         _cinderboxProgress.value =
-                            CinderboxDownloadProgress(errorMessage = "Empty response body")
+                            CinderboxDownloadProgress(errorMessage = context.getString(R.string.download_response_empty))
                         return@withContext
                     }
 
@@ -228,7 +229,7 @@ class GameDownloadManager(
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e(TAG, "Cinderbox APK download failed", e)
                 _cinderboxProgress.value =
-                    CinderboxDownloadProgress(errorMessage = e.message ?: "Unknown error")
+                    CinderboxDownloadProgress(errorMessage = e.message ?: context.getString(R.string.error_unknown))
             }
         }
     }
@@ -243,7 +244,7 @@ class GameDownloadManager(
                 )
                 if (releaseInfo == null) {
                     _smapiProgress.value =
-                        SmapiSetupProgress(errorMessage = "Could not find SMAPI release")
+                        SmapiSetupProgress(errorMessage = context.getString(R.string.smapi_release_missing))
                     return@withContext null
                 }
 
@@ -265,7 +266,7 @@ class GameDownloadManager(
                 val body = response.body ?: run {
                     response.close()
                     _smapiProgress.value =
-                        SmapiSetupProgress(errorMessage = "Empty response body")
+                            SmapiSetupProgress(errorMessage = context.getString(R.string.download_response_empty))
                     return@withContext null
                 }
 
@@ -303,7 +304,7 @@ class GameDownloadManager(
                 AppLogger.e(TAG, "SMAPI zip download failed", e)
                 destFile.delete()
                 _smapiProgress.value =
-                    SmapiSetupProgress(errorMessage = e.message ?: "Download failed")
+                    SmapiSetupProgress(errorMessage = e.message ?: context.getString(R.string.download_error))
                 null
             }
         }
@@ -313,11 +314,11 @@ class GameDownloadManager(
         val cacheFile = File(context.cacheDir, SMAPI_CACHE_FILENAME)
         if (!cacheFile.exists()) {
             _smapiProgress.value =
-                SmapiSetupProgress(errorMessage = "SMAPI zip not found. Download it first.")
+                SmapiSetupProgress(errorMessage = context.getString(R.string.smapi_zip_missing))
             return@withContext
         }
 
-        _smapiProgress.value = SmapiSetupProgress(isRunning = true, currentFile = "Counting files…")
+        _smapiProgress.value = SmapiSetupProgress(isRunning = true, currentFile = context.getString(R.string.smapi_counting_files))
 
         val buffer = ByteArray(256 * 1024)
         val smapiDestDir = File(SMAPI_DEST)
@@ -333,7 +334,7 @@ class GameDownloadManager(
                 _smapiProgress.value =
                     SmapiSetupProgress(
                         completed = true,
-                        errorMessage = "Failed to open SMAPI zip: ${e.message}"
+                        errorMessage = context.getString(R.string.smapi_zip_open_failed, e.message ?: context.getString(R.string.error_unknown))
                     )
                 return@withContext
             }
@@ -476,7 +477,7 @@ class GameDownloadManager(
         val content = File(srcDir, CINDERBOX_CONTENT_DIR)
         if (!content.isDirectory || content.walk().none { it.isFile }) missing += CINDERBOX_CONTENT_DIR
         if (missing.isNotEmpty()) {
-            setCopyError("Missing game files: ${missing.joinToString(", ")}")
+            setCopyError(context.getString(R.string.cinderbox_missing_files, missing.joinToString(", ")))
             return@withContext
         }
 

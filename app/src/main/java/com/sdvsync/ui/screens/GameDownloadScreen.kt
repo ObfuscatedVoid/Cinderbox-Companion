@@ -31,7 +31,6 @@ import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.installCinderboxApk
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import org.koin.androidx.compose.koinViewModel
@@ -47,7 +46,7 @@ private fun SectionHeader(text: String) {
 
 private fun formatDate(epochSeconds: Long): String {
     if (epochSeconds == 0L) return ""
-    return SimpleDateFormat("MMM d, yyyy", Locale.US).format(Date(epochSeconds * 1000))
+    return java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, Locale.getDefault()).format(Date(epochSeconds * 1000))
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

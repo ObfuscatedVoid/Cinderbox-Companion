@@ -91,7 +91,7 @@ class ModDownloadService : Service() {
             ModDownloadManager._progress.value =
                 ModDownloadProgress(
                     state = ModDownloadState.ERROR,
-                    errorMessage = "Download cancelled"
+                    errorMessage = getString(R.string.download_cancelled)
                 )
         }
         super.onDestroy()

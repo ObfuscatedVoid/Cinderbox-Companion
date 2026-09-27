@@ -3,6 +3,7 @@ package com.sdvsync.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.BackupInfo
 import com.sdvsync.saves.SaveBackupManager
@@ -39,7 +40,7 @@ class BackupListViewModel(
     companion object {
         private const val TAG = "BackupListVM"
         private val BACKUP_DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US)
-        private val DISPLAY_DATE_FORMAT = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US)
+        private val DISPLAY_DATE_FORMAT = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, Locale.getDefault())
     }
 
     private val _state = MutableStateFlow(BackupListState())
@@ -67,7 +68,7 @@ class BackupListViewModel(
                 }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load backups", e)
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to load backups") }
+                _state.update { it.copy(isLoading = false, error = e.message ?: context.getString(R.string.backups_load_failed)) }
             }
         }
     }
@@ -85,7 +86,7 @@ class BackupListViewModel(
                 }
 
                 if (backupFiles.isEmpty()) {
-                    _state.update { it.copy(isRestoring = false, restoreResult = "Backup is empty") }
+                    _state.update { it.copy(isRestoring = false, restoreResult = context.getString(R.string.backups_empty_file)) }
                     return@launch
                 }
 
@@ -102,7 +103,7 @@ class BackupListViewModel(
                 _state.update {
                     it.copy(
                         isRestoring = false,
-                        restoreResult = if (success) "Restore complete" else "Restore failed"
+                        restoreResult = context.getString(if (success) R.string.backups_restore_complete else R.string.backups_restore_failed)
                     )
                 }
 
@@ -113,7 +114,7 @@ class BackupListViewModel(
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Restore failed", e)
                 _state.update {
-                    it.copy(isRestoring = false, restoreResult = "Restore failed: ${e.message}")
+                    it.copy(isRestoring = false, restoreResult = context.getString(R.string.backups_restore_error, e.message ?: context.getString(R.string.error_unknown)))
                 }
             }
         }

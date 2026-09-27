@@ -48,7 +48,7 @@ class SaveStorageTest {
                 ModFileManager(context, ModManifestParser()),
                 SaveMetadataParser(),
                 backups,
-                SaveValidator()
+                SaveValidator(context)
             )
     }
 

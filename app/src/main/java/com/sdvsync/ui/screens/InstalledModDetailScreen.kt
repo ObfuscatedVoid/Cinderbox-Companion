@@ -33,14 +33,13 @@ import com.sdvsync.ui.components.StardewTopAppBar
 import com.sdvsync.ui.components.toHtmlIfFormatted
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.viewmodels.InstalledModDetailViewModel
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
 fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsState()
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val dateFormat = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, Locale.getDefault()) }
 
     LaunchedEffect(state.removed) {
         if (state.removed) onBack()
@@ -73,7 +72,7 @@ fun InstalledModDetailScreen(viewModel: InstalledModDetailViewModel, onBack: () 
                 if (state.isLoading) {
                     CircularProgressIndicator()
                 } else {
-                    Text("Mod not found")
+                    Text(stringResource(R.string.mods_not_found))
                 }
             }
             return@Scaffold

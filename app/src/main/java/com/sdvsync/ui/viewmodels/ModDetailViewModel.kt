@@ -1,7 +1,9 @@
 package com.sdvsync.ui.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModDownloadManager
 import com.sdvsync.mods.ModFileManager
@@ -28,6 +30,7 @@ data class ModDetailState(
 )
 
 class ModDetailViewModel(
+    private val context: Context,
     private val nexusSource: NexusModSource,
     private val downloadManager: ModDownloadManager,
     private val fileManager: ModFileManager,
@@ -58,7 +61,7 @@ class ModDetailViewModel(
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load mod details", e)
                 _state.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load mod details")
+                    it.copy(isLoading = false, error = e.message ?: context.getString(R.string.mods_detail_load_failed))
                 }
             }
         }
@@ -86,7 +89,7 @@ class ModDetailViewModel(
             try {
                 _state.update { it.copy(isDownloading = true, error = null, downloadErrorUrl = null) }
                 val url = nexusSource.getDownloadUrl(modId, fileId)
-                val modName = _state.value.mod?.name ?: "Unknown"
+                val modName = _state.value.mod?.name ?: context.getString(R.string.save_season_unknown)
                 downloadManager.startDownload(url, modName, modId, source)
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to get download URL", e)
@@ -108,17 +111,16 @@ class ModDetailViewModel(
 
     private fun mapDownloadError(message: String?): Pair<String, String?> {
         val nexusUrl = "https://www.nexusmods.com/stardewvalley/mods/$modId?tab=files"
-        if (message == null) return "Failed to start download" to null
+        if (message == null) return context.getString(R.string.mods_download_start_failed) to null
         return when {
             message.contains("No File found", ignoreCase = true) ->
-                "This file is no longer available for download" to nexusUrl
+                context.getString(R.string.mods_file_unavailable) to nexusUrl
             message.contains("Not Premium", ignoreCase = true) ||
                 message.contains("premium", ignoreCase = true) ||
                 message.contains("403") ->
-                "Free account: tap below to open Nexus, then tap \"Mod Manager Download\"" +
-                    " on the file you want. The download will start automatically." to nexusUrl
+                context.getString(R.string.mods_premium_download_hint) to nexusUrl
             message.contains("429") ->
-                "Rate limit reached. Please try again later." to null
+                context.getString(R.string.mods_rate_limited) to null
             else -> message to nexusUrl
         }
     }

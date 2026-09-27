@@ -175,7 +175,7 @@ class DashboardViewModel(
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isRefreshing = false,
-                    error = context.getString(R.string.error_load_saves_failed, e.message ?: "Unknown error")
+                    error = context.getString(R.string.error_load_saves_failed, e.message ?: context.getString(R.string.error_unknown))
                 )
             }
         }
@@ -211,20 +211,20 @@ class DashboardViewModel(
                 val inputStream = context.contentResolver.openInputStream(uri)
                 if (inputStream == null) {
                     _state.value =
-                        _state.value.copy(importResult = context.getString(R.string.import_error, "Cannot read file"))
+                        _state.value.copy(importResult = context.getString(R.string.import_error, context.getString(R.string.error_cannot_read_file)))
                     return@launch
                 }
                 val manifest = inputStream.use { bundleManager.readManifest(it) }
                 if (manifest == null) {
                     _state.value =
-                        _state.value.copy(importResult = context.getString(R.string.import_error, "Invalid bundle"))
+                        _state.value.copy(importResult = context.getString(R.string.import_error, context.getString(R.string.error_invalid_bundle)))
                     return@launch
                 }
                 _state.value = _state.value.copy(importPreview = manifest, importUri = uri)
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Preview import failed", e)
                 _state.value = _state.value.copy(
-                    importResult = context.getString(R.string.import_error, e.message ?: "Unknown error")
+                    importResult = context.getString(R.string.import_error, e.message ?: context.getString(R.string.error_unknown))
                 )
             }
         }
@@ -239,7 +239,7 @@ class DashboardViewModel(
                 if (inputStream == null) {
                     _state.value = _state.value.copy(
                         isImporting = false,
-                        importResult = context.getString(R.string.import_error, "Cannot read file")
+                        importResult = context.getString(R.string.import_error, context.getString(R.string.error_cannot_read_file))
                     )
                     return@launch
                 }
@@ -267,7 +267,7 @@ class DashboardViewModel(
                 _state.value = _state.value.copy(
                     isImporting = false,
                     importUri = null,
-                    importResult = context.getString(R.string.import_error, e.message ?: "Unknown error")
+                    importResult = context.getString(R.string.import_error, e.message ?: context.getString(R.string.error_unknown))
                 )
             }
         }

@@ -1,6 +1,7 @@
 package com.sdvsync.saves
 
 import android.content.Context
+import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModFileManager
 import java.io.File
@@ -32,7 +33,7 @@ class SaveBundleManager(
     suspend fun exportBundle(saveFolderName: String): File {
         val saveFiles = saveFileManager.readLocalSave(saveFolderName)
         if (saveFiles.isEmpty()) {
-            throw IllegalStateException("No local save files found for $saveFolderName")
+            throw IllegalStateException(context.getString(R.string.sync_error_no_local_files, saveFolderName))
         }
 
         // Parse metadata from SaveGameInfo
@@ -141,10 +142,10 @@ class SaveBundleManager(
             }
 
             if (manifest == null) {
-                return ImportResult.Error("No manifest found in bundle")
+                return ImportResult.Error(context.getString(R.string.import_bundle_no_manifest))
             }
             if (saveFiles.isEmpty()) {
-                return ImportResult.Error("No save files found in bundle")
+                return ImportResult.Error(context.getString(R.string.import_bundle_no_files))
             }
 
             val folderName = targetFolderName ?: manifest!!.save.folderName
@@ -158,14 +159,14 @@ class SaveBundleManager(
             // Write save files to local
             val writeSuccess = saveFileManager.writeLocalSave(folderName, saveFiles)
             if (!writeSuccess) {
-                return ImportResult.Error("Failed to write save files to device")
+                return ImportResult.Error(context.getString(R.string.sync_error_write_failed))
             }
 
             AppLogger.d(TAG, "Imported bundle for $folderName (${saveFiles.size} files)")
             return ImportResult.Success(manifest!!)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Import failed", e)
-            return ImportResult.Error(e.message ?: "Unknown error")
+            return ImportResult.Error(e.message ?: context.getString(R.string.error_unknown))
         }
     }
 

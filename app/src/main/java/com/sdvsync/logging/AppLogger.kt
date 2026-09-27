@@ -12,6 +12,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.sdvsync.BuildConfig
+import com.sdvsync.R
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
@@ -230,7 +231,7 @@ object AppLogger {
         val ctx = context.applicationContext
         val files = getLogFiles()
         if (files.isEmpty()) {
-            Toast.makeText(ctx, "No logs available", Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, ctx.getString(R.string.logs_none), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -246,7 +247,7 @@ object AppLogger {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
-        context.startActivity(Intent.createChooser(intent, "Share SDV Sync Logs"))
+        context.startActivity(Intent.createChooser(intent, ctx.getString(R.string.logs_share_title)))
     }
 
     fun copyLogs(context: Context) {
@@ -254,8 +255,8 @@ object AppLogger {
         val logText = readAllLogs()
 
         val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("SDV Sync Logs", logText))
+        clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.logs_share_title), logText))
 
-        Toast.makeText(ctx, "Logs copied to clipboard", Toast.LENGTH_SHORT).show()
+        Toast.makeText(ctx, ctx.getString(R.string.logs_copied), Toast.LENGTH_SHORT).show()
     }
 }

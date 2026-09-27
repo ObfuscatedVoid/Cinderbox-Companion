@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sdvsync.R
 import com.sdvsync.cinderbox.CinderboxLayoutEvents
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.mods.ModDataStore
@@ -83,7 +84,7 @@ class ModManagerViewModel(
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load mods", e)
                 _state.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load mods")
+                    it.copy(isLoading = false, error = e.message ?: context.getString(R.string.mods_error_load_failed))
                 }
             }
         }
@@ -144,7 +145,7 @@ class ModManagerViewModel(
                     tempFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
-                } ?: throw IllegalStateException("Cannot read file")
+                } ?: throw IllegalStateException(context.getString(R.string.error_cannot_read_file))
 
                 val result = fileManager.installFromZip(tempFile)
                 tempFile.delete()
@@ -152,16 +153,16 @@ class ModManagerViewModel(
                 when (result) {
                     is InstallResult.Success -> {
                         val names = result.mods.joinToString { it.manifest.name }
-                        _state.update { it.copy(importMessage = "Installed: $names") }
+                        _state.update { it.copy(importMessage = context.getString(R.string.mods_import_installed, names)) }
                         loadInstalledMods()
                     }
                     is InstallResult.Error -> {
-                        _state.update { it.copy(importMessage = "Import failed: ${result.message}") }
+                        _state.update { it.copy(importMessage = context.getString(R.string.import_error, result.message)) }
                     }
                 }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Import failed", e)
-                _state.update { it.copy(importMessage = "Import failed: ${e.message}") }
+                _state.update { it.copy(importMessage = context.getString(R.string.import_error, e.message ?: context.getString(R.string.error_unknown))) }
             }
         }
     }
@@ -214,7 +215,7 @@ class ModManagerViewModel(
                 it.copy(
                     profiles = profiles,
                     activeProfileName = name,
-                    profileMessage = "Profile \"$name\" saved"
+                    profileMessage = context.getString(R.string.profiles_saved, name)
                 )
             }
         }
@@ -238,14 +239,14 @@ class ModManagerViewModel(
                 _state.update {
                     it.copy(
                         isApplyingProfile = false,
-                        profileMessage = "Profile \"${profile.name}\" applied"
+                        profileMessage = context.getString(R.string.profiles_applied, profile.name)
                     )
                 }
                 loadInstalledMods()
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to apply profile", e)
                 _state.update {
-                    it.copy(isApplyingProfile = false, profileMessage = "Failed to apply profile")
+                    it.copy(isApplyingProfile = false, profileMessage = context.getString(R.string.profiles_apply_failed))
                 }
             }
         }

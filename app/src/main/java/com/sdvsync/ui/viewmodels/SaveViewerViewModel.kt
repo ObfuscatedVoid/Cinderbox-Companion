@@ -3,6 +3,7 @@ package com.sdvsync.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
 import com.sdvsync.saves.SaveFileData
 import com.sdvsync.saves.SaveFileManager
@@ -46,20 +47,20 @@ class SaveViewerViewModel(
                 val mainSaveData = files[saveFolderName]
 
                 if (mainSaveData == null) {
-                    _state.update { it.copy(isLoading = false, error = "Main save file not found") }
+                    _state.update { it.copy(isLoading = false, error = context.getString(R.string.save_viewer_main_missing)) }
                     return@launch
                 }
 
                 val data = saveFileParser.parse(mainSaveData)
                 if (data == null) {
-                    _state.update { it.copy(isLoading = false, error = "Failed to parse save file") }
+                    _state.update { it.copy(isLoading = false, error = context.getString(R.string.save_viewer_parse_failed)) }
                     return@launch
                 }
 
                 _state.update { it.copy(data = data, isLoading = false) }
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to load save", e)
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Unknown error") }
+                _state.update { it.copy(isLoading = false, error = e.message ?: context.getString(R.string.error_unknown)) }
             }
         }
     }

@@ -179,7 +179,7 @@ fun DashboardScreen(
                     Box(modifier = Modifier.fillMaxSize()) {
                         EmptyState(
                             title = stringResource(R.string.dashboard_no_saves),
-                            subtitle = "Pull to refresh or check your save files",
+                            subtitle = stringResource(R.string.dashboard_empty_hint),
                             modifier = Modifier
                                 .align(Alignment.Center)
                                 .padding(24.dp)
