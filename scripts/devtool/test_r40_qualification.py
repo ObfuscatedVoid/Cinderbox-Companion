@@ -93,6 +93,20 @@ class Qualification(unittest.TestCase):
         self.assertNotIn('assembleRelease', public_before)
         self.assertIn('gh attestation verify', public_after)
 
+    def test_emulator_kvm_and_instrumentation_output_contract(self):
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root/'.github/workflows/cinderbox-r40-qualification.yml').read_text()
+        self.assertEqual(workflow.count('disable-linux-hw-accel: false'), 2)
+        self.assertEqual(workflow.count('test -c /dev/kvm'), 2)
+        self.assertEqual(workflow.count('sudo udevadm trigger --name-match=kvm'), 2)
+        self.assertEqual(workflow.count('test -r /dev/kvm && test -w /dev/kvm'), 2)
+        self.assertEqual(workflow.count('R40_KVM_DEVICE_UNAVAILABLE'), 2)
+        self.assertEqual(workflow.count('R40_KVM_ACCESS_UNAVAILABLE'), 2)
+        self.assertEqual(workflow.count('ReactiveCircus/android-emulator-runner@'), 2)
+        smoke = (root/'scripts/devtool/r40_emulator_smoke.sh').read_text()
+        self.assertIn('am instrument -w ', smoke)
+        self.assertNotIn('am instrument -w -r ', smoke)
+
     def test_merged_receipt_consistency(self):
         base=dict(repository=mod.REPO,source_commit=S,run_id=int(I['run']),attempt=1,status='PASS')
         def write(p,d):

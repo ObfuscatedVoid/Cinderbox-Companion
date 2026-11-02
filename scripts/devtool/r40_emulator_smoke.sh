@@ -14,7 +14,7 @@ test "${#apps[@]}" -eq 1 && test "${#tests[@]}" -eq 1
 adb -s "$SERIAL" get-state | grep -qx device
 adb -s "$SERIAL" install -r -t "${apps[0]}" >/dev/null
 adb -s "$SERIAL" install -r -t "${tests[0]}" >/dev/null
-adb -s "$SERIAL" shell am instrument -w -r \
+adb -s "$SERIAL" shell am instrument -w \
   -e class com.sdvsync.qualification.PlatformStorageAliasDeviceTest \
   com.sdvsync.test/androidx.test.runner.AndroidJUnitRunner \
   > "$RUNNER_TEMP/r40-emulator/instrumentation-output.txt"

@@ -82,3 +82,25 @@ Review `M21_RELEASE_CANDIDATE.json`, `SHA256SUMS` and `r40-verified-candidate-ev
 - One scoped instrumentation test plus parsed unit tests does not prove every M14–M24 scenario passed; extend through additional separately selected device campaigns, not by changing historic receipts.
 - SLSA/Sigstore authentication verifies the signed build provenance and artifact digest; it does not guarantee bug-free source, reproducibility, keystore custody or device compatibility.
 - Signing credentials are environment-scoped; no signing key is generated or stored in the repository.
+
+## R40-R1: accelerated emulator boot (run 41455791370)
+
+The first R40 run on `master` at `ff8ad473e93a43aa65cb2ab88e2ede7e1a71b605`
+passed all 221 JVM unit tests (37 original JUnit XML reports, zero failures,
+errors or skips), and compiled both Android emulator APKs. It did not reach
+signing because the disposable emulator exceeded its 600-second boot timeout.
+The action reported `/dev/kvm` access denied and launched `-accel off`.
+
+R40-R1 adds the documented KVM permissions setup to **both** hosted emulator
+jobs, then checks `/dev/kvm` is available and accessible before invoking the
+emulator. It explicitly requires `disable-linux-hw-accel: false`; a runner
+without KVM fails with `R40_KVM_DEVICE_UNAVAILABLE` or
+`R40_KVM_ACCESS_UNAVAILABLE` rather than performing costly software emulation.
+It also removes `-r` from the scoped `am instrument -w` command so the Android
+instrumentation runner emits the human-readable `OK (N tests)` summary required
+by the existing strict parser, while preserving the final
+`INSTRUMENTATION_CODE: -1` requirement.
+
+No change to release keystores, environment secrets, signing certificates,
+Android app code, release policy or production-device permissions. R40 remains
+candidate-only and must pass a fresh hosted run for this fix to count.
