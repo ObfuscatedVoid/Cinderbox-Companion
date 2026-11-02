@@ -38,3 +38,23 @@ devtool --repo "$PWD" actions provider-export \
 Only if the exporter confirms full admission of **both** nodes and the exact output, generate the *new* GitHub Actions workflow on the clean/reviewed migration branch (`--yes` is a separate explicit step; it writes files but does not dispatch or build). Inspect/generated YAML, run `--verify`, commit & push; run a source-only PR check and hosted debug build on GitHub. Inspect DAG `needs`, source/run/attempt handoff, resulting APK SHA and debug signer. Keep the passing A07 native debug and signed-candidate workflows as fallback until both hosted and artifact-import parity pass. A green source test alone is not hosted/device/release qualification.
 
 If the provider exporter refuses a job or output: **stop and inspect the error**. Do not bypass source, output, or signer safety checks, and do not substitute a hand-written workflow for canonical exporter output.
+
+## R39-R2 export compatibility correction (2026-11-02)
+
+R39 `actions_android_provider.py` explicitly accepts the empty string for a
+Gradle project located at the repository root. It **refuses** `"."` because
+its bounded subdirectory grammar does not admit a dot path segment. R2 sets
+`ci_android_project_dir = ""` on the two opt-in R39 jobs, leaving all existing
+A05/A07 and Gradle outputs untouched. Both root and nested-directory cases
+retain path/symlink guards.
+
+**Important second blocker:** the pinned R39 provider's APK basename regex
+`[A-Za-z0-9_-]+\.apk` rejects Cinderbox's actual versioned output
+`CinderboxCompanion-v0.1.1.apk`. Do not rename the production/legacy APK
+or turn off exact-output ownership. Apply the separate, test-backed Devtool
+provider patch, commit/push Devtool to obtain a new immutable 40-hex SHA, and
+use that new SHA for read-only `actions provider-export --plan` and later
+generated workflows. Until then, provider-export cannot be called qualified.
+
+R39-R2 applies on `feature/r39-hosted-dag` at original commit
+`03aef79e53d84623586ec89bf537283ebd860412`, not on `master` or PR #35.

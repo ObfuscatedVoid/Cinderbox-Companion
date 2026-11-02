@@ -43,7 +43,7 @@ class TestR39HostedSource(unittest.TestCase):
                 self.assertEqual(job['gradle_tasks'],[task])
                 meta=job['metadata']
                 self.assertEqual(meta['ci_toolchain'],'android-gradle')
-                self.assertEqual(meta['ci_android_project_dir'],'.')
+                self.assertEqual(meta['ci_android_project_dir'],'')
                 self.assertEqual(meta['ci_android_debug_variant'],'debug')
                 self.assertEqual(meta['ci_android_java_version'],'17')
                 self.assertEqual(set(meta['ci_android_sdk_packages']),PINS)
@@ -54,6 +54,16 @@ class TestR39HostedSource(unittest.TestCase):
         self.assertEqual(apk['outputs'],[APK])
         self.assertEqual(apk['metadata']['ci_android_expected_output'],APK)
         self.assertIs(apk['metadata']['release_signed'],False)
+
+    def test_gradle_project_root_contract_is_explicit_empty(self):
+        lint, apk, _ = candidate(self.cfg)
+        for job in (lint, apk):
+            root = job['metadata']['ci_android_project_dir']
+            self.assertEqual(root, '')
+            self.assertEqual((ROOT / root).resolve(), ROOT.resolve())
+        # This checks the root-project contract only. Versioned filename
+        # admission must be qualified against Devtool's actual provider.
+        self.assertIn('v0.1.1.apk', apk['outputs'][0])
 
     def test_native_graph_is_lint_then_apk(self):
         _,_,steps=candidate(self.cfg)
