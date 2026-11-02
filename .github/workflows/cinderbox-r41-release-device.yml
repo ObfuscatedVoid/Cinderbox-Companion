@@ -1,0 +1,80 @@
+name: Cinderbox R41 Release Device Kit (prepare only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_source_sha:
+        description: 'Exact reviewed R41 master commit after merge (distinct from the R40 APK commit)'
+        required: true
+        type: string
+      r40_signed_run_id:
+        description: 'Successful R40 signed-only run with independent attestation receipt'
+        required: true
+        type: string
+      confirm:
+        description: 'Type R41_PREPARE_ONLY (never installs an APK)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+
+jobs:
+  prepare-release-device-kit:
+    if: >-
+      github.repository == 'Mikeyphw/Cinderbox-Companion' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/master' &&
+      inputs.confirm == 'R41_PREPARE_ONLY' &&
+      inputs.reviewed_source_sha == github.sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout immutable reviewed source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Validate exact R41 source and never install
+        shell: bash
+        env:
+          REVIEWED_SHA: ${{ inputs.reviewed_source_sha }}
+          R40_RUN: ${{ inputs.r40_signed_run_id }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$REVIEWED_SHA"
+          [[ "$R40_RUN" =~ ^[0-9]{8,14}$ ]] || { echo R41_RUN_ID_INVALID >&2; exit 2; }
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r41_release_device.py' -v
+      - name: Download exact GitHub release candidate and signing acceptance evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          R40_RUN: ${{ inputs.r40_signed_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/r41-kit"
+          gh run download "$R40_RUN" -R "$GITHUB_REPOSITORY" \
+            --name r40-signed-candidate --dir "$RUNNER_TEMP/r41-kit"
+          gh run download "$R40_RUN" -R "$GITHUB_REPOSITORY" \
+            --name r40-verified-signed-build --dir "$RUNNER_TEMP/r41-kit"
+      - name: Independently verify GitHub OIDC attestation, signer, hash and source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          R40_RUN: ${{ inputs.r40_signed_run_id }}
+        run: |
+          set -euo pipefail
+          python3 scripts/devtool/r41_release_device.py prepare \
+            --kit "$RUNNER_TEMP/r41-kit" \
+            --r40-run-id "$R40_RUN" --r41-run-id "$GITHUB_RUN_ID" \
+            --source ea79d4044764f4f3c5827a05dd32a821d1aec20c \
+            --r41-source "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/r41-kit/R41_HOST_KIT.json"
+      - name: Upload verified R41 kit (NO Android install or release publication)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r41-verified-release-device-kit
+          path: ${{ runner.temp }}/r41-kit/
+          if-no-files-found: error
+          retention-days: 14
