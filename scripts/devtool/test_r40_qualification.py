@@ -78,7 +78,7 @@ class Qualification(unittest.TestCase):
         self.assertGreaterEqual(len(refs), 10)
         for action, sha in refs:
             self.assertRegex(sha, r'^[a-f0-9]{40}$')
-        for name in ('unit-tests:', 'emulator-debug:', 'github-sign:', 'signed-emulator:', 'remote-verify:'):
+        for name in ('unit-tests:', 'emulator-debug:', 'github-sign:', 'signed-emulator:', 'remote-sign-verify:', 'remote-verify:'):
             self.assertIn('  '+name, workflow)
         private = workflow.split('  github-sign:',1)[1].split('  signed-emulator:',1)[0]
         public_before = workflow.split('  github-sign:',1)[0]
@@ -97,7 +97,7 @@ class Qualification(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         workflow = (root/'.github/workflows/cinderbox-r40-qualification.yml').read_text()
         self.assertEqual(workflow.count('runs-on: macos-15-intel'), 2)
-        self.assertEqual(workflow.count('runs-on: ubuntu-24.04'), 3)
+        self.assertEqual(workflow.count('runs-on: ubuntu-24.04'), 4)
         self.assertEqual(workflow.count('Require native Intel macOS emulator host'), 2)
         self.assertEqual(workflow.count('R40_WRONG_EMULATOR_HOST'), 2)
         self.assertEqual(workflow.count('R40_NON_INTEL_EMULATOR_HOST'), 2)
@@ -120,6 +120,26 @@ class Qualification(unittest.TestCase):
         self.assertIn('am instrument -w ', smoke)
         self.assertNotIn('am instrument -w -r ', smoke)
 
+    def test_signing_lane_independent_but_full_device_remains_fail_closed(self):
+        root=Path(__file__).resolve().parents[2]
+        workflow=(root/'.github/workflows/cinderbox-r40-qualification.yml').read_text()
+        self.assertIn('default: signed-only',workflow)
+        self.assertIn('options: [signed-only, full]',workflow)
+        emulator=workflow.split('  emulator-debug:',1)[1].split('  github-sign:',1)[0]
+        sign=workflow.split('  github-sign:',1)[1].split('  signed-emulator:',1)[0]
+        sign_ver=workflow.split('  remote-sign-verify:',1)[1].split('  remote-verify:',1)[0]
+        full=workflow.split('  remote-verify:',1)[1]
+        self.assertIn("if: inputs.qualification_scope == 'full'",emulator)
+        self.assertIn('needs: [unit-tests]',sign)
+        self.assertNotIn('needs: [unit-tests, emulator-debug]',sign)
+        self.assertIn('needs: [unit-tests, github-sign]',sign_ver)
+        self.assertIn('gh attestation verify',sign_ver)
+        self.assertIn('r40_qualification.py signing',sign_ver)
+        self.assertNotIn('secrets.',sign_ver)
+        self.assertIn("if: inputs.qualification_scope == 'full'",full)
+        self.assertIn('signed-emulator',full)
+        self.assertIn('remote-sign-verify',full)
+
     def test_merged_receipt_consistency(self):
         base=dict(repository=mod.REPO,source_commit=S,run_id=int(I['run']),attempt=1,status='PASS')
         def write(p,d):
@@ -127,16 +147,27 @@ class Qualification(unittest.TestCase):
             f.parent.mkdir(parents=True,exist_ok=True)
             f.write_text(json.dumps(d))
         h='a'*64
-        write('unit/R40_JUNIT.json',dict(base,schema_version=1,kind='r40-parsed-junit',tests=2,failures=0,errors=0,skipped=0,report_files=1))
+        write('unit/R40_JUNIT.json',dict(base,schema_version=1,kind='r40-parsed-junit',tests=2,failures=0,errors=0,skipped=0,report_files=1,release_qualified=False))
         (self.root/'unit/TEST-r40.xml').write_text('<testsuite tests="2" failures="0" errors="0" skipped="0"><testcase classname="a" name="x"/><testcase classname="a" name="y"/></testsuite>')
         write('emulator/R40_EMULATOR.json',dict(base,schema_version=1,kind='r40-emulator-instrumentation',tests=1,device_scope='github-ephemeral-android-emulator'))
         f=self.root/'signed/CinderboxCompanion-release-candidate.apk'
         f.parent.mkdir(exist_ok=True)
         f.write_bytes(b'signed APK placeholder for receipt test')
         digest=mod.sha256(f)
-        write('signed/M21_RELEASE_CANDIDATE.json', dict(schema_version=1,producer='cinderbox-m21-manual-release-candidate',variant='release',package=mod.PKG,installed=False,automatic_publication=False,version_code=14,repository=mod.REPO,source_commit=S,workflow_run_id=int(I['run']),release_signed=True,signature_verified=True,publication_allowed=False,release_qualified=False,apk_sha256=digest,release_certificate_sha256=h,debug_certificate_sha256='b'*64))
+        write('signed/M21_RELEASE_CANDIDATE.json', dict(schema_version=1,producer='cinderbox-m21-manual-release-candidate',variant='release',package=mod.PKG,installed=False,automatic_publication=False,version_code=14,version_name='0.1.1',debuggable=False,device_qualified=False,repository=mod.REPO,source_commit=S,workflow_run_id=int(I['run']),release_signed=True,signature_verified=True,publication_allowed=False,release_qualified=False,apk_sha256=digest,release_certificate_sha256=h,debug_certificate_sha256='b'*64))
         (f.parent/'SHA256SUMS').write_text(f'{digest}  {f.name}\n')
         write('signed-emulator/R40_SIGNED_EMULATOR.json',dict(base,schema_version=1,kind='r40-emulator-signed-candidate-install',apk_sha256=digest,device_scope='github-ephemeral-android-emulator'))
+        att=self.root/'attestation.json'
+        att.write_text('[{"verificationResult": "success"}]')
+        signed=mod.signing(self.root,att,**I)
+        self.assertEqual(signed['overall'],'PASS_R40_SIGNING_AND_REMOTE_ATTESTATION_ONLY')
+        self.assertFalse(signed['emulator_instrumentation_qualified'])
+        self.assertFalse(signed['release_qualified'])
+        self.assertEqual(signed['release_apk_sha256'],digest)
+        with self.assertRaises(mod.Refused):mod.signing(self.root,self.root/'missing-attestation.json',**I)
+        att.write_text('[]')
+        with self.assertRaises(mod.Refused):mod.signing(self.root,att,**I)
+        att.write_text('[{"verificationResult": "success"}]')
         self.assertEqual(mod.finalize(self.root,**I)['overall'],'PASS_R40_HOSTED_CANDIDATE_EVIDENCE')
         a=json.loads((self.root/'signed-emulator/R40_SIGNED_EMULATOR.json').read_text())
         a['apk_sha256']='0'*64

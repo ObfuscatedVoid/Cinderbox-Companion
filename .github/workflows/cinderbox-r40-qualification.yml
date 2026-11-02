@@ -12,6 +12,12 @@ on:
         description: Type R40_SIGNED_CANDIDATE to allow protected signing
         type: string
         required: true
+      qualification_scope:
+        description: 'signed-only: verify signed build without Android device claims; full: require both emulators'
+        type: choice
+        required: true
+        default: signed-only
+        options: [signed-only, full]
 
 permissions:
   contents: read
@@ -74,6 +80,7 @@ jobs:
 
   emulator-debug:
     needs: [unit-tests]
+    if: inputs.qualification_scope == 'full'
     runs-on: macos-15-intel
     timeout-minutes: 75
     steps:
@@ -118,7 +125,9 @@ jobs:
           retention-days: 14
 
   github-sign:
-    needs: [unit-tests, emulator-debug]
+    # An unavailable emulator must not prevent independent, protected signing.
+    # This does NOT grant device or release qualification.
+    needs: [unit-tests]
     if: >-
       github.repository == 'Mikeyphw/Cinderbox-Companion' &&
       github.event_name == 'workflow_dispatch' &&
@@ -210,6 +219,7 @@ jobs:
 
   signed-emulator:
     needs: [github-sign]
+    if: inputs.qualification_scope == 'full'
     runs-on: macos-15-intel
     timeout-minutes: 60
     permissions:
@@ -258,8 +268,60 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  remote-sign-verify:
+    # Independent Ubuntu job: no keystore or signing secrets, exact same run.
+    needs: [unit-tests, github-sign]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact reviewed source for independent verification
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Download original JUnit reports from GitHub
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: r40-unit
+          path: signing-proof/unit
+      - name: Download signed candidate from GitHub
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: r40-signed-candidate
+          path: signing-proof/signed
+      - name: Authenticate attestation and rehash signed APK and original JUnit evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.head_sha')" = "$GITHUB_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.event')" = workflow_dispatch
+          gh attestation verify signing-proof/signed/CinderboxCompanion-release-candidate.apk \
+            --repo "$GITHUB_REPOSITORY" --source-ref "$GITHUB_REF" \
+            --source-digest "$GITHUB_SHA" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/cinderbox-r40-qualification.yml" \
+            --format json > "$RUNNER_TEMP/r40-sign-attestation.json"
+          test -s "$RUNNER_TEMP/r40-sign-attestation.json"
+          python3 scripts/devtool/r40_qualification.py signing \
+            --folder signing-proof \
+            --attestation "$RUNNER_TEMP/r40-sign-attestation.json" \
+            --output "$RUNNER_TEMP/R40_SIGNED_BUILD_ACCEPTANCE.json" \
+            --source "$GITHUB_SHA" --run "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+      - name: Upload signing-only authenticated receipt (not device qualified)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r40-verified-signed-build
+          path: ${{ runner.temp }}/R40_SIGNED_BUILD_ACCEPTANCE.json
+          if-no-files-found: error
+          retention-days: 14
+
   remote-verify:
-    needs: [unit-tests, emulator-debug, github-sign, signed-emulator]
+    # Never convert missing emulator evidence into device qualification.
+    needs: [unit-tests, emulator-debug, github-sign, signed-emulator, remote-sign-verify]
+    if: inputs.qualification_scope == 'full'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
