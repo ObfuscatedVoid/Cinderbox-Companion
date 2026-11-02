@@ -104,3 +104,26 @@ by the existing strict parser, while preserving the final
 No change to release keystores, environment secrets, signing certificates,
 Android app code, release policy or production-device permissions. R40 remains
 candidate-only and must pass a fresh hosted run for this fix to count.
+
+## R40-R2: move both disposable emulators to Intel macOS (run 41462219417)
+
+R40-R1, dispatched from master `c8234d96d7ed91cddd09d9d2b09c16f563863edc`,
+again passed real JVM unit tests and compiled Android app/instrumentation APKs.
+The Linux KVM preflight failed with `R40_KVM_ACCESS_UNAVAILABLE` even after
+`udevadm trigger`. `github-sign`, `signed-emulator`, and `remote-verify` were
+correctly skipped; release signing did **not** run. The error is the hosted
+Linux runner's inaccessible `/dev/kvm`, not an Android test or app failure.
+
+R40-R2 changes **only the two ephemeral emulator jobs** to GitHub's documented
+`macos-15-intel` runner using the Android Emulator's native macOS hypervisor
+path. They verify the runner OS and architecture before invoking the existing
+SHA-pinned emulator action. Removes Linux-only KVM permissions/acceleration
+configuration. The unit-test, protected GitHub signing, and remote-verification
+jobs remain on Ubuntu; no code or signing keys are moved onto another host.
+
+The Intel macOS runners may consume different GitHub Actions minutes or incur
+charges depending on plan and repository visibility. Run once on reviewed
+master and inspect fresh remote receipts before promoting any qualification.
+This source-only fix is **not** evidence that emulator, signing or remote
+provenance stages passed. Fail closed if the emulator cannot start; never fall
+back to `-accel off` or to a personal Android device.
