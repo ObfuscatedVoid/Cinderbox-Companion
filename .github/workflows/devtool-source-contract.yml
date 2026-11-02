@@ -21,6 +21,7 @@ on:
       - 'scripts/devtool/cinderbox_devtool_audit.py'
       - 'scripts/devtool/test_cinderbox_devtool_audit.py'
       - 'scripts/devtool/test_storage_alias_source.py'
+      - 'scripts/devtool/test_r39_hosted_source.py'
       - 'scripts/devtool/hosted_debug.py'
       - 'scripts/devtool/test_hosted_debug.py'
       - 'scripts/devtool/check_security_contract.py'
@@ -50,6 +51,7 @@ on:
       - 'scripts/devtool/cinderbox_devtool_audit.py'
       - 'scripts/devtool/test_cinderbox_devtool_audit.py'
       - 'scripts/devtool/test_storage_alias_source.py'
+      - 'scripts/devtool/test_r39_hosted_source.py'
       - 'scripts/devtool/hosted_debug.py'
       - 'scripts/devtool/test_hosted_debug.py'
       - 'scripts/devtool/check_security_contract.py'
@@ -108,6 +110,8 @@ jobs:
         run: python3 -B -m unittest discover -s scripts/devtool -p 'test_m3h_reliability.py' -q
       - name: Exact pinned plan response contract regressions
         run: python3 -B -m unittest discover -s scripts/devtool -p 'test_pinned_plan_contract.py' -v
+      - name: R39 opt-in provider export source contract
+        run: python3 -B -m unittest discover -s scripts/devtool -p 'test_r39_hosted_source.py' -v
       - name: Pinned A05/A07 config parser regression
         shell: bash
         run: |

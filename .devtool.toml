@@ -543,7 +543,28 @@ command = ["python3", "scripts/devtool/m24_shared_depot_gate.py"]
 inputs = ["scripts/devtool/m24_shared_depot_gate.py", "app/src/main/java/com/sdvsync/download/M24SharedDepotBinding.kt", "app/src/main/java/com/sdvsync/steam/SteamContentService.kt", "app/src/main/java/com/sdvsync/download/GameDownloadService.kt", "app/src/main/java/com/sdvsync/download/GameDownloadManager.kt", "app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", "app/src/test/java/com/sdvsync/download/M24SharedDepotBindingTest.kt"]
 metadata = { read_only = true, area = "m24-parent-pics-and-setup", root_required = false, device_required = false }
 
+# R39 opt-in native hosted export candidate. The existing A05/A07 and signing
+# lanes are intentionally untouched. Never invoke this Gradle DAG in Termux.
+[targets.cinderbox.jobs.r39-hosted-lint]
+runner = "android"
+gradle_tasks = [":app:lintDebug"]
+inputs = [".devtool.toml", "gradlew", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties", "gradle/libs.versions.toml", "gradle.properties", "settings.gradle.kts", "build.gradle.kts", "app/build.gradle.kts", "app/src/main/AndroidManifest.xml"]
+metadata = { area = "r39-hosted-lint", ci_toolchain = "android-gradle", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_java_version = "17", ci_android_sdk_packages = ["platforms;android-35", "build-tools;35.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9" }
+
+[targets.cinderbox.jobs.r39-hosted-apk]
+runner = "android"
+gradle_tasks = [":app:assembleDebug"]
+inputs = [".devtool.toml", "gradlew", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties", "gradle/libs.versions.toml", "gradle.properties", "settings.gradle.kts", "build.gradle.kts", "app/build.gradle.kts", "app/src/main/AndroidManifest.xml"]
+outputs = ["app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk"]
+metadata = { area = "r39-hosted-debug-apk", release_signed = false, device_required = false, ci_toolchain = "android-gradle", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_java_version = "17", ci_android_sdk_packages = ["platforms;android-35", "build-tools;35.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9", ci_android_expected_output = "app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk" }
+
 [targets.cinderbox.workflows]
+# R39 provider-export candidate only, not a release or device workflow.
+# Two native nodes: lint -> assembleDebug. Exact APK path is source-bound.
+r39-hosted-debug = [
+  { id = "lint", ref = "job:r39-hosted-lint", depends_on = [] },
+  { id = "apk", ref = "job:r39-hosted-apk", depends_on = ["lint"] },
+]
 # All root nodes are genuinely source-only. Git/CI regression jobs do not write
 # to the repository; scheduler may overlap them after per-job admission.
 host-check = [
