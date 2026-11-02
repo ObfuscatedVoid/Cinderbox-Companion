@@ -548,13 +548,13 @@ metadata = { read_only = true, area = "m24-parent-pics-and-setup", root_required
 [targets.cinderbox.jobs.r39-hosted-lint]
 runner = "android"
 gradle_tasks = [":app:lintDebug"]
-inputs = ["app/src/**", "app/build.gradle.kts", "gradle/**", "build.gradle.kts", "settings.gradle.kts"]
+inputs = [".devtool.toml", "gradlew", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties", "gradle/libs.versions.toml", "gradle.properties", "settings.gradle.kts", "build.gradle.kts", "app/build.gradle.kts", "app/src/main/AndroidManifest.xml"]
 metadata = { area = "r39-hosted-lint", ci_toolchain = "android-gradle", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_java_version = "17", ci_android_sdk_packages = ["platforms;android-35", "build-tools;35.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9" }
 
 [targets.cinderbox.jobs.r39-hosted-apk]
 runner = "android"
 gradle_tasks = [":app:assembleDebug"]
-inputs = ["app/src/**", "app/build.gradle.kts", "gradle/**", "build.gradle.kts", "settings.gradle.kts"]
+inputs = [".devtool.toml", "gradlew", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties", "gradle/libs.versions.toml", "gradle.properties", "settings.gradle.kts", "build.gradle.kts", "app/build.gradle.kts", "app/src/main/AndroidManifest.xml"]
 outputs = ["app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk"]
 metadata = { area = "r39-hosted-debug-apk", release_signed = false, device_required = false, ci_toolchain = "android-gradle", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_java_version = "17", ci_android_sdk_packages = ["platforms;android-35", "build-tools;35.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9", ci_android_expected_output = "app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk" }
 

@@ -58,3 +58,24 @@ generated workflows. Until then, provider-export cannot be called qualified.
 
 R39-R2 applies on `feature/r39-hosted-dag` at original commit
 `03aef79e53d84623586ec89bf537283ebd860412`, not on `master` or PR #35.
+
+## R39-R3 — Explicit inputs for generated-output ownership (2026-11-02)
+
+The opt-in R39 graph has two native jobs (lint -> debug APK) and an exact
+`app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk` producer.
+Devtool RM-06 deliberately refuses wildcard inputs such as `app/src/**` or
+`gradle/**` when the graph contains any output producer: it cannot infer
+which generated inputs are owned by which node from a glob.
+
+R39-R3 changes **only** those two opt-in jobs' input lists to exact tracked
+build anchor paths (`.devtool.toml`, wrapper files, Gradle build/settings
+files, `app/build.gradle.kts`, Android manifest). It does **not** remove
+the existing target-level change-detection globs or widen RM-06 admission.
+The exact Git commit/tree and full checkout remain the actual source identity;
+the job input lists are *not* an exhaustive source manifest. Outputs, native
+`lint -> apk` dependency, signing and connected-device gates are unchanged.
+
+Run the read-only exporter plan again using the **pushed**, patched Devtool
+commit (`fix/r39-versioned-apk`), with no local Gradle execution. Accept the
+next gate only if both nodes and exact APK output are present; source-only
+regression tests do not prove hosted runtime or exporter acceptance.

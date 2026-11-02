@@ -79,6 +79,43 @@ class TestR39HostedSource(unittest.TestCase):
         self.assertEqual(target['jobs']['debug-apk']['gradle_tasks'],[':app:assembleDebug'])
         self.assertEqual(target['jobs']['connected-tests']['metadata']['explicit_only'],True)
 
+
+    def test_rm06_generated_input_ownership_is_explicit(self):
+        # Exporter compile_graph: globs are refused once a DAG owns any output.
+        # The repository checkout is SHA-bound; this list identifies only
+        # exact tracked build anchors, not an incomplete filesystem sandbox.
+        lint, apk, _ = candidate(self.cfg)
+        wanted = [
+            ".devtool.toml", "gradlew", "gradle/wrapper/gradle-wrapper.jar",
+            "gradle/wrapper/gradle-wrapper.properties", "gradle/libs.versions.toml",
+            "gradle.properties", "settings.gradle.kts", "build.gradle.kts",
+            "app/build.gradle.kts", "app/src/main/AndroidManifest.xml",
+        ]
+        for name, job in (("lint", lint), ("apk", apk)):
+            with self.subTest(name=name):
+                self.assertEqual(job["inputs"], wanted)
+                self.assertEqual(len(job["inputs"]), len(set(job["inputs"])))
+                self.assertTrue(all((ROOT / rel).is_file() for rel in job["inputs"]))
+                self.assertFalse(any(any(ch in rel for ch in "*?[]") for rel in job["inputs"]))
+                self.assertFalse(set(job["inputs"]) & set(apk["outputs"]))
+
+    def test_generated_input_glob_regression_fails_closed(self):
+        import copy
+        for name, unsafe in (("glob", "app/src/**"),
+                             ("generated-output", APK),
+                             ("outside", "../other")):
+            with self.subTest(name=name):
+                cfg = copy.deepcopy(self.cfg)
+                lint, apk, _ = candidate(cfg)
+                lint["inputs"].append(unsafe)
+                ownership_ok = all(
+                    rel not in apk["outputs"] and
+                    not any(ch in rel for ch in "*?[]") and
+                    not Path(rel).is_absolute() and ".." not in Path(rel).parts
+                    for rel in lint["inputs"]
+                )
+                self.assertFalse(ownership_ok)
+
     def test_negative_drift_examples(self):
         import copy
         for case in ('release','device','unowned','unsigned_jar'):
