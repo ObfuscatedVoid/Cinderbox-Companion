@@ -1,0 +1,299 @@
+# R40: opt-in GitHub-hosted release signing and separate scoped Android qualification.
+# No publication, production device install, or release-qualification promotion.
+name: Cinderbox R40 Candidate Qualification
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_source_sha:
+        description: Exact reviewed master commit (40 lowercase hexadecimal characters)
+        type: string
+        required: true
+      confirm:
+        description: Type R40_SIGNED_CANDIDATE to allow protected signing
+        type: string
+        required: true
+
+permissions:
+  contents: read
+concurrency:
+  group: cinderbox-r40-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  unit-tests:
+    if: >-
+      github.repository == 'Mikeyphw/Cinderbox-Companion' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/master' &&
+      inputs.confirm == 'R40_SIGNED_CANDIDATE' &&
+      inputs.reviewed_source_sha == github.sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - name: Checkout exact reviewed master commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Assert immutable source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f scripts/devtool/r40_qualification.py
+          test ! -e keystore.jks && test ! -L keystore.jks
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Install pinned SDK
+        shell: bash
+        run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c
+      - name: Execute real JVM unit tests on GitHub, never Termux
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest
+      - name: Parse original JUnit XML, refusing zero tests, failures and skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/devtool/r40_qualification.py junit \
+            --reports app/build/test-results/testDebugUnitTest \
+            --output "$RUNNER_TEMP/r40-unit/R40_JUNIT.json" \
+            --source "$GITHUB_SHA" --run "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+          cp -- app/build/test-results/testDebugUnitTest/TEST-*.xml "$RUNNER_TEMP/r40-unit/"
+      - name: Upload parsed unit-test receipt and JUnit XML
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r40-unit
+          path: ${{ runner.temp }}/r40-unit/
+          if-no-files-found: error
+          retention-days: 14
+
+  emulator-debug:
+    needs: [unit-tests]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Assert source identity
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c
+      - name: Compile disposable emulator app/test APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Run one scoped synthetic instrumented test on ephemeral emulator
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_4
+          disable-animations: true
+          script: bash scripts/devtool/r40_emulator_smoke.sh
+      - name: Upload sanitized device evidence (never raw log)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r40-emulator
+          path: ${{ runner.temp }}/r40-emulator/R40_EMULATOR.json
+          if-no-files-found: error
+          retention-days: 14
+
+  github-sign:
+    needs: [unit-tests, emulator-debug]
+    if: >-
+      github.repository == 'Mikeyphw/Cinderbox-Companion' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/master' &&
+      inputs.confirm == 'R40_SIGNED_CANDIDATE' &&
+      inputs.reviewed_source_sha == github.sha
+    environment: cinderbox-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Verify reviewed source and existing release policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e keystore.jks && test ! -L keystore.jks
+          test ! -e local.properties
+          python3 scripts/devtool/m3_build_evidence.py source
+          python3 scripts/devtool/m3b_release_candidate.py policy
+          python3 scripts/devtool/check_security_contract.py
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Install pinned signing tools
+        shell: bash
+        run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c
+      - name: Provision existing GitHub environment signing identity
+        shell: bash
+        env:
+          CINDERBOX_RELEASE_KEYSTORE_B64: ${{ secrets.CINDERBOX_RELEASE_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.CINDERBOX_RELEASE_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.CINDERBOX_RELEASE_KEY_PASSWORD }}
+          CINDERBOX_RELEASE_CERT_SHA256: ${{ vars.CINDERBOX_RELEASE_CERT_SHA256 }}
+          CINDERBOX_DEBUG_CERT_SHA256: ${{ vars.CINDERBOX_DEBUG_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          set +x
+          python3 scripts/devtool/m21_actions_release.py provision \
+            --source-dir "$GITHUB_WORKSPACE" --runner-temp "$RUNNER_TEMP"
+      - name: Build signed release candidate on GitHub (not a release)
+        shell: bash
+        env:
+          STORE_PASSWORD: ${{ secrets.CINDERBOX_RELEASE_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.CINDERBOX_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          set +x
+          ./gradlew --no-daemon --max-workers=2 --console=plain :app:assembleRelease
+      - name: Independently verify APK signer, package and certificate pins
+        shell: bash
+        env:
+          CINDERBOX_RELEASE_CERT_SHA256: ${{ vars.CINDERBOX_RELEASE_CERT_SHA256 }}
+          CINDERBOX_DEBUG_CERT_SHA256: ${{ vars.CINDERBOX_DEBUG_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          python3 scripts/devtool/m21_actions_release.py verify \
+            --source-dir "$GITHUB_WORKSPACE" \
+            --stage-dir "$RUNNER_TEMP/r40-release-candidate" \
+            --source-commit "$GITHUB_SHA" --workflow-run "$GITHUB_RUN_ID"
+      - name: Destroy ephemeral signing key before any upload
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f -- keystore.jks
+          rm -f -- "$RUNNER_TEMP/cinderbox-release-signing/keystore.jks"
+      - name: Generate GitHub OIDC/Sigstore SLSA attestation for APK bytes
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: ${{ runner.temp }}/r40-release-candidate/CinderboxCompanion-release-candidate.apk
+      - name: Upload signed candidate (not publication)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r40-signed-candidate
+          path: ${{ runner.temp }}/r40-release-candidate/
+          if-no-files-found: error
+          retention-days: 14
+
+  signed-emulator:
+    needs: [github-sign]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Retrieve signed candidate from a separate GitHub job
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: r40-signed-candidate
+          path: ${{ runner.temp }}/r40-download-signed
+      - name: Verify GitHub OIDC/Sigstore attestation before installing
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh attestation verify "$RUNNER_TEMP/r40-download-signed/CinderboxCompanion-release-candidate.apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --source-digest "$GITHUB_SHA" --source-ref "$GITHUB_REF" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/cinderbox-r40-qualification.yml" \
+            --format json > "$RUNNER_TEMP/r40-verified-attestation.json"
+          test -s "$RUNNER_TEMP/r40-verified-attestation.json"
+      - name: Verify release APK installation bytes on disposable Android emulator
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_4
+          disable-animations: true
+          script: bash scripts/devtool/r40_signed_emulator.sh
+      - name: Upload signed candidate emulator-install evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r40-signed-emulator
+          path: ${{ runner.temp }}/r40-signed-emulator/R40_SIGNED_EMULATOR.json
+          if-no-files-found: error
+          retention-days: 14
+
+  remote-verify:
+    needs: [unit-tests, emulator-debug, github-sign, signed-emulator]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: r40-unit
+          path: proof/unit
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: r40-emulator
+          path: proof/emulator
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: r40-signed-candidate
+          path: proof/signed
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: r40-signed-emulator
+          path: proof/signed-emulator
+      - name: Independently authenticate source and signed APK provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.head_sha')" = "$GITHUB_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.event')" = workflow_dispatch
+          gh attestation verify proof/signed/CinderboxCompanion-release-candidate.apk \
+            --repo "$GITHUB_REPOSITORY" --source-ref "$GITHUB_REF" \
+            --source-digest "$GITHUB_SHA" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/cinderbox-r40-qualification.yml" \
+            --format json > "$RUNNER_TEMP/r40-verified-attestation.json"
+          test -s "$RUNNER_TEMP/r40-verified-attestation.json"
+          python3 scripts/devtool/r40_qualification.py finalize \
+            --folder proof --output "$RUNNER_TEMP/R40_CANDIDATE_ACCEPTANCE.json" \
+            --source "$GITHUB_SHA" --run "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+      - name: Upload public final evidence (not a release)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r40-verified-candidate-evidence
+          path: ${{ runner.temp }}/R40_CANDIDATE_ACCEPTANCE.json
+          if-no-files-found: error
+          retention-days: 14

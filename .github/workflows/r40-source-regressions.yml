@@ -1,0 +1,35 @@
+name: R40 Source Regressions
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  r40-source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: Verify checkout identity
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Validate emulator scripts
+        run: |
+          bash -n scripts/devtool/r40_emulator_smoke.sh
+          bash -n scripts/devtool/r40_signed_emulator.sh
+
+      - name: Run R40 regression suite
+        run: |
+          python3 -B -m unittest discover \
+            -s scripts/devtool \
+            -p 'test_r40_qualification.py' -v
