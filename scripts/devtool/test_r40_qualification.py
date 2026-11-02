@@ -93,16 +93,29 @@ class Qualification(unittest.TestCase):
         self.assertNotIn('assembleRelease', public_before)
         self.assertIn('gh attestation verify', public_after)
 
-    def test_emulator_kvm_and_instrumentation_output_contract(self):
+    def test_intel_macos_emulators_and_instrumentation_output_contract(self):
         root = Path(__file__).resolve().parents[2]
         workflow = (root/'.github/workflows/cinderbox-r40-qualification.yml').read_text()
-        self.assertEqual(workflow.count('disable-linux-hw-accel: false'), 2)
-        self.assertEqual(workflow.count('test -c /dev/kvm'), 2)
-        self.assertEqual(workflow.count('sudo udevadm trigger --name-match=kvm'), 2)
-        self.assertEqual(workflow.count('test -r /dev/kvm && test -w /dev/kvm'), 2)
-        self.assertEqual(workflow.count('R40_KVM_DEVICE_UNAVAILABLE'), 2)
-        self.assertEqual(workflow.count('R40_KVM_ACCESS_UNAVAILABLE'), 2)
+        self.assertEqual(workflow.count('runs-on: macos-15-intel'), 2)
+        self.assertEqual(workflow.count('runs-on: ubuntu-24.04'), 3)
+        self.assertEqual(workflow.count('Require native Intel macOS emulator host'), 2)
+        self.assertEqual(workflow.count('R40_WRONG_EMULATOR_HOST'), 2)
+        self.assertEqual(workflow.count('R40_NON_INTEL_EMULATOR_HOST'), 2)
         self.assertEqual(workflow.count('ReactiveCircus/android-emulator-runner@'), 2)
+        self.assertNotIn('/dev/kvm', workflow)
+        self.assertNotIn('udevadm', workflow)
+        self.assertNotIn('disable-linux-hw-accel: false', workflow)
+        for start, end in [('emulator-debug', 'github-sign'),
+                           ('signed-emulator', 'remote-verify')]:
+            section = workflow.split('  '+start+':',1)[1].split('  '+end+':',1)[0]
+            self.assertEqual(section.count('runs-on: macos-15-intel'), 1)
+            self.assertEqual(section.count('ReactiveCircus/android-emulator-runner@'), 1)
+            self.assertIn('arch: x86_64', section)
+            self.assertIn('api-level: 35', section)
+        sign = workflow.split('  github-sign:',1)[1].split('  signed-emulator:',1)[0]
+        self.assertIn('runs-on: ubuntu-24.04', sign)
+        self.assertIn('environment: cinderbox-release', sign)
+        self.assertIn('actions/attest@', sign)
         smoke = (root/'scripts/devtool/r40_emulator_smoke.sh').read_text()
         self.assertIn('am instrument -w ', smoke)
         self.assertNotIn('am instrument -w -r ', smoke)

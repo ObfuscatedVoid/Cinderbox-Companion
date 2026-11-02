@@ -74,7 +74,7 @@ jobs:
 
   emulator-debug:
     needs: [unit-tests]
-    runs-on: ubuntu-24.04
+    runs-on: macos-15-intel
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -94,14 +94,12 @@ jobs:
         run: |
           set -euo pipefail
           ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest
-      - name: Enable and verify KVM for disposable emulator
+      - name: Require native Intel macOS emulator host
         shell: bash
         run: |
           set -euo pipefail
-          test -c /dev/kvm || { echo 'R40_KVM_DEVICE_UNAVAILABLE' >&2; exit 2; }
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
-          sudo udevadm trigger --name-match=kvm
-          test -r /dev/kvm && test -w /dev/kvm || { echo 'R40_KVM_ACCESS_UNAVAILABLE' >&2; exit 2; }
+          test "$RUNNER_OS" = macOS || { echo R40_WRONG_EMULATOR_HOST >&2; exit 2; }
+          test "$(uname -m)" = x86_64 || { echo R40_NON_INTEL_EMULATOR_HOST >&2; exit 2; }
       - name: Run one scoped synthetic instrumented test on ephemeral emulator
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
@@ -110,7 +108,6 @@ jobs:
           target: google_apis
           profile: pixel_4
           disable-animations: true
-          disable-linux-hw-accel: false
           script: bash scripts/devtool/r40_emulator_smoke.sh
       - name: Upload sanitized device evidence (never raw log)
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
@@ -213,7 +210,7 @@ jobs:
 
   signed-emulator:
     needs: [github-sign]
-    runs-on: ubuntu-24.04
+    runs-on: macos-15-intel
     timeout-minutes: 60
     permissions:
       contents: read
@@ -238,14 +235,12 @@ jobs:
             --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/cinderbox-r40-qualification.yml" \
             --format json > "$RUNNER_TEMP/r40-verified-attestation.json"
           test -s "$RUNNER_TEMP/r40-verified-attestation.json"
-      - name: Enable and verify KVM for signed-candidate emulator
+      - name: Require native Intel macOS emulator host
         shell: bash
         run: |
           set -euo pipefail
-          test -c /dev/kvm || { echo 'R40_KVM_DEVICE_UNAVAILABLE' >&2; exit 2; }
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
-          sudo udevadm trigger --name-match=kvm
-          test -r /dev/kvm && test -w /dev/kvm || { echo 'R40_KVM_ACCESS_UNAVAILABLE' >&2; exit 2; }
+          test "$RUNNER_OS" = macOS || { echo R40_WRONG_EMULATOR_HOST >&2; exit 2; }
+          test "$(uname -m)" = x86_64 || { echo R40_NON_INTEL_EMULATOR_HOST >&2; exit 2; }
       - name: Verify release APK installation bytes on disposable Android emulator
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
@@ -254,7 +249,6 @@ jobs:
           target: google_apis
           profile: pixel_4
           disable-animations: true
-          disable-linux-hw-accel: false
           script: bash scripts/devtool/r40_signed_emulator.sh
       - name: Upload signed candidate emulator-install evidence
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
