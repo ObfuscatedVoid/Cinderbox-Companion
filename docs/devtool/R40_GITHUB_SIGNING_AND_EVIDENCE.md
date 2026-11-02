@@ -127,3 +127,49 @@ master and inspect fresh remote receipts before promoting any qualification.
 This source-only fix is **not** evidence that emulator, signing or remote
 provenance stages passed. Fail closed if the emulator cannot start; never fall
 back to `-accel off` or to a personal Android device.
+
+## R40-R3: signing-only mode after third emulator boot timeout (run 41466933054)
+
+R40-R2 merged source `0a49c7c3cd407ca0d4be82aae788bacfc2fcd967` passed 221
+Gradle JVM tests and both Android APK assemblies. Intel macOS then started an
+Android emulator but `adb` remained `device offline` for 600 seconds; the
+scoped Android instrumentation never executed. The protected signing job was
+**skipped** because of its `needs: emulator-debug` dependency. Thus there is
+no R40 release signing, device acceptance, or attestation from this run.
+
+R40-R3 separates independent signed-build qualification from device
+qualification. The new `qualification_scope` input defaults to `signed-only`;
+`full` is an explicitly requested, fail-closed Android emulator campaign. In
+`signed-only`, `unit-tests` must PASS with nonempty parsed JUnit XML, followed
+by `github-sign` with existing protected `cinderbox-release` secrets and
+certificate pins, then `remote-sign-verify` without signing secrets. The
+independent job downloads exact GitHub artifacts, rehashes original XML and
+APK against M21's source/run/certificate-bound evidence, and verifies GitHub
+OIDC/Sigstore attestation with repository, workflow, ref and source digest
+constraints. It uploads `r40-verified-signed-build`; this receipt explicitly
+claims **no** emulator tests, device qualification, release approval or
+publication permission. It will not exist if signing, JUnit parsing or remote
+authentication fails.
+
+With `qualification_scope=full`, the existing two disposable macOS emulator
+jobs still run and `remote-verify` requires ALL their real outputs AND the new
+independent signing receipt. A failed or skipped emulator never yields full
+qualification. The full lane is still blocked by emulator startup until
+a reliable host, image or test-device lane is qualified.
+
+First acceptance command (after reviewed R40-R3 PR is merged):
+
+```zsh
+REPO=Mikeyphw/Cinderbox-Companion
+SHA=$(gh api "repos/$REPO/branches/master" --jq '.commit.sha')
+gh workflow run cinderbox-r40-qualification.yml -R "$REPO" --ref master \
+  -f reviewed_source_sha="$SHA" -f confirm=R40_SIGNED_CANDIDATE \
+  -f qualification_scope=signed-only
+```
+
+Only dispatch `qualification_scope=full` after an emulator host has been
+proved to boot. This avoids repeated long-running, failed macOS jobs.
+
+Warning: `gh attestation verify` trusts the GitHub OIDC identity for build
+provenance; it is not an Android APK signer or code quality guarantee. The
+Android signing key is the existing persistent protected release keystore.

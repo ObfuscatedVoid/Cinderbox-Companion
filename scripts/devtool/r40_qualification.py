@@ -161,10 +161,65 @@ def finalize(folder: Path, *, source: str, run: str, attempt: str) -> dict:
                 device_scope='ephemeral-emulator-only', physical_device_qualified=False,
                 release_qualified=False, publication_allowed=False)
 
+
+def signing(folder: Path, attestation: Path, *, source: str, run: str, attempt: str) -> dict:
+    """Independent signed-build receipt; NEVER a device-qualification receipt.
+
+    Caller MUST run `gh attestation verify` with exact repository/ref/SHA/workflow
+    constraints before supplying its successful JSON output.
+    """
+    ident = identity(source, run, attempt)
+    original = get(folder/'unit/R40_JUNIT.json')
+    insist(original.get('schema_version') == 1 and original.get('kind') == 'r40-parsed-junit' and
+           all(original.get(k) == v for k,v in ident.items()) and
+           original.get('status') == 'PASS' and original.get('release_qualified') is False,
+           'R40_SIGNING_JUNIT_RECEIPT_INVALID')
+    parsed = junit(folder/'unit', source=source, run=run, attempt=attempt)
+    insist(all(original.get(k) == parsed[k] for k in
+               ('tests','failures','errors','skipped','report_files')),
+           'R40_SIGNING_JUNIT_XML_MISMATCH')
+    released = get(folder/'signed/M21_RELEASE_CANDIDATE.json')
+    expected_fields = dict(schema_version=1,producer='cinderbox-m21-manual-release-candidate',
+                           repository=REPO,source_commit=source,workflow_run_id=int(run),
+                           package=PKG,variant='release',signature_verified=True,
+                           release_signed=True,debuggable=False,installed=False,
+                           publication_allowed=False,release_qualified=False,
+                           device_qualified=False,automatic_publication=False)
+    insist(all(type(released.get(k)) is type(v) and released.get(k) == v
+               for k,v in expected_fields.items()), 'R40_SIGNING_RELEASE_RECEIPT_INVALID')
+    release_cert = released.get('release_certificate_sha256')
+    debug_cert = released.get('debug_certificate_sha256')
+    insist(all(isinstance(x,str) and HEX.fullmatch(x) for x in (release_cert,debug_cert)) and
+           release_cert != debug_cert, 'R40_SIGNING_CERTIFICATE_PINS_INVALID')
+    apk_name = 'CinderboxCompanion-release-candidate.apk'
+    digest = sha256(folder/'signed'/apk_name)
+    insist(released.get('apk_sha256') == digest and
+           released.get('version_code',0) > 0 and
+           isinstance(released.get('version_name'),str), 'R40_SIGNING_APK_IDENTITY_INVALID')
+    sums = folder/'signed/SHA256SUMS'
+    insist(sums.is_file() and not sums.is_symlink() and
+           sums.read_text(encoding='utf-8') == f'{digest}  {apk_name}\n',
+           'R40_SIGNING_SHA256SUMS_MISMATCH')
+    insist(attestation.is_file() and not attestation.is_symlink() and
+           0 < attestation.stat().st_size < MAX_FILE, 'R40_SIGNING_ATTESTATION_MISSING')
+    verified_json = json.loads(attestation.read_text(encoding='utf-8'))
+    insist((isinstance(verified_json, list) and bool(verified_json)) or
+           (isinstance(verified_json,dict) and bool(verified_json)),
+           'R40_SIGNING_ATTESTATION_JSON_INVALID')
+    return dict(schema_version=1,kind='r40-verified-signed-build',**ident,
+                overall='PASS_R40_SIGNING_AND_REMOTE_ATTESTATION_ONLY',
+                signing_certificate_sha256=release_cert,release_apk_sha256=digest,
+                junit_tests=parsed['tests'],junit_reports=parsed['report_files'],
+                github_attestation_sha256=sha256(attestation),
+                verified_by='gh-attestation-verify-with-source-and-workflow-pins',
+                emulator_instrumentation_qualified=False,
+                physical_device_qualified=False,release_qualified=False,
+                publication_allowed=False)
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     cmd = p.add_subparsers(dest='command', required=True)
-    for name in ['junit','instrument','installed','finalize']:
+    for name in ['junit','instrument','installed','finalize','signing']:
         t = cmd.add_parser(name)
         t.add_argument('--source', required=True)
         t.add_argument('--run', required=True)
@@ -177,13 +232,15 @@ def main(argv=None) -> int:
         if name == 'installed':
             t.add_argument('--apk', required=True, type=Path)
             t.add_argument('--serial', required=True)
-        if name == 'finalize':t.add_argument('--folder', required=True, type=Path)
+        if name in ('finalize','signing'):t.add_argument('--folder', required=True, type=Path)
+        if name == 'signing':t.add_argument('--attestation', required=True, type=Path)
     a = p.parse_args(argv)
     try:
         args = dict(source=a.source, run=a.run, attempt=a.attempt)
         if a.command == 'junit': doc = junit(a.reports, **args)
         elif a.command == 'instrument': doc = instrument(a.input, expected=a.expected, **args)
         elif a.command == 'installed': doc = installed(a.apk, serial=a.serial, **args)
+        elif a.command == 'signing': doc = signing(a.folder,a.attestation,**args)
         else: doc = finalize(a.folder, **args)
         put(a.output, doc)
         print(doc.get('overall', doc['status'] if 'status' in doc else 'PASS_R40'))
