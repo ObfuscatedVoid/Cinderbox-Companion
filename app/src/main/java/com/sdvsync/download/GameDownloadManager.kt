@@ -3,6 +3,8 @@ package com.sdvsync.download
 import android.content.Context
 import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.local.M23CinderboxFirstPolicy
+import com.sdvsync.local.CinderboxDownloadDestination
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import com.sdvsync.local.M23InstallationDiscovery
 import com.sdvsync.local.InstallationScanner
 import com.sdvsync.local.InstallHealth
@@ -117,6 +119,10 @@ class GameDownloadManager(
     fun canResume(directory: File, branch: String, os: String, verify: Boolean): Boolean =
         recovery.pending()?.matches(directory, branch, os, verify) == true
 
+    /** Read-only view of journal-owned promotion; not standalone write authority. */
+    fun isPublishedRecovery(directory: File): Boolean =
+        runCatching { recovery.isPromotedStage(directory) }.getOrDefault(false)
+
     /** Explicit discard ONLY forgets metadata, never deletes downloaded game bytes. */
     fun discardPendingDownload() {
         recovery.discard()
@@ -180,19 +186,33 @@ class GameDownloadManager(
             "Another game download is already active"
         }
         val directory = File(installDirectory)
-        // Recheck in the service entry path; UI preflight alone is not a guard.
+        // UI preflight does not authorize writing. Recheck the fixed
+        // production destination even for callers that bypass the ViewModel.
+        val debugAlternative = DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(context) &&
+            !CinderboxDownloadDestination.isExactDestination(directory.path)
         val scope = M23CinderboxFirstPolicy.assess(directory, File(CinderboxPaths.ROOT_DIR))
-        check(scope.code != M23CinderboxFirstPolicy.Code.PROTECTED_CINDERBOX_TREE &&
-            scope.code != M23CinderboxFirstPolicy.Code.UNSAFE_OR_NONABSOLUTE_DESTINATION &&
-            scope.code != M23CinderboxFirstPolicy.Code.DESTINATION_UNREADABLE) {
-            "Destination overlaps Cinderbox or cannot be safely inspected"
+        if (debugAlternative) {
+            check(scope.code != M23CinderboxFirstPolicy.Code.PROTECTED_CINDERBOX_TREE &&
+                scope.code != M23CinderboxFirstPolicy.Code.UNSAFE_OR_NONABSOLUTE_DESTINATION &&
+                scope.code != M23CinderboxFirstPolicy.Code.DESTINATION_UNREADABLE) {
+                "Debug destination is protected, unsafe or unreadable"
+            }
+        } else {
+            CinderboxDownloadDestination.requireWritableForInstall(
+                directory, isPublishedRecovery(directory))
         }
         StoragePreflight.requireWritable(directory)
         GameDownloadRecovery.safeDestination(directory)
         val checkpoint = recovery.pending()
         if (checkpoint == null) {
-            check(scope.separateEmptyDestination) {
-                "Selected folder is not an independent empty download destination"
+            if (debugAlternative) {
+                check(scope.separateEmptyDestination) {
+                    "Debug destination must be an independent empty folder"
+                }
+            } else {
+                check(CinderboxDownloadDestination.inspect(directory).canStartNewDownload) {
+                    "Cinderbox's GameFiles destination is no longer available for a new download"
+                }
             }
             val health = InstallationScanner.game(directory).health
             check(health != InstallHealth.INCOMPLETE && health != InstallHealth.INACCESSIBLE &&

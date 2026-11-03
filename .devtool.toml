@@ -190,6 +190,11 @@ description = "R42 user-facing policy and developer-feature source contracts (ho
 workflow = "r42-check"
 target = "cinderbox"
 
+[wrapper.commands.r43-check]
+description = "R43 Cinderbox-only production destination source guard (host-only)"
+workflow = "r43-check"
+target = "cinderbox"
+
 [wrapper.commands.m23-check]
 description = "M23 read-only installation recognition and source-bound evidence DAG"
 workflow = "m23-check"
@@ -570,7 +575,19 @@ command = ["python3", "-B", "scripts/devtool/r42_product_gate.py"]
 inputs = ["scripts/devtool/r42_*.py", "app/src/main/java/com/sdvsync/MainActivity.kt", "app/src/main/java/com/sdvsync/ui/policy/**", "app/src/main/java/com/sdvsync/ui/screens/*.kt", "app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt", ".devtool.toml"]
 metadata = { read_only = true, area = "r42-ui-policy", root_required = false, device_required = false }
 
+[targets.cinderbox.jobs.r43-cinderbox-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r43_policy_gate.py"]
+inputs = ["scripts/devtool/r43_*.py", "app/src/main/java/com/sdvsync/local/CinderboxDownloadDestination.kt", "app/src/main/java/com/sdvsync/download/GameDownloadManager.kt", "app/src/main/java/com/sdvsync/download/GameDownloadService.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", "app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt", "app/src/main/java/com/sdvsync/ui/components/CinderboxWizardDialog.kt", ".devtool.toml"]
+metadata = { read_only = true, area = "r43-cinderbox-only", root_required = false, device_required = false }
+
 [targets.cinderbox.workflows]
+r43-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r42", ref = "job:r42-product-source", depends_on = ["security"] },
+  { id = "r43", ref = "job:r43-cinderbox-source", depends_on = ["r42"] },
+]
 r42-check = [
   { id = "security", ref = "job:security-contract", depends_on = [] },
   { id = "policy", ref = "job:r42-product-source", depends_on = ["security"] },

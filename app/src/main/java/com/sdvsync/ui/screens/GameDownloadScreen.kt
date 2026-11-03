@@ -341,22 +341,31 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
             }
 
             } else {
-                Text(
-                    "This version downloads Steam game files to a separate folder. " +
-                        "It will not replace the existing Cinderbox game automatically.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                StardewCard {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("Game destination · Cinderbox",
+                            style = MaterialTheme.typography.titleMedium)
+                        Text("Game files are downloaded only to Cinderbox's GameFiles folder. " +
+                            "Existing installations are protected until safe updates are supported.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
-            // Read-only assessment of the selected path, not a hash verification.
+            // Alternative path inspector belongs to unlocked debug mode only.
+            if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(LocalContext.current) &&
+                state.installDirectory != CinderboxPaths.GAME_FILES_DIR) {
             state.selectedInstallHealth?.let { health ->
                 Text("Selected folder: ${health.health.name.replace('_', ' ')}",
                     style = MaterialTheme.typography.titleSmall)
                 Text(health.details, style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(12.dp))
             }
+            }
             Text(state.storageDetail, style = MaterialTheme.typography.bodySmall)
-            if (state.destinationCode != M23CinderboxFirstPolicy.Code.EMPTY_SEPARATE_DESTINATION) {
+            if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(LocalContext.current) &&
+                state.installDirectory != CinderboxPaths.GAME_FILES_DIR &&
+                state.destinationCode != M23CinderboxFirstPolicy.Code.EMPTY_SEPARATE_DESTINATION) {
                 Text(DownloadPresentation.destinationStatus(state.destinationCode),
                     color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
@@ -494,7 +503,9 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                     val progress = state.downloadProgress
                     val copyFailed = progress.copyCompleted && progress.copyErrors.isNotEmpty()
                     val copySucceeded = progress.copyCompleted && progress.copyErrors.isEmpty()
-                    val showCopyButton = state.isCinderboxSetup && !copySucceeded
+                    val showCopyButton = state.isCinderboxSetup && !copySucceeded &&
+                        DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(LocalContext.current) &&
+                        state.installDirectory != CinderboxPaths.GAME_FILES_DIR
 
                     StardewCard {
                         Column(modifier = Modifier.padding(12.dp)) {

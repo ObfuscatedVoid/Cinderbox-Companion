@@ -18,6 +18,7 @@ import com.sdvsync.local.M23CinderboxFirstPolicy
 import com.sdvsync.local.InstallAssessment
 import com.sdvsync.local.InstallHealth
 import com.sdvsync.local.StoragePreflight
+import com.sdvsync.local.CinderboxDownloadDestination
 import java.io.File
 import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.download.SmapiSetupProgress
@@ -120,6 +121,17 @@ class GameDownloadViewModel(
         null
     }
 
+    private fun isDebugAlternative(path: String): Boolean =
+        DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(context) &&
+            !CinderboxDownloadDestination.isExactDestination(path)
+
+    private fun destinationDetail(path: String): String =
+        if (isDebugAlternative(path)) {
+            "Debug-only custom folder. Actual write access will be tested when downloading."
+        } else {
+            CinderboxDownloadDestination.inspect(File(path)).explanation
+        }
+
     init {
         val defaultDir = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DOWNLOADS
@@ -128,7 +140,12 @@ class GameDownloadViewModel(
             .getString("game_dir", null) ?: defaultDir
         val interrupted = runCatching { downloadManager.pendingDownload() }
         val pending = interrupted.getOrNull()
-        val selectedDir = pending?.directory ?: savedDir
+        val selectedDir = if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(context)) {
+            pending?.directory ?: savedDir
+        } else {
+            // Old M4 preferences and separate-folder checkpoints cannot redirect release downloads.
+            CinderboxPaths.GAME_FILES_DIR
+        }
         _state.value = _state.value.copy(
             installDirectory = selectedDir,
             selectedBranch = pending?.branch ?: "public",
@@ -142,7 +159,7 @@ class GameDownloadViewModel(
             destinationCode = M23CinderboxFirstPolicy.assess(
                 File(selectedDir), File(CinderboxPaths.ROOT_DIR)).code,
             storageReady = false,
-            storageDetail = "Write access will be tested only when you start a download.",
+            storageDetail = destinationDetail(selectedDir),
             isCinderboxSetup = fileAccessDetector.getSetupType() == SETUP_TYPE_CINDERBOX,
             cinderboxPackageInstalled = installedCinderboxVersionFromPackage() != null
         )
@@ -336,20 +353,25 @@ class GameDownloadViewModel(
             destinationCode = M23CinderboxFirstPolicy.assess(
                 File(path), File(CinderboxPaths.ROOT_DIR)).code,
             storageReady = false,
-            storageDetail = "Write access will be tested only when you start a download."
+            storageDetail = destinationDetail(path)
         )
     }
 
     fun refreshSelectedDirectoryHealth() {
-        val path = _state.value.installDirectory
+        val path = if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(context)) {
+            _state.value.installDirectory
+        } else {
+            CinderboxPaths.GAME_FILES_DIR
+        }
         _state.value = _state.value.copy(
+            installDirectory = path,
             selectedInstallHealth = InstallationScanner.game(File(path)),
             primaryGameStatus = M23InstallationDiscovery.game(File(CinderboxPaths.GAME_FILES_DIR)).status,
             primarySmapiStatus = M23InstallationDiscovery.smapi(File(CinderboxPaths.SMAPI_DIR)).status,
             destinationCode = M23CinderboxFirstPolicy.assess(
                 File(path), File(CinderboxPaths.ROOT_DIR)).code,
             storageReady = false,
-            storageDetail = "Write access will be tested only when you start a download."
+            storageDetail = destinationDetail(path)
         )
     }
 
@@ -418,12 +440,26 @@ class GameDownloadViewModel(
                 "Interrupted checkpoint uses a different or unknown Steam build. Files preserved; review before retry.")
             return
         }
-        // A checkpoint never licenses writing inside the original Cinderbox tree.
-        // For new downloads, the *selected* destination must be empty and separate.
-        if ((!resume && !destination.separateEmptyDestination) ||
+        val debugAlternative = isDebugAlternative(current.installDirectory)
+        if (!debugAlternative) {
+            val assessment = CinderboxDownloadDestination.inspect(File(current.installDirectory))
+            val ownedPromotion = resume &&
+                downloadManager.isPublishedRecovery(File(current.installDirectory))
+            if (!assessment.canStartNewDownload &&
+                !(ownedPromotion && assessment.code ==
+                    CinderboxDownloadDestination.Code.EXISTING_GAME_PROTECTED)) {
+                _state.value = current.copy(error = assessment.explanation,
+                    storageDetail = assessment.explanation)
+                return
+            }
+        }
+        // Legacy M23 independent empty-directory policy is retained only for
+        // explicitly unlocked debug overrides. Production cannot select it.
+        if (debugAlternative && (
+            (!resume && !destination.separateEmptyDestination) ||
             destination.code == M23CinderboxFirstPolicy.Code.PROTECTED_CINDERBOX_TREE ||
             destination.code == M23CinderboxFirstPolicy.Code.UNSAFE_OR_NONABSOLUTE_DESTINATION ||
-            destination.code == M23CinderboxFirstPolicy.Code.DESTINATION_UNREADABLE) {
+            destination.code == M23CinderboxFirstPolicy.Code.DESTINATION_UNREADABLE)) {
             _state.value = current.copy(error =
                 "Download destination rejected (${destination.code}). Cinderbox's imported " +
                 "game, saves, mods and SMAPI were not modified.")
@@ -485,6 +521,11 @@ class GameDownloadViewModel(
     }
 
     fun copyCinderbox() {
+        if (!isDebugAlternative(_state.value.installDirectory)) {
+            _state.update { it.copy(error =
+                "Game files install directly into Cinderbox. No separate copy is needed.") }
+            return
+        }
         downloadManager.resetCopyState()
         viewModelScope.launch {
             try {
@@ -575,6 +616,12 @@ class GameDownloadViewModel(
     }
 
     fun onWizardChooseOther() {
+        if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(context) == false) {
+            _wizardState.value = CinderboxWizardState()
+            _state.update { it.copy(error =
+                "Alternative download locations are available only in unlocked debug builds.") }
+            return
+        }
         pendingSetupType = SETUP_TYPE_OTHER
         _state.value = _state.value.copy(isCinderboxSetup = false)
         _wizardState.value = CinderboxWizardState()

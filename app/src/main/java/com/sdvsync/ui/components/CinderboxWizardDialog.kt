@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.fileaccess.AllFilesAccess
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import com.sdvsync.ui.formatBytes
 import com.sdvsync.ui.theme.GoldAmber
 import com.sdvsync.ui.theme.SuccessGreen
@@ -257,6 +258,8 @@ private fun SetupChoiceStep(onChooseCinderbox: () -> Unit, onChooseOther: () -> 
             }
         }
 
+        // The alternate-app/destination wizard is an unlocked debug tool.
+        if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(LocalContext.current)) {
         Spacer(Modifier.height(12.dp))
 
         // Other option — outlined card
@@ -285,6 +288,7 @@ private fun SetupChoiceStep(onChooseCinderbox: () -> Unit, onChooseOther: () -> 
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
         }
     }
 }

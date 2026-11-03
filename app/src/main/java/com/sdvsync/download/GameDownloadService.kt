@@ -3,6 +3,8 @@ package com.sdvsync.download
 import android.app.ActivityManager
 import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.local.M23CinderboxFirstPolicy
+import com.sdvsync.local.CinderboxDownloadDestination
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -182,19 +184,26 @@ class GameDownloadService : Service() {
             }
             recheckBranch()
             val installRoot = File(installDir)
-            // Defense in depth for restarted/explicit service intents, even if the
-            // UI and GameDownloadManager path gates were bypassed.
+            // Recheck the production destination independently of the UI and
+            // manager. A direct service intent is never an installation authority.
+            val recovery = GameDownloadRecovery(filesDir)
+            val debugAlternative = DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(this) &&
+                !CinderboxDownloadDestination.isExactDestination(installRoot.path)
             val scope = M23CinderboxFirstPolicy.assess(installRoot, File(CinderboxPaths.ROOT_DIR))
-            check(scope.code != M23CinderboxFirstPolicy.Code.PROTECTED_CINDERBOX_TREE &&
-                scope.code != M23CinderboxFirstPolicy.Code.UNSAFE_OR_NONABSOLUTE_DESTINATION &&
-                scope.code != M23CinderboxFirstPolicy.Code.DESTINATION_UNREADABLE) {
-                "Protected Cinderbox game tree or unsafe destination"
+            if (debugAlternative) {
+                check(scope.code != M23CinderboxFirstPolicy.Code.PROTECTED_CINDERBOX_TREE &&
+                    scope.code != M23CinderboxFirstPolicy.Code.UNSAFE_OR_NONABSOLUTE_DESTINATION &&
+                    scope.code != M23CinderboxFirstPolicy.Code.DESTINATION_UNREADABLE) {
+                    "Debug destination is protected, unsafe or unreadable"
+                }
+            } else {
+                val promoted = runCatching { recovery.isPromotedStage(installRoot) }.getOrDefault(false)
+                CinderboxDownloadDestination.requireWritableForInstall(installRoot, promoted)
             }
             StoragePreflight.requireWritable(installRoot)
-            // Only a checkpoint written by our manager authorizes touching partial files.
-            // This also rejects intents manually dispatched to the service.
-            GameDownloadRecovery(filesDir).requireMatching(installRoot, branch, os, verify)
-            val recovery = GameDownloadRecovery(filesDir)
+            // Only the manager's checkpoint, matching target, Steam options and
+            // ownership marker authorize resuming this exact download.
+            recovery.requireMatching(installRoot, branch, os, verify)
             recovery.requireSteamBuildId(expectedBuildId)
             val manifestFingerprint = checkNotNull(sessionManifestFingerprint)
             recovery.bindDepotManifestFingerprint(manifestFingerprint)

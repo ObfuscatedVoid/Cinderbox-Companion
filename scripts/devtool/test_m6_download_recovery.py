@@ -16,7 +16,14 @@ class M6DownloadRecoveryTest(unittest.TestCase):
         self.assertIn('fun discardPendingDownload()', manager)
     def test_service_never_bypasses_session(self):
         src = read('app/src/main/java/com/sdvsync/download/GameDownloadService.kt')
-        self.assertIn('GameDownloadRecovery(filesDir).requireMatching(', src)
+        # The R43 service reuses a single recovery journal instance.
+        # Ownership proof must precede depot downloader initialization.
+        self.assertIn('val recovery = GameDownloadRecovery(filesDir)', src)
+        self.assertIn('recovery.requireMatching(installRoot, branch, os, verify)', src)
+        self.assertLess(
+            src.index('recovery.requireMatching(installRoot, branch, os, verify)'),
+            src.index('depotDownloader = downloader')
+        )
         self.assertIn('GameDownloadRecovery(filesDir).completed()', src)
         self.assertIn('GameFileIntegrity(filesDir).verifyAndRecord(', src)
         self.assertNotIn('while (input.read(buffer) != -1) { }',src)

@@ -1,0 +1,47 @@
+name: R43 Cinderbox-only destination source contracts
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/cinderbox/**'
+      - 'app/src/main/java/com/sdvsync/download/**'
+      - 'app/src/main/java/com/sdvsync/local/**'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/test/java/com/sdvsync/local/CinderboxDownloadDestinationTest.kt'
+      - 'scripts/devtool/r43_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43-cinderbox-destination.yml'
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/cinderbox/**'
+      - 'app/src/main/java/com/sdvsync/download/**'
+      - 'app/src/main/java/com/sdvsync/local/**'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/test/java/com/sdvsync/local/CinderboxDownloadDestinationTest.kt'
+      - 'scripts/devtool/r43_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43-cinderbox-destination.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r43-host-policy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Run R43 immutable source contract tests
+        run: |
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r43_policy.py' -v
+          python3 -B scripts/devtool/r43_patch.py --check
+          python3 -B scripts/devtool/r43_policy_gate.py
+      - name: Preserve earlier R42 contract
+        run: |
+          python3 -B scripts/devtool/r42_product_gate.py
+      - name: Scope evidence
+        run: echo 'R43_SOURCE_ONLY_PASS; Gradle, device acceptance and authenticated Steam transfer are separate.'

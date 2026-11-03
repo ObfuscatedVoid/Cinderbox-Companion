@@ -56,9 +56,17 @@ class M4Contracts(unittest.TestCase):
 
         service = read('app/src/main/java/com/sdvsync/download/GameDownloadService.kt')
         run = service.split('    private suspend fun runDownload(', 1)[1]
-        gate = 'GameDownloadRecovery(filesDir).requireMatching(installRoot, branch, os, verify)'
+        # R43 uses one private recovery instance for the ownership proof and
+        # subsequent Steam binding. Keep the M4 fail-closed ordering contract:
+        # untrusted service intents cannot reach a downloader without a match.
+        recovery_init = 'val recovery = GameDownloadRecovery(filesDir)'
+        gate = 'recovery.requireMatching(installRoot, branch, os, verify)'
         assert 'StoragePreflight.requireWritable(installRoot)' in run
+        assert recovery_init in run
         assert gate in run
+        assert run.index(recovery_init) < run.index(gate)
+        assert run.index('StoragePreflight.requireWritable(installRoot)') < run.index(gate)
+        assert run.index(gate) < run.index('recovery.requireSteamBuildId(expectedBuildId)')
         assert run.index(gate) < run.index('depotDownloader = downloader')
 
         recovery = read('app/src/main/java/com/sdvsync/download/GameDownloadRecovery.kt')
