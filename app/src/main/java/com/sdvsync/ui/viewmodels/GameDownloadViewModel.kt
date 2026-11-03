@@ -66,6 +66,9 @@ data class GameDownloadState(
     val primaryGameStatus: M23InstallationDiscovery.Status = M23InstallationDiscovery.Status.MISSING,
     val primarySmapiStatus: M23InstallationDiscovery.Status = M23InstallationDiscovery.Status.MISSING,
     val destinationCode: M23CinderboxFirstPolicy.Code = M23CinderboxFirstPolicy.Code.DESTINATION_UNREADABLE,
+    // Fixed Cinderbox destination; separate from legacy developer-only selection.
+    val fixedDestinationCode: CinderboxDownloadDestination.Code =
+        CinderboxDownloadDestination.Code.STORAGE_INACCESSIBLE,
     val storageReady: Boolean = false,
     val storageDetail: String = "Storage not checked",
     val verifyAfterDownload: Boolean = true,
@@ -135,6 +138,12 @@ class GameDownloadViewModel(
             CinderboxDownloadDestination.inspect(File(path)).explanation
         }
 
+    /** Never crash the download UI when shared storage is unavailable. */
+    private fun inspectFixedDestination(): CinderboxDownloadDestination.Code =
+        runCatching { CinderboxDownloadDestination.inspect(
+            File(CinderboxPaths.GAME_FILES_DIR)).code }
+            .getOrDefault(CinderboxDownloadDestination.Code.STORAGE_INACCESSIBLE)
+
     init {
         val defaultDir = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DOWNLOADS
@@ -151,6 +160,7 @@ class GameDownloadViewModel(
         }
         _state.value = _state.value.copy(
             installDirectory = selectedDir,
+            fixedDestinationCode = inspectFixedDestination(),
             selectedBranch = pending?.branch ?: "public",
             selectedOs = pending?.os ?: "windows",
             verifyAfterDownload = pending?.verify ?: true,
@@ -368,6 +378,7 @@ class GameDownloadViewModel(
         }
         _state.value = _state.value.copy(
             installDirectory = path,
+            fixedDestinationCode = inspectFixedDestination(),
             selectedInstallHealth = InstallationScanner.game(File(path)),
             primaryGameStatus = M23InstallationDiscovery.game(File(CinderboxPaths.GAME_FILES_DIR)).status,
             primarySmapiStatus = M23InstallationDiscovery.smapi(File(CinderboxPaths.SMAPI_DIR)).status,

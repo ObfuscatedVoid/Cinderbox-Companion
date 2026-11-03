@@ -39,6 +39,7 @@ import com.sdvsync.local.M23CinderboxFirstPolicy
 import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import com.sdvsync.ui.policy.DownloadPresentation
+import com.sdvsync.ui.policy.R43DDestinationPresentation
 import java.io.File
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import java.text.SimpleDateFormat
@@ -200,17 +201,29 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
             // installation and navigates to read-only Installation Health.
             StardewCard {
                 Column(Modifier.padding(12.dp)) {
-                    Text("Main app · Cinderbox", style = MaterialTheme.typography.titleMedium)
-                    Text("Game: ${state.primaryGameStatus.name.replace('_', ' ')}",
+                    val destinationNotice = R43DDestinationPresentation.from(
+                        state.fixedDestinationCode, state.primaryGameStatus,
+                        state.protectedUpdateStatus)
+                    Text("Game destination · Cinderbox",
+                        style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(6.dp))
+                    Text(destinationNotice.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary)
+                    Text(destinationNotice.detail,
                         style = MaterialTheme.typography.bodyMedium)
-                    Text("SMAPI: ${state.primarySmapiStatus.name.replace('_', ' ')}",
-                        style = MaterialTheme.typography.bodyMedium)
-                    Text("Cinderbox game location: ${CinderboxPaths.GAME_FILES_DIR}",
+                    Spacer(Modifier.height(4.dp))
+                    Text("Next step: ${destinationNotice.nextStep}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Game: ${R43DDestinationPresentation.installedLabel(state.primaryGameStatus)}",
                         style = MaterialTheme.typography.bodySmall)
-                    Text("An imported game can be used through Cinderbox without " +
-                        "downloading another copy. Detection is read-only; versions " +
-                        "and Steam integrity are not verified.",
+                    Text("SMAPI: ${R43DDestinationPresentation.installedLabel(state.primarySmapiStatus)}",
                         style = MaterialTheme.typography.bodySmall)
+                    Text("Installation discovery is read-only and does not verify a Steam version.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(8.dp))
                     StardewOutlinedButton(onClick = onOpenInstallationHealth) {
                         Text("Inspect existing Cinderbox installation")
@@ -400,10 +413,10 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
             } else {
                 StardewCard {
                     Column(Modifier.padding(12.dp)) {
-                        Text("Game destination · Cinderbox",
+                        Text("Existing-game updates",
                             style = MaterialTheme.typography.titleMedium)
-                        Text("Game files are downloaded only to Cinderbox's GameFiles folder. " +
-                            "Existing installations are protected until safe updates are supported.",
+                        Text("Replacing an existing game is disabled in this build. " +
+                            "Your files remain protected.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(8.dp))
@@ -441,7 +454,7 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                                 }
                             }
                         } else {
-                            Text("Protected updates: transaction and rollback candidate ready. " +
+                            Text("Existing installations are protected. " +
                                 "Live replacement remains disabled until device acceptance.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -459,7 +472,11 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                 Spacer(Modifier.height(12.dp))
             }
             }
-            Text(state.storageDetail, style = MaterialTheme.typography.bodySmall)
+            // Technical alternate-path inspection is restricted to unlocked debug builds.
+            if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(LocalContext.current) &&
+                state.installDirectory != CinderboxPaths.GAME_FILES_DIR) {
+                Text(state.storageDetail, style = MaterialTheme.typography.bodySmall)
+            }
             if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(LocalContext.current) &&
                 state.installDirectory != CinderboxPaths.GAME_FILES_DIR &&
                 state.destinationCode != M23CinderboxFirstPolicy.Code.EMPTY_SEPARATE_DESTINATION) {

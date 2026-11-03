@@ -1,0 +1,50 @@
+name: R43D Fixed Destination UX Source Contracts
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/ui/policy/R43DDestinationPresentation.kt'
+      - 'app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt'
+      - 'app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt'
+      - 'app/src/main/java/com/sdvsync/ui/components/CinderboxWizardDialog.kt'
+      - 'app/src/test/java/com/sdvsync/ui/policy/R43DDestinationPresentationTest.kt'
+      - 'scripts/devtool/r43d_*.py'
+      - 'scripts/devtool/test_r43d_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43d-destination-ux.yml'
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/test/java/com/sdvsync/ui/policy/R43DDestinationPresentationTest.kt'
+      - 'scripts/devtool/r43d_*.py'
+      - 'scripts/devtool/test_r43d_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43d-destination-ux.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: R43D fixed destination postconditions and host unit tests
+        run: |
+          python3 -B scripts/devtool/r43d_patch.py --check
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r43d_gate.py' -v
+          python3 -B scripts/devtool/r43d_gate.py
+      - name: Preserve R43C, R43B4 and older product boundaries
+        run: |
+          python3 -B scripts/devtool/r43c_patch.py --check
+          python3 -B scripts/devtool/r43c_gate.py
+          python3 -B scripts/devtool/r43b4_patch.py --check
+          python3 -B scripts/devtool/r43b4_gate.py
+          python3 -B scripts/devtool/r43_policy_gate.py
+          python3 -B scripts/devtool/r42_product_gate.py
+      - name: Evidence boundary
+        run: |
+          echo 'UI + host source contracts ONLY. Existing Build Debug APK workflow owns Android Kotlin compilation, JVM tests, lint and APK signing.'
+          echo 'No device execution or live update, release or publication enabled by this workflow.'
