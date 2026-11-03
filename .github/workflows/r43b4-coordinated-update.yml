@@ -1,0 +1,51 @@
+name: R43B4 Consolidated Protected Update Candidate
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/R43B*.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameDownload*.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameFileIntegrity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt'
+      - 'app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt'
+      - 'app/src/test/java/com/sdvsync/download/R43B*.kt'
+      - 'scripts/devtool/r43b4_*.py'
+      - 'scripts/devtool/test_r43b4_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43b4-coordinated-update.yml'
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/**'
+      - 'app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt'
+      - 'app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt'
+      - 'app/src/test/java/com/sdvsync/download/**'
+      - 'scripts/devtool/r43b4_*.py'
+      - 'scripts/devtool/test_r43b4_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43b4-coordinated-update.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  r43b4-consolidated-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Verify exact patch and consolidated source tests
+        run: |
+          python3 -B scripts/devtool/r43b4_patch.py --check
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r43b4_gate.py' -v
+          python3 -B scripts/devtool/r43b4_gate.py
+      - name: Legacy R43 source safety and no-overwrite compatibility
+        run: |
+          python3 -B scripts/devtool/r43b3_gate.py
+          python3 -B scripts/devtool/r43b2_gate.py
+          python3 -B scripts/devtool/r43b_swap_gate.py
+          python3 -B scripts/devtool/r43_policy_gate.py
+      - name: Scope reminder
+        run: |
+          echo 'SOURCE ONLY: Android/Kotlin/JUnit, lint, debug APK are checked by existing hosted Build Debug APK.'
+          echo 'No device write, new install, game update, release or publication.'

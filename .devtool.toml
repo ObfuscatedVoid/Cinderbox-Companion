@@ -205,6 +205,16 @@ description = "R43-B2 read-only installed-game admission and staged-ledger isola
 workflow = "r43b2-check"
 target = "cinderbox"
 
+[wrapper.commands.r43b3-check]
+description = "R43-B3 owned update staging and verified-preparation bridge (live update disabled)"
+workflow = "r43b3-check"
+target = "cinderbox"
+
+[wrapper.commands.r43b4-check]
+description = "R43 consolidated update transaction, two-journal recovery and acceptance policy"
+workflow = "r43b4-check"
+target = "cinderbox"
+
 [wrapper.commands.m23-check]
 description = "M23 read-only installation recognition and source-bound evidence DAG"
 workflow = "m23-check"
@@ -606,7 +616,31 @@ command = ["python3", "-B", "scripts/devtool/r43b2_gate.py"]
 inputs = ["scripts/devtool/r43b2_*.py", "app/src/main/java/com/sdvsync/download/R43BUpdateAdmission.kt", "app/src/test/java/com/sdvsync/download/R43BUpdateAdmissionTest.kt", "app/src/main/java/com/sdvsync/download/GameFileIntegrity.kt", "app/src/main/java/com/sdvsync/download/GameDownloadService.kt", ".devtool.toml"]
 metadata = { read_only = true, area = "r43b2-preflight-unwired", root_required = false, device_required = false }
 
+[targets.cinderbox.jobs.r43b3-handoff-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r43b3_gate.py"]
+inputs = ["scripts/devtool/r43b3_*.py", "app/src/main/java/com/sdvsync/download/R43BVerifiedStageBridge.kt", "app/src/main/java/com/sdvsync/download/GameDownloadRecovery.kt", "app/src/main/java/com/sdvsync/download/R43BUpdateAdmission.kt", "app/src/test/java/com/sdvsync/download/R43BUpdateStageSessionTest.kt", ".devtool.toml"]
+metadata = { read_only = true, area = "r43b3-owned-stage-unwired", root_required = false, device_required = false }
+
+[targets.cinderbox.jobs.r43b4-coordinator-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r43b4_gate.py"]
+inputs = ["scripts/devtool/r43b4_*.py", "scripts/devtool/test_r43b4_gate.py", "app/src/main/java/com/sdvsync/download/R43BLedgerArchive.kt", "app/src/main/java/com/sdvsync/download/R43BUpdateCoordinator.kt", "app/src/test/java/com/sdvsync/download/R43BUpdateCoordinatorTest.kt", "app/src/main/java/com/sdvsync/download/GameDownloadService.kt", "app/src/main/java/com/sdvsync/download/GameDownloadRecovery.kt", "app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", ".devtool.toml"]
+metadata = { read_only = true, area = "r43b4-coordinated-fail-closed-candidate", root_required = false, device_required = false, live_update_enabled = false }
+
 [targets.cinderbox.workflows]
+r43b4-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r43b3", ref = "job:r43b3-handoff-source", depends_on = ["security"] },
+  { id = "coordinator", ref = "job:r43b4-coordinator-source", depends_on = ["r43b3"] },
+]
+r43b3-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r43b2", ref = "job:r43b2-admission-source", depends_on = ["security"] },
+  { id = "handoff", ref = "job:r43b3-handoff-source", depends_on = ["r43b2"] },
+]
 r43b2-check = [
   { id = "security", ref = "job:security-contract", depends_on = [] },
   { id = "r43a", ref = "job:r43-cinderbox-source", depends_on = ["security"] },

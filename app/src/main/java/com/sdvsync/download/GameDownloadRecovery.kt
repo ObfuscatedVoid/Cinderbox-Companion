@@ -2,6 +2,7 @@ package com.sdvsync.download
 
 import java.io.File
 import com.sdvsync.local.PlatformStoragePaths
+import com.sdvsync.cinderbox.CinderboxPaths
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Properties
@@ -21,7 +22,8 @@ data class GameDownloadCheckpoint(
     val token: String,
     val steamBuildId: Long = 0L,
     val stagingDirectory: String? = null,
-    val depotManifestFingerprint: String? = null
+    val depotManifestFingerprint: String? = null,
+    val updateMode: Boolean = false
 ) {
     fun matches(directory: File, branch: String, os: String, verify: Boolean): Boolean {
         val safe = GameDownloadRecovery.safeDestination(directory)
@@ -31,7 +33,13 @@ data class GameDownloadCheckpoint(
         val stage = stagingDirectory?.let { GameDownloadRecovery.safeDestination(File(it)) }
         // Staged receipts are either PRE-PROMOTION (stage only) or AFTER-PROMOTION
         // (destination only). Both present means a conflict, never trusted recovery.
-        if (stage != null && stage.exists() == safe.exists()) return false
+        if (stage != null) {
+            if (updateMode) {
+                // PRE-PROMOTION ONLY. Recovery after a swap belongs to R43-B1,
+                // never the old M24 absent-target path.
+                if (!stage.isDirectory || !safe.isDirectory) return false
+            } else if (stage.exists() == safe.exists()) return false
+        }
         val marker = File(if (stage?.exists() == true) stage else safe, ".cinderbox-download.session")
         return runCatching { marker.isFile && !Files.isSymbolicLink(marker.toPath()) &&
             marker.readText() == token }.getOrDefault(false)
@@ -82,11 +90,19 @@ class GameDownloadRecovery(private val privateRoot: File) {
                 "Invalid M24 staging directory identity"
             }
         }
+        val updateMode = when (props.getProperty("update_mode")) {
+            null, "false" -> false
+            "true" -> true
+            else -> error("Invalid update-mode checkpoint flag")
+        }
+        check(!updateMode || (stagePath != null && verify)) {
+            "Update mode requires verified sibling staging"
+        }
         val manifestHash = props.getProperty("pics_depot_manifest_fingerprint")
         check(manifestHash == null || manifestHash.matches(Regex("[0-9a-f]{64}"))) {
             "Corrupt PICS depot manifest fingerprint in journal"
         }
-        return GameDownloadCheckpoint(directory, branch, os, verify, token, buildId, stagePath, manifestHash)
+        return GameDownloadCheckpoint(directory, branch, os, verify, token, buildId, stagePath, manifestHash, updateMode)
     }
 
     /** Only call this for a NEW, already preflighted empty installation directory. */
@@ -100,7 +116,23 @@ class GameDownloadRecovery(private val privateRoot: File) {
     @Synchronized fun beginStaged(directory: File, branch: String, os: String, verify: Boolean) =
         beginOwned(directory, branch, os, verify, true)
 
-    private fun beginOwned(directory: File, branch: String, os: String, verify: Boolean, staged: Boolean) {
+    /** R43-B3: owned stage beside a still-occupied game; NOT called by live UI/service.
+     * The old installation and its integrity ledger must pass read-only admission
+     * before any owned stage can be created. Publication remains separate.
+     */
+    @Synchronized fun beginStagedUpdate(directory: File, branch: String, os: String, verify: Boolean) {
+        check(verify && directory.path == CinderboxPaths.GAME_FILES_DIR) {
+            "Update staging is restricted to verified Cinderbox GameFiles"
+        }
+        check(R43BUpdateAdmission.inspect(privateRoot).eligible) {
+            "Installed game is not eligible for protected staging"
+        }
+        beginOwned(directory, branch, os, verify, true, updateMode = true)
+    }
+
+    private fun beginOwned(directory: File, branch: String, os: String, verify: Boolean,
+                           staged: Boolean, updateMode: Boolean = false) {
+        check(!updateMode || staged) { "Update requires sibling staging" }
         check(pending() == null) { "Resolve the previous download before starting another" }
         val safe = safeDestination(directory)
         require(branch.length in 1..128 && os in setOf("windows", "linux", "macos")) {
@@ -109,8 +141,15 @@ class GameDownloadRecovery(private val privateRoot: File) {
         check(privateRoot.isDirectory || privateRoot.mkdirs()) { "App-private download storage inaccessible" }
         val token = UUID.randomUUID().toString()
         val stage = if (staged) {
-            check(!safe.exists() && safe.parentFile?.isDirectory == true) {
-                "Staged download requires an absent target and existing parent"
+            if (updateMode) {
+                check(safe.isDirectory && safe.parentFile?.isDirectory == true &&
+                    R43BUpdateAdmission.inspect(privateRoot).eligible) {
+                    "Existing GameFiles no longer satisfies read-only update admission"
+                }
+            } else {
+                check(!safe.exists() && safe.parentFile?.isDirectory == true) {
+                    "Staged download requires an absent target and existing parent"
+                }
             }
             File(safe.parentFile, ".${safe.name}.cinderbox-m24-stage-$token").also {
                 check(it.mkdir()) { "Cannot create exclusive M24 staging directory" }
@@ -132,6 +171,7 @@ class GameDownloadRecovery(private val privateRoot: File) {
             setProperty("verify", verify.toString())
             setProperty("token", token)
             if (staged) setProperty("staging_directory", stage.path)
+            if (updateMode) setProperty("update_mode", "true")
         }
         val temp = File(privateRoot, "m6-game-download-${System.nanoTime()}.tmp")
         try {
@@ -245,7 +285,8 @@ class GameDownloadRecovery(private val privateRoot: File) {
             "Staging identity or ownership changed"
         }
         val stage = safeDestination(File(current.stagingDirectory))
-        check(stage.isDirectory && !destination.exists()) {
+        check(stage.isDirectory && (if (current.updateMode) destination.isDirectory
+            else !destination.exists())) {
             "Staged transfer already promoted or destination changed; do not redownload"
         }
         return stage
@@ -253,7 +294,7 @@ class GameDownloadRecovery(private val privateRoot: File) {
 
     @Synchronized fun isPromotedStage(destination: File): Boolean {
         val current = pending() ?: return false
-        if (current.stagingDirectory == null || current.steamBuildId <= 0L ||
+        if (current.updateMode || current.stagingDirectory == null || current.steamBuildId <= 0L ||
             current.directory != safeDestination(destination).path) return false
         val stage = safeDestination(File(current.stagingDirectory))
         return !stage.exists() && destination.isDirectory &&
@@ -299,6 +340,9 @@ class GameDownloadRecovery(private val privateRoot: File) {
         val current = pending()
         if (current != null) {
             val marker = File(current.directory, ".cinderbox-download.session")
+            check(!current.updateMode) {
+                "M24 completion cannot finalize an occupied-target update; use R43 recovery"
+            }
             if (current.stagingDirectory != null) {
                 check(isPromotedStage(File(current.directory))) {
                     "Cannot finalize unpromoted or conflicting staged download"
@@ -313,10 +357,58 @@ class GameDownloadRecovery(private val privateRoot: File) {
         check(journal.delete() || !journal.exists()) { "Could not finalize download checkpoint" }
     }
 
+    /** R43: the verified replacement keeps its ownership marker while an
+     * independent R43 rollback journal and original backup still exist.
+     * Never allow the old M24 completed() path to remove that marker.
+     */
+    @Synchronized fun completeUpdateJournal(token: String) {
+        val current = pending() ?: error("M24 update checkpoint missing")
+        check(current.updateMode && current.verify && current.token == token &&
+            current.stagingDirectory != null && current.steamBuildId > 0L &&
+            current.depotManifestFingerprint != null) {
+            "Unbound update checkpoint cannot be finalized"
+        }
+        val original = safeDestination(File(current.directory))
+        val stage = safeDestination(File(current.stagingDirectory))
+        check(!stage.exists() && original.isDirectory) {
+            "Update was not atomically published"
+        }
+        val marker = File(original, ".cinderbox-download.session")
+        check(marker.isFile && !Files.isSymbolicLink(marker.toPath()) &&
+            marker.readText() == token) { "Published update owner changed" }
+        val transaction = File(privateRoot, "r43b-update-swap.properties")
+        check(transaction.isFile && !Files.isSymbolicLink(transaction.toPath())) {
+            "R43 rollback journal required before closing M24"
+        }
+        check(journal.delete()) { "Could not finalize M24 update checkpoint" }
+    }
+
+    /** Rollback preserves the new bytes in the owned displaced sibling and
+     * closes M24 only after the original is back in its exact GameFiles path.
+     */
+    @Synchronized fun completeRolledBackUpdate(token: String) {
+        val current = pending() ?: return
+        check(current.updateMode && current.token == token &&
+            current.stagingDirectory != null) { "Rollback journal owner changed" }
+        val original = safeDestination(File(current.directory))
+        val stage = safeDestination(File(current.stagingDirectory))
+        val displaced = safeDestination(File(original.parentFile,
+            ".GameFiles.cinderbox-r43-rolledback-$token"))
+        val marker = File(displaced, ".cinderbox-download.session")
+        check(original.isDirectory && !stage.exists() && displaced.isDirectory &&
+            marker.isFile && !Files.isSymbolicLink(marker.toPath()) &&
+            marker.readText() == token) { "Rollback has not preserved both game versions" }
+        check(journal.delete()) { "Could not close the rolled-back M24 journal" }
+    }
+
     /** Explicit user discard; forgets the checkpoint but keeps game bytes. */
     @Synchronized fun discard() {
         val current = pending()
         if (current != null) {
+            check(!current.updateMode ||
+                !File(privateRoot, "r43b-update-swap.properties").exists()) {
+                "Prepared update swap cannot be discarded before recovery review"
+            }
             val path = current.stagingDirectory?.let { File(it) }
                 ?.takeIf { it.exists() } ?: File(current.directory)
             val marker = File(path, ".cinderbox-download.session")

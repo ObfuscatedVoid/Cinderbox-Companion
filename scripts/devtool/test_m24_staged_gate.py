@@ -82,7 +82,25 @@ fun main(args:Array<String>) {
 }
 ''')
             jar=root/'smoke.jar'
-            build=subprocess.run(['kotlinc', str(ROOT/'app/src/main/java/com/sdvsync/local/PlatformStoragePaths.kt'), str(REC), str(harness), '-d', str(jar)],capture_output=True,text=True,timeout=60)
+            # Compile the real R43-B3 recovery dependencies. The only test stub
+            # replaces CinderboxLayout's Android-dependent isInstalled() method;
+            # production CinderboxPaths, admission and SHA-256 integrity are real.
+            layout_stub = root / 'CinderboxLayoutStub.kt'
+            layout_stub.write_text(
+                'package com.sdvsync.cinderbox\n'
+                'class CinderboxLayout { fun isInstalled(): Boolean = false }\n'
+            )
+            dependencies = (
+                'app/src/main/java/com/sdvsync/local/PlatformStoragePaths.kt',
+                'app/src/main/java/com/sdvsync/cinderbox/CinderboxPaths.kt',
+                'app/src/main/java/com/sdvsync/download/GameFileIntegrity.kt',
+                'app/src/main/java/com/sdvsync/download/R43BUpdateAdmission.kt',
+            )
+            build = subprocess.run(
+                ['kotlinc', *(str(ROOT / p) for p in dependencies),
+                 str(REC), str(layout_stub), str(harness), '-d', str(jar)],
+                capture_output=True, text=True, timeout=60
+            )
             self.assertEqual(0,build.returncode,build.stderr)
             run=subprocess.run(['kotlin','-classpath',str(jar),'HarnessKt',str(root)],capture_output=True,text=True,timeout=30)
             self.assertEqual(0,run.returncode,run.stderr)

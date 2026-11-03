@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.sdvsync.R
 import com.sdvsync.download.CinderboxDownloadProgress
 import com.sdvsync.download.DownloadState
+import com.sdvsync.download.R43BLiveUpdatePolicy
 import com.sdvsync.download.M24DepotProgressPolicy
 import com.sdvsync.download.SmapiSetupProgress
 import com.sdvsync.ui.components.ArrowLeftData
@@ -65,6 +66,61 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                        viewModel: GameDownloadViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
     val wizardState by viewModel.wizardState.collectAsState()
+    var confirmProtectedGameUpdate by remember { mutableStateOf(false) }
+    var confirmProtectedRollback by remember { mutableStateOf(false) }
+    var confirmProtectedRecovery by remember { mutableStateOf(false) }
+    if (confirmProtectedGameUpdate) {
+        AlertDialog(
+            onDismissRequest = { confirmProtectedGameUpdate = false },
+            title = { Text("Update existing game?") },
+            text = { Text("Close Cinderbox before proceeding. The existing GameFiles " +
+                "must be unchanged and have an app-owned integrity receipt. A new Steam " +
+                "stage is verified before an atomic swap; both versions are retained. " +
+                "If verification or recovery is uncertain, the operation stops for review. " +
+                "Saves, Mods and SMAPI must remain protected.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmProtectedGameUpdate = false
+                    viewModel.startProtectedUpdateConfirmed()
+                }) { Text("Confirm protected update") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmProtectedGameUpdate = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    if (confirmProtectedRollback) {
+        AlertDialog(
+            onDismissRequest = { confirmProtectedRollback = false },
+            title = { Text("Restore original game?") },
+            text = { Text("Only the verified owned backup can be restored. " +
+                "Both versions are preserved; conflicts require manual review.") },
+            confirmButton = { TextButton(onClick = {
+                confirmProtectedRollback = false
+                viewModel.rollbackProtectedUpdateConfirmed()
+            }) { Text("Restore original") } },
+            dismissButton = { TextButton(onClick = {
+                confirmProtectedRollback = false
+            }) { Text("Cancel") } }
+        )
+    }
+    if (confirmProtectedRecovery) {
+        AlertDialog(
+            onDismissRequest = { confirmProtectedRecovery = false },
+            title = { Text("Review interrupted update?") },
+            text = { Text("Recovery only restores an owned original into an empty slot. " +
+                "It will not overwrite unknown game data.") },
+            confirmButton = { TextButton(onClick = {
+                confirmProtectedRecovery = false
+                viewModel.recoverProtectedUpdateConfirmed()
+            }) { Text("Run safe recovery") } },
+            dismissButton = { TextButton(onClick = {
+                confirmProtectedRecovery = false
+            }) { Text("Cancel") } }
+        )
+    }
     val directoryPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -77,6 +133,7 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
     LifecycleResumeEffect(Unit) {
         viewModel.refreshInstalledVersions()
         viewModel.refreshSelectedDirectoryHealth()
+        viewModel.refreshProtectedUpdateStatus()
         onPauseOrDispose {}
     }
 
@@ -349,6 +406,46 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                             "Existing installations are protected until safe updates are supported.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(8.dp))
+                        if (R43BLiveUpdatePolicy.LIVE_UPDATES_ENABLED &&
+                            R43BLiveUpdatePolicy.DEVICE_ACCEPTED) {
+                            StardewOutlinedButton(onClick = {
+                                confirmProtectedGameUpdate = true
+                            }, modifier = Modifier.fillMaxWidth(),
+                                enabled = state.branches.isNotEmpty() && state.steamLoggedIn &&
+                                    !state.isLoadingBranches &&
+                                    state.downloadProgress.state == DownloadState.IDLE) {
+                                Text("Update existing game (verified + rollback)")
+                            }
+                            state.protectedUpdateStatus?.let { status ->
+                                Text(status, style = MaterialTheme.typography.bodySmall)
+                            }
+                            if (state.canRollbackProtectedUpdate) {
+                                StardewOutlinedButton(onClick = {
+                                    confirmProtectedRollback = true
+                                }, modifier = Modifier.fillMaxWidth(),
+                                    enabled = state.downloadProgress.state !in setOf(
+                                        DownloadState.PREPARING, DownloadState.DOWNLOADING,
+                                        DownloadState.VERIFYING, DownloadState.COPYING)) {
+                                    Text("Restore original game from backup")
+                                }
+                            }
+                            if (state.canRecoverProtectedUpdate) {
+                                StardewOutlinedButton(onClick = {
+                                    confirmProtectedRecovery = true
+                                }, modifier = Modifier.fillMaxWidth(),
+                                    enabled = state.downloadProgress.state !in setOf(
+                                        DownloadState.PREPARING, DownloadState.DOWNLOADING,
+                                        DownloadState.VERIFYING, DownloadState.COPYING)) {
+                                    Text("Review interrupted game update")
+                                }
+                            }
+                        } else {
+                            Text("Protected updates: transaction and rollback candidate ready. " +
+                                "Live replacement remains disabled until device acceptance.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }

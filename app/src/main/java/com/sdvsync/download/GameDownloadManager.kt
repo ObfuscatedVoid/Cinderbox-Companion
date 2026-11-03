@@ -123,6 +123,38 @@ class GameDownloadManager(
     fun isPublishedRecovery(directory: File): Boolean =
         runCatching { recovery.isPromotedStage(directory) }.getOrDefault(false)
 
+    /** Read-only inspection. Does not reconcile or rename files on UI refresh. */
+    data class ProtectedUpdateStatus(
+        val description: String?, val canRollback: Boolean, val canRecover: Boolean
+    )
+
+    fun protectedUpdateStatus(): ProtectedUpdateStatus {
+        // The manager knows the coordinator, NOT the raw swap engine. This
+        // preserves the older no-direct-swap safety contracts.
+        val inspected = R43BUpdateCoordinator.forProduction(context.filesDir).inspectReadOnly()
+        return ProtectedUpdateStatus(inspected.description,
+            inspected.canRollback, inspected.canRecover)
+    }
+
+    private fun requireNoConcurrentGameTransfer() {
+        check(_progress.value.state !in setOf(DownloadState.PREPARING,
+            DownloadState.DOWNLOADING, DownloadState.VERIFYING, DownloadState.COPYING)) {
+            "Cannot modify game directories while a transfer is active"
+        }
+    }
+
+    /** Explicit user action only; errors never trigger unverified deletion. */
+    fun reconcileProtectedUpdate(): String {
+        requireNoConcurrentGameTransfer()
+        return R43BUpdateCoordinator.forProduction(context.filesDir).reconcileWithoutSteam().name
+    }
+
+    /** Explicit user action; coordinator verifies original backup before rename. */
+    fun rollbackProtectedUpdate(): String {
+        requireNoConcurrentGameTransfer()
+        return R43BUpdateCoordinator.forProduction(context.filesDir).rollbackPublished().name
+    }
+
     /** Explicit discard ONLY forgets metadata, never deletes downloaded game bytes. */
     fun discardPendingDownload() {
         recovery.discard()
@@ -133,7 +165,9 @@ class GameDownloadManager(
         if (recovery.pending() != null && _progress.value.state == DownloadState.IDLE) {
             _progress.value = DownloadProgress(
                 state = DownloadState.ERROR,
-                errorMessage = "Interrupted Steam download detected. Sign in and choose Resume interrupted download."
+                errorMessage = if (recovery.pending()?.updateMode == true)
+                    "Interrupted protected game update: review recovery before resuming."
+                else "Interrupted Steam download detected. Sign in and choose Resume interrupted download."
             )
         }
     }
@@ -239,6 +273,35 @@ class GameDownloadManager(
             verify = verifyAfterDownload,
             expectedBuildId = branchBuildId
         )
+    }
+
+    /** Explicit existing-game update. No debug path or accidental resume authority.
+     * Both feature gates remain OFF until hosted and physical-device acceptance.
+     */
+    fun startProtectedUpdate(branch: String, branchPassword: String?, os: String,
+                             verifyAfterDownload: Boolean, branchBuildId: Long) {
+        check(R43BLiveUpdatePolicy.LIVE_UPDATES_ENABLED && R43BLiveUpdatePolicy.DEVICE_ACCEPTED) {
+            "Protected updates are disabled pending device acceptance"
+        }
+        require(verifyAfterDownload && branchBuildId > 0L) {
+            "Verified Steam build is required for updating"
+        }
+        check(_progress.value.state !in setOf(DownloadState.PREPARING,
+            DownloadState.DOWNLOADING, DownloadState.VERIFYING, DownloadState.COPYING)) {
+            "Another game operation is already active"
+        }
+        val destination = File(CinderboxPaths.GAME_FILES_DIR)
+        check(recovery.pending() == null &&
+            R43BUpdateAdmission.inspect(context.filesDir).eligible) {
+            "Existing game changed, has user files, or needs recovery review"
+        }
+        StoragePreflight.requireWritable(destination)
+        // The coordinator repeats admission before creating a private journal.
+        R43BUpdateCoordinator.forProduction(context.filesDir)
+            .beginOwnedUpdate(branch, os, verifyAfterDownload)
+        recovery.bindSteamBuildId(branchBuildId)
+        GameDownloadService.start(context, branch, branchPassword,
+            destination.path, os, verifyAfterDownload, branchBuildId)
     }
 
     fun cancelDownload() {

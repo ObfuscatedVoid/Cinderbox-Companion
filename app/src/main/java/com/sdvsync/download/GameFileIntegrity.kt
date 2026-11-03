@@ -102,11 +102,13 @@ class GameFileIntegrity(private val privateRoot: File) {
     }
 
     /** Compare the current installation with the last successfully recorded SHA-256 ledger. */
-    fun verifyRecorded(root: File): GameIntegrityResult {
-        check(ledger.isFile && ledger.length() in 1..10485760) { "No saved game integrity record" }
-        val props = Properties().apply { ledger.inputStream().use { load(it) } }
+    fun verifyRecorded(root: File, recordedDestination: File = root,
+                       receiptFile: File = ledger): GameIntegrityResult {
+        check(receiptFile.isFile && !Files.isSymbolicLink(receiptFile.toPath()) &&
+            receiptFile.length() in 1..10485760) { "No safe game integrity record" }
+        val props = Properties().apply { receiptFile.inputStream().use { load(it) } }
         check(props.getProperty("schema") == "1" &&
-            props.getProperty("directory") == GameDownloadRecovery.safeDestination(root).path) {
+            props.getProperty("directory") == GameDownloadRecovery.safeDestination(recordedDestination).path) {
             "Integrity ledger does not belong to this game folder"
         }
         val count = props.getProperty("count")?.toIntOrNull() ?: error("Invalid verification ledger")
@@ -123,6 +125,14 @@ class GameFileIntegrity(private val privateRoot: File) {
             path to (size to hash)
         }
         check(expected.size == count) { "Duplicate path in integrity ledger" }
+        val expectedDirectories = buildSet<String> {
+            for (relative in expected.keys) {
+                val segments = relative.split('/')
+                for (depth in 1 until segments.size) {
+                    add(segments.take(depth).joinToString("/"))
+                }
+            }
+        }
         val actual = files(root)
         val actualPaths = actual.map { it.relativeTo(root).invariantSeparatorsPath }.toSet()
         val errors = mutableListOf<String>()
@@ -132,6 +142,23 @@ class GameFileIntegrity(private val privateRoot: File) {
             if (pair == null || pair.first != file.length() || pair.second != digest(file)) errors.add(rel)
         }
         for (missing in expected.keys - actualPaths) errors.add(missing)
+        // Fail closed for untracked empty folders and symlinks. The Steam SDK
+        // metadata tree is excluded from game-content tracking by design.
+        root.walkTopDown().onEnter { dir ->
+            // Reject a linked directory without traversing into its target.
+            val linked = Files.isSymbolicLink(dir.toPath())
+            if (linked) errors.add("Linked directory: ${dir.relativeTo(root).invariantSeparatorsPath}")
+            !linked
+        }.forEach { node ->
+            val relative = node.relativeTo(root).invariantSeparatorsPath
+            if (Files.isSymbolicLink(node.toPath())) errors.add("Linked path: $relative")
+            if (node != root && node.isDirectory &&
+                relative != ".DepotDownloader" &&
+                !relative.startsWith(".DepotDownloader/") &&
+                relative !in expectedDirectories) {
+                errors.add("Untracked directory: $relative")
+            }
+        }
         return GameIntegrityResult(actual.size, errors.distinct())
     }
 }

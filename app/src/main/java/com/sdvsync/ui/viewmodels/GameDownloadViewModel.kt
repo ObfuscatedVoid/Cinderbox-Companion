@@ -73,6 +73,9 @@ data class GameDownloadState(
     val downloadProgress: DownloadProgress = DownloadProgress(),
     val smapiSetupProgress: SmapiSetupProgress = SmapiSetupProgress(),
     val cinderboxDownloadProgress: CinderboxDownloadProgress = CinderboxDownloadProgress(),
+    val protectedUpdateStatus: String? = null,
+    val canRollbackProtectedUpdate: Boolean = false,
+    val canRecoverProtectedUpdate: Boolean = false,
     val error: String? = null,
     val branchLoadError: String? = null,
     val branchLoadNeedsReconnect: Boolean = false,
@@ -501,6 +504,73 @@ class GameDownloadViewModel(
         } catch (e: Exception) {
             _state.value = _state.value.copy(error = e.message ?: "Storage is unavailable")
         }
+    }
+
+    /** Only reached through a separate, explicit update confirmation. */
+    fun startProtectedUpdateConfirmed() {
+        if (!com.sdvsync.download.R43BLiveUpdatePolicy.LIVE_UPDATES_ENABLED ||
+            !com.sdvsync.download.R43BLiveUpdatePolicy.DEVICE_ACCEPTED) {
+            _state.update { it.copy(error = "Existing-game updates are awaiting device acceptance.") }
+            return
+        }
+        if (!steamClientManager.isLoggedIn) {
+            _state.update { it.copy(error = "Steam sign-in required for a protected update.") }
+            return
+        }
+        val current = _state.value
+        val info = current.branches.firstOrNull { it.name == current.selectedBranch }
+        if (info == null || info.buildId <= 0L || !current.verifyAfterDownload) {
+            _state.update { it.copy(error = "Refresh Steam branch and build information first.") }
+            return
+        }
+        try {
+            downloadManager.startProtectedUpdate(
+                current.selectedBranch, current.branchPassword.ifBlank { null },
+                current.selectedOs, current.verifyAfterDownload, info.buildId)
+            _state.update { it.copy(error = null) }
+        } catch (failure: Exception) {
+            _state.update { it.copy(error = failure.message ?: "Protected update preflight failed") }
+        }
+    }
+
+    /** Read-only UI status, rechecked after resume and explicit actions. */
+    fun refreshProtectedUpdateStatus() {
+        runCatching { downloadManager.protectedUpdateStatus() }
+            .onSuccess { status -> _state.update {
+                it.copy(protectedUpdateStatus = status.description,
+                    canRollbackProtectedUpdate = status.canRollback,
+                    canRecoverProtectedUpdate = status.canRecover)
+            } }
+            .onFailure { failure -> _state.update {
+                it.copy(protectedUpdateStatus =
+                    "Protected update journal requires review: ${failure.message}",
+                    canRollbackProtectedUpdate = false,
+                    canRecoverProtectedUpdate = false)
+            } }
+    }
+
+    fun rollbackProtectedUpdateConfirmed() {
+        runCatching { downloadManager.rollbackProtectedUpdate() }
+            .onSuccess { result ->
+                refreshProtectedUpdateStatus()
+                _state.update { it.copy(error = "Protected update rollback: $result") }
+            }
+            .onFailure { error ->
+                refreshProtectedUpdateStatus()
+                _state.update { it.copy(error = error.message ?: "Rollback needs manual review") }
+            }
+    }
+
+    fun recoverProtectedUpdateConfirmed() {
+        runCatching { downloadManager.reconcileProtectedUpdate() }
+            .onSuccess { result ->
+                refreshProtectedUpdateStatus()
+                _state.update { it.copy(error = "Protected update recovery: $result") }
+            }
+            .onFailure { error ->
+                refreshProtectedUpdateStatus()
+                _state.update { it.copy(error = error.message ?: "Recovery needs manual review") }
+            }
     }
 
     fun cancelDownload() {

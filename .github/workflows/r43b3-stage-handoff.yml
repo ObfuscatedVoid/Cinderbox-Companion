@@ -1,0 +1,43 @@
+name: R43B3 Verified Stage Handoff Source Contracts
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/R43BVerifiedStageBridge.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameDownloadRecovery.kt'
+      - 'app/src/main/java/com/sdvsync/download/R43BUpdateAdmission.kt'
+      - 'app/src/test/java/com/sdvsync/download/R43BUpdateStageSessionTest.kt'
+      - 'scripts/devtool/r43b3_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43b3-stage-handoff.yml'
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/R43BVerifiedStageBridge.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameDownloadRecovery.kt'
+      - 'app/src/main/java/com/sdvsync/download/R43BUpdateAdmission.kt'
+      - 'app/src/test/java/com/sdvsync/download/R43BUpdateStageSessionTest.kt'
+      - 'scripts/devtool/r43b3_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43b3-stage-handoff.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  r43b3-handoff-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Verify R43B3 handoff and stage source contracts
+        run: |
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r43b3_gate.py' -v
+          python3 -B scripts/devtool/r43b3_patch.py --check
+          python3 -B scripts/devtool/r43b3_gate.py
+      - name: Verify R43B2 and R43B1 remain closed to live updates
+        run: |
+          python3 -B scripts/devtool/r43b2_gate.py
+          python3 -B scripts/devtool/r43b_swap_gate.py
+      - name: Qualification scope
+        run: echo 'SOURCE_ONLY. Android compilation remains in hosted Build Debug APK. No device, download or live swap.'

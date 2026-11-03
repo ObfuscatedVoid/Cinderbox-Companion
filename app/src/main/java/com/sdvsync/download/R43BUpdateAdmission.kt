@@ -45,9 +45,36 @@ internal object R43BUpdateAdmission {
     internal fun inspectFixture(privateRoot: File, gameFiles: File): Assessment =
         inspectCore(privateRoot, gameFiles, fixture = true)
 
+    /** Only an exact existing M24 update journal can bypass the pending-download
+     * block for READ-ONLY baseline rechecks; not an installation authority.
+     */
+    fun inspectOwnedStage(privateRoot: File, checkpoint: GameDownloadCheckpoint): Assessment =
+        inspectOwnedCore(privateRoot, File(CinderboxPaths.GAME_FILES_DIR), checkpoint, false)
+
+    internal fun inspectOwnedStageFixture(privateRoot: File, gameFiles: File,
+                                          checkpoint: GameDownloadCheckpoint): Assessment =
+        inspectOwnedCore(privateRoot, gameFiles, checkpoint, true)
+
+    private fun inspectOwnedCore(privateRoot: File, gameFiles: File,
+                                 checkpoint: GameDownloadCheckpoint, fixture: Boolean): Assessment {
+        if (!checkpoint.updateMode || !checkpoint.verify || checkpoint.stagingDirectory == null ||
+            checkpoint.directory != gameFiles.canonicalPath) {
+            return refusal(Code.RECOVERY_REVIEW_REQUIRED, "No verified owned update checkpoint")
+        }
+        val owned = runCatching {
+            val current = GameDownloadRecovery(privateRoot).pending()
+            current == checkpoint && checkpoint.matches(gameFiles,
+                checkpoint.branch, checkpoint.os, true)
+        }.getOrDefault(false)
+        if (!owned) return refusal(Code.RECOVERY_REVIEW_REQUIRED,
+            "M24 checkpoint and sibling stage ownership could not be confirmed")
+        return inspectCore(privateRoot, gameFiles, fixture, ownedUpdateJournal = true)
+    }
+
     private fun refusal(code: Code, reason: String) = Assessment(code, reason)
 
-    private fun inspectCore(privateRoot: File, gameFiles: File, fixture: Boolean): Assessment {
+    private fun inspectCore(privateRoot: File, gameFiles: File, fixture: Boolean,
+                            ownedUpdateJournal: Boolean = false): Assessment {
         if (!fixture && gameFiles.path != CinderboxPaths.GAME_FILES_DIR) {
             return refusal(Code.WRONG_LAYOUT, "GameFiles is not Cinderbox's configured destination")
         }
@@ -74,7 +101,7 @@ internal object R43BUpdateAdmission {
         // A leftover owner marker or pending journal can mean an interrupted M24
         // publication. An update cannot safely start until it is reconciled.
         if (File(safe, ".cinderbox-download.session").exists() ||
-            downloadJournal.exists() || swapJournal.exists()) {
+            (downloadJournal.exists() && !ownedUpdateJournal) || swapJournal.exists()) {
             return refusal(Code.RECOVERY_REVIEW_REQUIRED,
                 "An unfinished download or previous update must be reviewed")
         }

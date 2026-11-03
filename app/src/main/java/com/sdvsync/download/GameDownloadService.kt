@@ -190,8 +190,19 @@ class GameDownloadService : Service() {
             val debugAlternative = DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(this) &&
                 !CinderboxDownloadDestination.isExactDestination(installRoot.path)
             val scope = M23CinderboxFirstPolicy.assess(installRoot, File(CinderboxPaths.ROOT_DIR))
-            if (debugAlternative) {
-                check(scope.code != M23CinderboxFirstPolicy.Code.PROTECTED_CINDERBOX_TREE &&
+            val ownedUpdate = recovery.pending()?.takeIf { it.updateMode }
+            if (ownedUpdate != null) {
+                check(R43BLiveUpdatePolicy.LIVE_UPDATES_ENABLED &&
+                    R43BLiveUpdatePolicy.DEVICE_ACCEPTED && !debugAlternative &&
+                    installRoot.path == CinderboxPaths.GAME_FILES_DIR) {
+                    "Unqualified or redirected update service intent"
+                }
+                check(R43BUpdateAdmission.inspectOwnedStage(filesDir, ownedUpdate).eligible) {
+                    "Existing GameFiles changed after update session creation"
+                }
+            } else {
+                if (debugAlternative) {
+                    check(scope.code != M23CinderboxFirstPolicy.Code.PROTECTED_CINDERBOX_TREE &&
                     scope.code != M23CinderboxFirstPolicy.Code.UNSAFE_OR_NONABSOLUTE_DESTINATION &&
                     scope.code != M23CinderboxFirstPolicy.Code.DESTINATION_UNREADABLE) {
                     "Debug destination is protected, unsafe or unreadable"
@@ -199,6 +210,7 @@ class GameDownloadService : Service() {
             } else {
                 val promoted = runCatching { recovery.isPromotedStage(installRoot) }.getOrDefault(false)
                 CinderboxDownloadDestination.requireWritableForInstall(installRoot, promoted)
+                }
             }
             StoragePreflight.requireWritable(installRoot)
             // Only the manager's checkpoint, matching target, Steam options and
@@ -449,7 +461,14 @@ class GameDownloadService : Service() {
             AppLogger.i(TAG, "M24 downloaded depot IDs=${completedDepots.toSortedSet().joinToString(",")}; " +
                 "PICS-bound IDs=${checkNotNull(sessionDepotManifestIds).keys.sorted().joinToString(",")}")
             verifyFiles(installDir, stageRoot, completedFiles, ::recheckBranch,
-                checkNotNull(sessionManifestFingerprint), checkNotNull(sessionDepotManifestIds), completedDepots.toSet())
+                checkNotNull(sessionManifestFingerprint), checkNotNull(sessionDepotManifestIds),
+                completedDepots.toSet(), refreshSelection = {
+                    recheckBranch()
+                    R43BUpdateCoordinator.Selection(
+                        branch, os, expectedBuildId,
+                        checkNotNull(sessionManifestFingerprint),
+                        checkNotNull(sessionDepotManifestIds), completedDepots.toSet())
+                })
         } catch (e: CancellationException) {
             AppLogger.d(TAG, "Download cancelled")
             GameDownloadManager._progress.value = DownloadProgress(
@@ -520,7 +539,8 @@ class GameDownloadService : Service() {
     private suspend fun verifyFiles(installDir: String, stageRoot: File,
         completedFiles: Set<String>, recheckBranch: suspend () -> Unit,
         expectedManifestFingerprint: String, depotIds: Map<Int, String>,
-        completedDepots: Set<Int>) {
+        completedDepots: Set<Int>,
+        refreshSelection: suspend () -> R43BUpdateCoordinator.Selection) {
         val root = stageRoot
         verifyingStage("Checking staged files")
         updateNotification("Verifying staged files")
@@ -554,8 +574,30 @@ class GameDownloadService : Service() {
         GameDownloadRecovery(filesDir).requireDepotManifestFingerprint(expectedManifestFingerprint)
         verifyingStage("Publishing verified files atomically")
         updateNotification("Publishing verified files")
-        GameDownloadRecovery(filesDir).promoteStaged(File(installDir))
-        verifyPromotedFiles(File(installDir), depotIds, completedDepots)
+        val checkpoint = GameDownloadRecovery(filesDir).pending()
+        if (checkpoint?.updateMode == true) {
+            check(R43BLiveUpdatePolicy.LIVE_UPDATES_ENABLED &&
+                R43BLiveUpdatePolicy.DEVICE_ACCEPTED) {
+                "Live update remains disabled pending device acceptance"
+            }
+            val selection = R43BUpdateCoordinator.Selection(
+                checkpoint.branch, checkpoint.os, checkpoint.steamBuildId,
+                expectedManifestFingerprint, depotIds, completedDepots)
+            R43BUpdateCoordinator.forProduction(filesDir)
+                .publishFromSteam(selection, refreshSelection)
+            val installed = GameFileIntegrity(filesDir).verifyRecorded(File(installDir))
+            check(installed.passed && installed.files > 0) {
+                "Published update receipt did not verify"
+            }
+            GameDownloadManager._progress.value = DownloadProgress(
+                state = DownloadState.COMPLETED, overallPercent = 1f,
+                verifiedFiles = installed.files, totalFilesToVerify = installed.files,
+                verificationPassed = true,
+                integrityScope = "PICS_BOUND_DEPOT_SHA1_UNSIGNED")
+        } else {
+            GameDownloadRecovery(filesDir).promoteStaged(File(installDir))
+            verifyPromotedFiles(File(installDir), depotIds, completedDepots)
+        }
         updateNotification(getString(R.string.download_complete))
     }
 
