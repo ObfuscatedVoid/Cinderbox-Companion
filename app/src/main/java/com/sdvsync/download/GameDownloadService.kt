@@ -529,7 +529,7 @@ class GameDownloadService : Service() {
             phaseProgress = { phase, done, total, name ->
                 activeJob?.ensureActive()
                 verifyingStage("Local integrity: $phase", done, total, name)
-            })
+            }, persistLedger = false)
         if (!report.passed) {
             GameDownloadManager._progress.value = DownloadProgress(
                 state = DownloadState.ERROR, verificationPassed = false,

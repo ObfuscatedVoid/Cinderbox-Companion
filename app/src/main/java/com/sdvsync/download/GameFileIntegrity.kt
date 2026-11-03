@@ -44,7 +44,8 @@ class GameFileIntegrity(private val privateRoot: File) {
 
     /** Hash twice and compare; abort on changed files or unreadable content. */
     fun verifyAndRecord(root: File, progress: (Int, Int, String) -> Unit = { _, _, _ -> },
-                        phaseProgress: (String, Int, Int, String) -> Unit = { _, _, _, _ -> }): GameIntegrityResult {
+                        phaseProgress: (String, Int, Int, String) -> Unit = { _, _, _, _ -> },
+                        persistLedger: Boolean = true): GameIntegrityResult {
         val selected = files(root)
         require(selected.isNotEmpty()) { "No downloaded game files to verify" }
         val first = LinkedHashMap<String, Pair<Long, String>>()
@@ -69,6 +70,9 @@ class GameFileIntegrity(private val privateRoot: File) {
             phaseProgress("hashing pass 2 of 2", i + 1, second.size, relative)
         }
         if (errors.isNotEmpty()) return GameIntegrityResult(second.size, errors)
+        // A verified stage must not overwrite the last published installation's
+        // private SHA-256 baseline. The ledger is committed after publication.
+        if (!persistLedger) return GameIntegrityResult(second.size, emptyList())
         check(privateRoot.isDirectory || privateRoot.mkdirs()) { "Cannot store integrity ledger" }
         val props = Properties().apply {
             setProperty("schema", "1")

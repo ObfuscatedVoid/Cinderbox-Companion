@@ -200,6 +200,11 @@ description = "R43-B1 isolated update transaction source tests (host only, no de
 workflow = "r43b-check"
 target = "cinderbox"
 
+[wrapper.commands.r43b2-check]
+description = "R43-B2 read-only installed-game admission and staged-ledger isolation"
+workflow = "r43b2-check"
+target = "cinderbox"
+
 [wrapper.commands.m23-check]
 description = "M23 read-only installation recognition and source-bound evidence DAG"
 workflow = "m23-check"
@@ -594,7 +599,20 @@ command = ["python3", "-B", "scripts/devtool/r43b_swap_gate.py"]
 inputs = ["scripts/devtool/r43b_*.py", "app/src/main/java/com/sdvsync/download/R43BUpdateSwap.kt", "app/src/test/java/com/sdvsync/download/R43BUpdateSwapTest.kt", ".devtool.toml"]
 metadata = { read_only = true, area = "r43b-swap-unwired", root_required = false, device_required = false }
 
+[targets.cinderbox.jobs.r43b2-admission-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r43b2_gate.py"]
+inputs = ["scripts/devtool/r43b2_*.py", "app/src/main/java/com/sdvsync/download/R43BUpdateAdmission.kt", "app/src/test/java/com/sdvsync/download/R43BUpdateAdmissionTest.kt", "app/src/main/java/com/sdvsync/download/GameFileIntegrity.kt", "app/src/main/java/com/sdvsync/download/GameDownloadService.kt", ".devtool.toml"]
+metadata = { read_only = true, area = "r43b2-preflight-unwired", root_required = false, device_required = false }
+
 [targets.cinderbox.workflows]
+r43b2-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r43a", ref = "job:r43-cinderbox-source", depends_on = ["security"] },
+  { id = "r43b1", ref = "job:r43b-swap-source", depends_on = ["r43a"] },
+  { id = "admission", ref = "job:r43b2-admission-source", depends_on = ["r43b1"] },
+]
 r43b-check = [
   { id = "security", ref = "job:security-contract", depends_on = [] },
   { id = "r43a", ref = "job:r43-cinderbox-source", depends_on = ["security"] },

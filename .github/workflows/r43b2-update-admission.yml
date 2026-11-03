@@ -1,0 +1,46 @@
+name: R43B2 Protected Update Admission Source Contracts
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/R43BUpdateAdmission.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameFileIntegrity.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameDownloadService.kt'
+      - 'app/src/test/java/com/sdvsync/download/R43BUpdateAdmissionTest.kt'
+      - 'scripts/devtool/r43b2_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43b2-update-admission.yml'
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/R43BUpdateAdmission.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameFileIntegrity.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameDownloadService.kt'
+      - 'app/src/test/java/com/sdvsync/download/R43BUpdateAdmissionTest.kt'
+      - 'scripts/devtool/r43b2_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43b2-update-admission.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r43b2-read-only-admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: R43B2 source and patch contracts
+        run: |
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r43b2_gate.py' -v
+          python3 -B scripts/devtool/r43b2_patch.py --check
+          python3 -B scripts/devtool/r43b2_gate.py
+      - name: Preserve R43B1 transaction gate
+        run: |
+          python3 -B scripts/devtool/r43b_swap_gate.py
+          python3 -B scripts/devtool/r43_policy_gate.py
+      - name: Evidence scope
+        run: echo 'R43B2_SOURCE_ONLY_PASS — Kotlin unit/lint/APK runs in existing hosted build workflow. Live replacement disabled.'
