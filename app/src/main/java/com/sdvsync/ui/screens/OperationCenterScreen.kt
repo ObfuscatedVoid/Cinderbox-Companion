@@ -20,6 +20,10 @@ import com.sdvsync.diagnostics.SyncOperationDiagnostics
 import com.sdvsync.download.GameDownloadManager
 import com.sdvsync.mods.ModDownloadManager
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.R44BResponsiveColumn
+import com.sdvsync.ui.components.R44BStatePanel
+import com.sdvsync.ui.policy.R44BStateKind
+import com.sdvsync.ui.theme.SdvSyncThemeExtras
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -83,7 +87,7 @@ fun OperationCenterScreen(
     Scaffold(topBar = { StardewTopAppBar("Operation center", navigationIcon = {
         TextButton(onClick = onBack) { Text("Back") }
     }) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)) {
+        R44BResponsiveColumn(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             Text("Live, read-only status and recovery guidance", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(6.dp))
             Text("No automatic retry or recovery is performed here. Status may be incomplete after Android stops the app.",
@@ -116,7 +120,18 @@ fun OperationCenterScreen(
 
 @Composable
 private fun CenterStatusCard(card: CenterItem, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+    if (SdvSyncThemeExtras.isEarthy) {
+        R44BStatePanel(
+            kind = R44BStateKind.fromOperationStatus(card.status.name),
+            title = card.title,
+            description = card.detail,
+            supportingText = card.percent?.let { "$it% reported" },
+            actionLabel = card.action,
+            onAction = onClick
+        )
+    } else {
+        // Retain Classic's original status card and actions.
+        Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(card.title, style = MaterialTheme.typography.titleMedium)
             Text(when (card.status) {
@@ -130,6 +145,7 @@ private fun CenterStatusCard(card: CenterItem, onClick: () -> Unit) {
             Text(card.detail, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onClick) { Text(card.action) }
+        }
         }
     }
 }

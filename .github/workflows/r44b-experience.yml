@@ -1,0 +1,47 @@
+name: R44B Responsive Accessible Experience Source Contracts
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/test/java/com/sdvsync/ui/**'
+      - 'scripts/devtool/r44b_*.py'
+      - 'scripts/devtool/test_r44b_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r44b-experience.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/test/java/com/sdvsync/ui/**'
+      - 'scripts/devtool/r44b_*.py'
+      - 'scripts/devtool/test_r44b_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r44b-experience.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: R44B exact postconditions, regression and host test
+        run: |
+          python3 -B scripts/devtool/r44b_patch.py --check
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r44b_gate.py' -v
+          python3 -B scripts/devtool/r44b_gate.py
+      - name: R44A, R43D, R43C and R42 source boundaries
+        run: |
+          python3 -B scripts/devtool/r44_patch.py --check
+          python3 -B scripts/devtool/r44_gate.py
+          python3 -B scripts/devtool/r43d_patch.py --check
+          python3 -B scripts/devtool/r43d_gate.py
+          python3 -B scripts/devtool/r43c_gate.py
+          python3 -B scripts/devtool/r42_product_gate.py
+      - name: Evidence boundary
+        run: |
+          echo 'R44B source-only UI contract. Existing Build Debug APK workflow owns Kotlin compilation, JVM tests, lint and signing.'
+          echo 'No device execution, game mutation, release or publication is authorized.'

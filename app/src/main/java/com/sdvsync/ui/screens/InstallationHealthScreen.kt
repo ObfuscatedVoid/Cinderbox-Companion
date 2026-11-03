@@ -21,6 +21,9 @@ import com.sdvsync.download.GameRepairPreview
 import com.sdvsync.download.VerifiedGameRepair
 import kotlinx.coroutines.launch
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.R44BResponsiveColumn
+import com.sdvsync.ui.components.R44BStatePanel
+import com.sdvsync.ui.policy.R44BStateKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -55,7 +58,7 @@ fun InstallationHealthScreen(onBack: () -> Unit) {
     Scaffold(topBar = { StardewTopAppBar("Installation health", navigationIcon = {
         TextButton(onClick = onBack) { Text("Back") }
     }) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)) {
+        R44BResponsiveColumn(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             Text("Read-only checks. Detection is not cryptographic integrity verification.", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(value = selectedPath, onValueChange = {
@@ -131,7 +134,11 @@ fun InstallationHealthScreen(onBack: () -> Unit) {
                         Text(result.storage.details, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-            } ?: CircularProgressIndicator()
+            } ?: R44BStatePanel(
+                kind = R44BStateKind.LOADING,
+                title = "Checking installation",
+                description = "Reading local installation details without changing game files."
+            )
             Spacer(Modifier.height(10.dp))
             Text("Missing, inaccessible and incomplete are different states. Cinderbox will not overwrite an existing game automatically.",
                 style = MaterialTheme.typography.bodySmall)

@@ -230,6 +230,11 @@ description = "R44 Material 3 Earthy foundation, Classic preservation and safety
 workflow = "r44-check"
 target = "cinderbox"
 
+[wrapper.commands.r44b-check]
+description = "R44-B dialogs, responsive states, accessibility and visual-only safety"
+workflow = "r44b-check"
+target = "cinderbox"
+
 [wrapper.commands.m23-check]
 description = "M23 read-only installation recognition and source-bound evidence DAG"
 workflow = "m23-check"
@@ -666,7 +671,19 @@ command = ["python3", "-B", "scripts/devtool/r44_gate.py"]
 inputs = ["scripts/devtool/r44_*.py", "scripts/devtool/test_r44_gate.py", "app/src/main/java/com/sdvsync/ui/theme/Theme.kt", "app/src/main/java/com/sdvsync/ui/theme/R44ProductDesignTokens.kt", "app/src/main/java/com/sdvsync/ui/components/StardewCard.kt", "app/src/main/java/com/sdvsync/ui/components/StardewButton.kt", "app/src/main/java/com/sdvsync/ui/components/R44StatusSummary.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", "app/src/main/java/com/sdvsync/ui/policy/R44StatusTone.kt", "app/src/test/java/com/sdvsync/ui/policy/R44StatusToneTest.kt", "docs/security/M3_RELEASE_POLICY.json", ".devtool.toml"]
 metadata = { read_only = true, area = "r44-material3-earthy-design-foundation", root_required = false, device_required = false, live_update_enabled = false }
 
+[targets.cinderbox.jobs.r44b-experience-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r44b_gate.py"]
+inputs = ["scripts/devtool/r44b_*.py", "scripts/devtool/test_r44b_gate.py", "app/src/main/java/com/sdvsync/ui/components/R44BExperience.kt", "app/src/main/java/com/sdvsync/ui/components/StardewDialog.kt", "app/src/main/java/com/sdvsync/ui/components/EmptyState.kt", "app/src/main/java/com/sdvsync/ui/screens/InstallationHealthScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/OperationCenterScreen.kt", "app/src/main/java/com/sdvsync/ui/policy/R44BLayoutPolicy.kt", "app/src/test/java/com/sdvsync/ui/policy/R44BLayoutPolicyTest.kt", "app/src/main/java/com/sdvsync/ui/theme/R44BExperiencePreview.kt", "docs/security/M3_RELEASE_POLICY.json", ".devtool.toml"]
+metadata = { read_only = true, area = "r44b-responsive-accessible-ui", root_required = false, device_required = false, live_update_enabled = false }
+
 [targets.cinderbox.workflows]
+r44b-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r44a", ref = "job:r44-design-system-source", depends_on = ["security"] },
+  { id = "r44b", ref = "job:r44b-experience-source", depends_on = ["r44a"] },
+]
 r44-check = [
   { id = "security", ref = "job:security-contract", depends_on = [] },
   { id = "r43d", ref = "job:r43d-destination-ux-source", depends_on = ["security"] },
