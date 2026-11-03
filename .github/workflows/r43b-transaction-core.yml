@@ -1,0 +1,37 @@
+name: R43B Isolated Swap Core Source Contracts
+
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/R43BUpdateSwap.kt'
+      - 'app/src/test/java/com/sdvsync/download/R43BUpdateSwapTest.kt'
+      - 'scripts/devtool/r43b_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43b-transaction-core.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/R43BUpdateSwap.kt'
+      - 'app/src/test/java/com/sdvsync/download/R43BUpdateSwapTest.kt'
+      - 'scripts/devtool/r43b_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43b-transaction-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r43b-host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Check isolated swap contract
+        run: |
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r43b_swap_gate.py' -v
+          python3 -B scripts/devtool/r43b_swap_gate.py
+      - name: Qualification boundary
+        run: echo 'R43B1_SOURCE_ONLY_PASS — Kotlin tests and Android build validated separately by existing debug build workflow.'
