@@ -215,6 +215,11 @@ description = "R43 consolidated update transaction, two-journal recovery and acc
 workflow = "r43b4-check"
 target = "cinderbox"
 
+[wrapper.commands.r43c-check]
+description = "R43-C production interlock, storage and cold-recovery source gates (no Gradle)"
+workflow = "r43c-check"
+target = "cinderbox"
+
 [wrapper.commands.m23-check]
 description = "M23 read-only installation recognition and source-bound evidence DAG"
 workflow = "m23-check"
@@ -630,7 +635,20 @@ command = ["python3", "-B", "scripts/devtool/r43b4_gate.py"]
 inputs = ["scripts/devtool/r43b4_*.py", "scripts/devtool/test_r43b4_gate.py", "app/src/main/java/com/sdvsync/download/R43BLedgerArchive.kt", "app/src/main/java/com/sdvsync/download/R43BUpdateCoordinator.kt", "app/src/test/java/com/sdvsync/download/R43BUpdateCoordinatorTest.kt", "app/src/main/java/com/sdvsync/download/GameDownloadService.kt", "app/src/main/java/com/sdvsync/download/GameDownloadRecovery.kt", "app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", ".devtool.toml"]
 metadata = { read_only = true, area = "r43b4-coordinated-fail-closed-candidate", root_required = false, device_required = false, live_update_enabled = false }
 
+[targets.cinderbox.jobs.r43c-protected-safety-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r43c_gate.py"]
+inputs = ["scripts/devtool/r43c_*.py", "scripts/devtool/test_r43c_gate.py", "app/src/main/java/com/sdvsync/download/R43C*.kt", "app/src/main/java/com/sdvsync/download/R43BUpdateSwap.kt", "app/src/main/java/com/sdvsync/download/R43BUpdateCoordinator.kt", "app/src/main/java/com/sdvsync/download/GameDownloadService.kt", "app/src/test/java/com/sdvsync/download/R43C*.kt", "app/src/androidTest/java/com/sdvsync/qualification/R43C*.kt", "docs/security/M3_RELEASE_POLICY.json", ".devtool.toml"]
+metadata = { read_only = true, area = "r43c-fail-closed-update-prequalification", root_required = false, device_required = false, live_update_enabled = false }
+
 [targets.cinderbox.workflows]
+r43c-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r43b3", ref = "job:r43b3-handoff-source", depends_on = ["security"] },
+  { id = "r43b4", ref = "job:r43b4-coordinator-source", depends_on = ["r43b3"] },
+  { id = "r43c", ref = "job:r43c-protected-safety-source", depends_on = ["r43b4"] },
+]
 r43b4-check = [
   { id = "security", ref = "job:security-contract", depends_on = [] },
   { id = "r43b3", ref = "job:r43b3-handoff-source", depends_on = ["security"] },

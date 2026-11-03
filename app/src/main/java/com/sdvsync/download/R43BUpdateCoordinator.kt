@@ -57,18 +57,19 @@ internal class R43BUpdateCoordinator private constructor(
     )
 
     fun inspectReadOnly(): ReadOnlyStatus {
-        val state = swap.inspect() ?: return ReadOnlyStatus(null, false, false)
+        val state = runCatching { swap.inspect() }.getOrElse {
+            return ReadOnlyStatus("Update records need manual review; no files were changed", false, false)
+        }
+        val assessment = runCatching {
+            R43CRecoveryReadOnly.inspect(state, destination, privateRoot)
+        }.getOrElse {
+            return ReadOnlyStatus("Storage or recovery records are inaccessible; manual review required", false, false)
+        }
         val enabled = fixture || (R43BLiveUpdatePolicy.LIVE_UPDATES_ENABLED &&
             R43BLiveUpdatePolicy.DEVICE_ACCEPTED)
-        val description = when (state.phase) {
-            R43BUpdateSwap.Phase.PREPARED -> "Prepared game update: review before publication"
-            R43BUpdateSwap.Phase.OLD_MOVED -> "Interrupted update: restore original game"
-            R43BUpdateSwap.Phase.PUBLISHED -> "Published game: original backup retained"
-            R43BUpdateSwap.Phase.ROLLED_BACK -> "Original restored; new version retained"
-        }
-        return ReadOnlyStatus(description,
-            enabled && state.phase == R43BUpdateSwap.Phase.PUBLISHED,
-            enabled && state.phase != R43BUpdateSwap.Phase.ROLLED_BACK)
+        return ReadOnlyStatus(assessment.description,
+            enabled && assessment.rollbackPossible,
+            enabled && assessment.recoveryPossible)
     }
 
     private val recovery get() = GameDownloadRecovery(privateRoot)
@@ -108,6 +109,10 @@ internal class R43BUpdateCoordinator private constructor(
             "Live update must use Cinderbox GameFiles"
         }
         check(swap.inspect() == null) { "Previous update needs recovery" }
+        R43CUpdateSafety.requireProductionQuiescence()
+        // No verified Steam byte estimate is currently passed into this API.
+        // Reject rather than incorrectly budget the staged copy as zero bytes.
+        R43CUpdateSafety.requireEarlyDownloadBudget(null)
         recovery.beginStagedUpdate(destination, branch, os, verify)
     }
 
@@ -122,6 +127,7 @@ internal class R43BUpdateCoordinator private constructor(
         verifyPublished: suspend (File) -> Unit
     ): Result {
         requireEnabled()
+        if (!fixture) R43CUpdateSafety.requireProductionQuiescence()
         val checkpoint = recovery.pending() ?: error("Missing M24 update checkpoint")
         check(checkpoint.updateMode && checkpoint.verify && checkpoint.stagingDirectory != null) {
             "Only a verified, owned M24 update may be published"
@@ -145,9 +151,15 @@ internal class R43BUpdateCoordinator private constructor(
         }
         try {
             // BOTH same-volume renames belong inside the guarded boundary.
+            if (!fixture) {
+                R43CUpdateSafety.requireProductionQuiescence()
+                R43CUpdateSafety.requirePreparedPublicationSpace(
+                    state.stage, destination, privateRoot)
+            }
             // The original implementation only caught failures after this call,
             // leaving a failed second rename unreconciled until manual recovery.
             swap.publishVerifiedStage()
+            if (!fixture) R43CUpdateSafety.requireProductionQuiescence()
             verifyPublished(destination)
             finishVerifiedPublication(state.token)
         } catch (failure: Exception) {
@@ -197,6 +209,7 @@ internal class R43BUpdateCoordinator private constructor(
     }
 
     private fun finishVerifiedPublication(token: String) {
+        if (!fixture) R43CUpdateSafety.requireProductionQuiescence()
         val state = swap.inspect() ?: error("Published update journal unavailable")
         check(state.token == token &&
             swap.reconcile() == R43BUpdateSwap.Finding.PUBLISHED_WITH_BACKUP) {
@@ -213,6 +226,7 @@ internal class R43BUpdateCoordinator private constructor(
 
     /** The old game is verified before ANY rollback rename. */
     private fun rollbackOwnedPublication(token: String): Result {
+        if (!fixture) R43CUpdateSafety.requireProductionQuiescence()
         val state = swap.inspect() ?: error("Missing rollback journal")
         check(state.token == token) { "Rollback token mismatch" }
         archive.verifyOriginal(token, state.backup, destination)
@@ -244,6 +258,7 @@ internal class R43BUpdateCoordinator private constructor(
      */
     fun reconcileWithoutSteam(): Result {
         requireEnabled()
+        if (!fixture) R43CUpdateSafety.requireProductionQuiescence()
         val state = swap.inspect() ?: return Result.NO_TRANSACTION
         return when (swap.reconcile()) {
             R43BUpdateSwap.Finding.NO_JOURNAL -> Result.NO_TRANSACTION

@@ -175,6 +175,7 @@ internal class R43BUpdateSwap private constructor(
         // authorizing this operation; never remove or overwrite it automatically.
         requireVerifiedStage(stage, token)
         val state = State(Phase.PREPARED, token, dest, stage, backup, displaced)
+        if (!isTestFixture) R43CUpdateSafety.requireProductionQuiescence()
         writeJournal(state)
         return state
     }
@@ -188,11 +189,17 @@ internal class R43BUpdateSwap private constructor(
             "Existing game or backup state changed"
         }
         requireVerifiedStage(s.stage, s.token)
+        if (!isTestFixture) {
+            R43CUpdateSafety.requireProductionQuiescence()
+            R43CUpdateSafety.requirePreparedPublicationSpace(s.stage, s.target, privateRoot)
+        }
         Files.move(s.target.toPath(), s.backup.toPath(), StandardCopyOption.ATOMIC_MOVE)
         // If the process dies here, reconcile() restores the original automatically.
         s = s.copy(phase = Phase.OLD_MOVED)
         writeJournal(s)
+        if (!isTestFixture) R43CUpdateSafety.requireProductionQuiescence()
         Files.move(s.stage.toPath(), s.target.toPath(), StandardCopyOption.ATOMIC_MOVE)
+        if (!isTestFixture) R43CUpdateSafety.requireProductionQuiescence()
         check(hasMarker(s.target, s.token)) { "New game ownership changed after promotion" }
         s = s.copy(phase = Phase.PUBLISHED)
         writeJournal(s)
@@ -206,6 +213,8 @@ internal class R43BUpdateSwap private constructor(
      */
     @Synchronized fun reconcile(): Finding {
         val s = inspect() ?: return Finding.NO_JOURNAL
+        // The method can execute recovery renames. Unknown game state denies them.
+        if (!isTestFixture) R43CUpdateSafety.requireProductionQuiescence()
         val targetExists = s.target.exists()
         val stageExists = s.stage.exists()
         val backupExists = s.backup.exists()
@@ -257,8 +266,10 @@ internal class R43BUpdateSwap private constructor(
         val s = inspect() ?: error("Missing update journal")
         check(!s.displaced.exists() && s.backup.isDirectory &&
             hasMarker(s.target, s.token)) { "Published update identity changed" }
+        if (!isTestFixture) R43CUpdateSafety.requireProductionQuiescence()
         Files.move(s.target.toPath(), s.displaced.toPath(), StandardCopyOption.ATOMIC_MOVE)
         // If restoring the backup fails, reconcile() will retry the restoration.
+        if (!isTestFixture) R43CUpdateSafety.requireProductionQuiescence()
         Files.move(s.backup.toPath(), s.target.toPath(), StandardCopyOption.ATOMIC_MOVE)
         writeJournal(s.copy(phase = Phase.ROLLED_BACK))
         return Finding.ROLLED_BACK_WITH_NEW_PRESERVED

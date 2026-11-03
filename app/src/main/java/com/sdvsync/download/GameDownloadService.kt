@@ -197,6 +197,9 @@ class GameDownloadService : Service() {
                     installRoot.path == CinderboxPaths.GAME_FILES_DIR) {
                     "Unqualified or redirected update service intent"
                 }
+                // Service intents do not bypass the R43-C game-launch interlock.
+                // No device-qualified exclusion protocol exists: this fails closed.
+                R43CUpdateSafety.requireProductionQuiescence()
                 check(R43BUpdateAdmission.inspectOwnedStage(filesDir, ownedUpdate).eligible) {
                     "Existing GameFiles changed after update session creation"
                 }

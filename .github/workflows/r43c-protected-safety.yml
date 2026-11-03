@@ -1,0 +1,53 @@
+name: R43C Protected Update Safety Source Contracts
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/R43C*.kt'
+      - 'app/src/main/java/com/sdvsync/download/R43BUpdate*.kt'
+      - 'app/src/main/java/com/sdvsync/download/GameDownloadService.kt'
+      - 'app/src/test/java/com/sdvsync/download/R43C*.kt'
+      - 'app/src/androidTest/java/com/sdvsync/qualification/R43C*.kt'
+      - 'scripts/devtool/r43c_*.py'
+      - 'scripts/devtool/test_r43c_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43c-protected-safety.yml'
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/download/**'
+      - 'app/src/test/java/com/sdvsync/download/R43C*.kt'
+      - 'app/src/androidTest/java/com/sdvsync/qualification/R43C*.kt'
+      - 'scripts/devtool/r43c_*.py'
+      - 'scripts/devtool/test_r43c_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r43c-protected-safety.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  r43c-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: R43C exact patch postcondition and fail-closed source contracts
+        run: |
+          python3 -B scripts/devtool/r43c_patch.py --check
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r43c_gate.py' -v
+          python3 -B scripts/devtool/r43c_gate.py
+      - name: Preserve R43B4 and R43B3 source contracts
+        run: |
+          python3 -B scripts/devtool/r43b4_patch.py --check
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r43b4_gate.py' -v
+          python3 -B scripts/devtool/r43b4_gate.py
+          python3 -B scripts/devtool/r43b3_gate.py
+          python3 -B scripts/devtool/r43b2_gate.py
+          python3 -B scripts/devtool/r43b_swap_gate.py
+          python3 -B scripts/devtool/r43_policy_gate.py
+          python3 -B scripts/devtool/r42_product_gate.py
+      - name: Evidence boundary
+        run: |
+          echo 'SOURCE ONLY; hosted Build Debug APK performs Android JVM, lint, debug + androidTest compilation and signer checks.'
+          echo 'No automatic device install, live Steam update, release signing or publication is authorized.'
