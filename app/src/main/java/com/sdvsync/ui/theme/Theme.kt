@@ -197,8 +197,8 @@ fun SdvSyncTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
-            shapes = StardewShapes,
+            typography = if (style == AppearanceStyle.EARTHY) R44ProductTypography else Typography,
+            shapes = if (style == AppearanceStyle.EARTHY) R44ProductShapes else StardewShapes,
             content = content
         )
     }

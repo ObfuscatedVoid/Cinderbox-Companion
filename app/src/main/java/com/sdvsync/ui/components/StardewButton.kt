@@ -1,6 +1,8 @@
 package com.sdvsync.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,7 +58,9 @@ fun StardewButton(
 
     Button(
         onClick = onClick,
-        modifier = modifier.drawBehind {
+        // Earthy: rounded, responsive minimum 48dp touch target; Classic: pixel bevel.
+        modifier = (if (SdvSyncThemeExtras.isEarthy) modifier.heightIn(min = 48.dp)
+                    else modifier.drawBehind {
             val px = 2.dp.toPx()
             val w = size.width
             val h = size.height
@@ -80,9 +84,9 @@ fun StardewButton(
             drawRect(borderShadow, Offset(px, h - 2 * px), Size(w - 2 * px, px))
             // Right shadow
             drawRect(borderShadow, Offset(w - 2 * px, 2 * px), Size(px, h - 4 * px))
-        },
+        }),
         enabled = enabled,
-        shape = RectangleShape,
+        shape = if (SdvSyncThemeExtras.isEarthy) MaterialTheme.shapes.medium else RectangleShape,
         contentPadding = ButtonPadding,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
@@ -105,7 +109,9 @@ fun StardewOutlinedButton(
 
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.drawBehind {
+        // Earthy: rounded, responsive minimum 48dp touch target; Classic: pixel bevel.
+        modifier = (if (SdvSyncThemeExtras.isEarthy) modifier.heightIn(min = 48.dp)
+                    else modifier.drawBehind {
             val px = 2.dp.toPx()
             val w = size.width
             val h = size.height
@@ -121,11 +127,12 @@ fun StardewOutlinedButton(
             drawRect(borderPlank, Offset(px, h - 2 * px), Size(w - 2 * px, px))
             drawRect(borderPlank, Offset(px, 2 * px), Size(px, h - 4 * px))
             drawRect(borderPlank, Offset(w - 2 * px, 2 * px), Size(px, h - 4 * px))
-        },
+        }),
         enabled = enabled,
-        shape = RectangleShape,
+        shape = if (SdvSyncThemeExtras.isEarthy) MaterialTheme.shapes.medium else RectangleShape,
         contentPadding = ButtonPadding,
-        border = null,
+        border = if (SdvSyncThemeExtras.isEarthy)
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
         content = content
     )
 }

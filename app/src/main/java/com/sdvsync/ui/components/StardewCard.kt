@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
@@ -20,19 +21,22 @@ fun StardewCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val earthy = SdvSyncThemeExtras.isEarthy
-    val cardModifier = modifier
+    // R44: Earthy uses Material 3 surfaces. Classic retains its pixel border.
+    val cardModifier = if (earthy) modifier.fillMaxWidth() else modifier
         .fillMaxWidth()
         .pixelBorder()
-        .padding(8.dp) // inner padding matching the 4-layer border width
+        .padding(8.dp) // Classic's original 4-layer border inset
 
     Surface(
         modifier = if (onClick != null) {
-            cardModifier.clickable(onClick = onClick)
+            cardModifier.clickable(role = Role.Button, onClick = onClick)
         } else {
             cardModifier
         },
-        shape = RectangleShape,
-        color = if (earthy) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceContainerHigh
+        shape = if (earthy) MaterialTheme.shapes.large else RectangleShape,
+        color = if (earthy) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = if (earthy) 2.dp else 0.dp,
+        shadowElevation = if (earthy) 1.dp else 0.dp
     ) {
         Column { content() }
     }

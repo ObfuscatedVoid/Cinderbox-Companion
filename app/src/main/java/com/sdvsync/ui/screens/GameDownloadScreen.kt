@@ -40,6 +40,9 @@ import com.sdvsync.cinderbox.CinderboxPaths
 import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import com.sdvsync.ui.policy.DownloadPresentation
 import com.sdvsync.ui.policy.R43DDestinationPresentation
+import com.sdvsync.ui.policy.R44StatusTone
+import com.sdvsync.ui.components.R44StatusSummary
+import com.sdvsync.ui.theme.SdvSyncThemeExtras
 import java.io.File
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import java.text.SimpleDateFormat
@@ -207,15 +210,26 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                     Text("Game destination · Cinderbox",
                         style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(6.dp))
-                    Text(destinationNotice.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary)
-                    Text(destinationNotice.detail,
-                        style = MaterialTheme.typography.bodyMedium)
-                    Spacer(Modifier.height(4.dp))
-                    Text("Next step: ${destinationNotice.nextStep}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (SdvSyncThemeExtras.isEarthy) {
+                        // Visual status only; actual download authorization remains in Manager/Service.
+                        R44StatusSummary(
+                            title = destinationNotice.title,
+                            detail = destinationNotice.detail,
+                            nextStep = destinationNotice.nextStep,
+                            tone = R44StatusTone.fromDestination(destinationNotice.kind)
+                        )
+                    } else {
+                        // Keep Classic's original presentation unchanged.
+                        Text(destinationNotice.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary)
+                        Text(destinationNotice.detail,
+                            style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Next step: ${destinationNotice.nextStep}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text("Game: ${R43DDestinationPresentation.installedLabel(state.primaryGameStatus)}",
                         style = MaterialTheme.typography.bodySmall)

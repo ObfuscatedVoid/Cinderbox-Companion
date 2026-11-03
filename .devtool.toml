@@ -225,6 +225,11 @@ description = "R43-D fixed Cinderbox destination UX and developer isolation (hos
 workflow = "r43d-check"
 target = "cinderbox"
 
+[wrapper.commands.r44-check]
+description = "R44 Material 3 Earthy foundation, Classic preservation and safety source contracts"
+workflow = "r44-check"
+target = "cinderbox"
+
 [wrapper.commands.m23-check]
 description = "M23 read-only installation recognition and source-bound evidence DAG"
 workflow = "m23-check"
@@ -654,7 +659,19 @@ command = ["python3", "-B", "scripts/devtool/r43d_gate.py"]
 inputs = ["scripts/devtool/r43d_*.py", "scripts/devtool/test_r43d_gate.py", "app/src/main/java/com/sdvsync/ui/policy/R43DDestinationPresentation.kt", "app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", "app/src/main/java/com/sdvsync/ui/components/CinderboxWizardDialog.kt", "app/src/test/java/com/sdvsync/ui/policy/R43DDestinationPresentationTest.kt", "docs/security/M3_RELEASE_POLICY.json", ".devtool.toml"]
 metadata = { read_only = true, area = "r43d-fixed-destination-ux", root_required = false, device_required = false, live_update_enabled = false }
 
+[targets.cinderbox.jobs.r44-design-system-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r44_gate.py"]
+inputs = ["scripts/devtool/r44_*.py", "scripts/devtool/test_r44_gate.py", "app/src/main/java/com/sdvsync/ui/theme/Theme.kt", "app/src/main/java/com/sdvsync/ui/theme/R44ProductDesignTokens.kt", "app/src/main/java/com/sdvsync/ui/components/StardewCard.kt", "app/src/main/java/com/sdvsync/ui/components/StardewButton.kt", "app/src/main/java/com/sdvsync/ui/components/R44StatusSummary.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", "app/src/main/java/com/sdvsync/ui/policy/R44StatusTone.kt", "app/src/test/java/com/sdvsync/ui/policy/R44StatusToneTest.kt", "docs/security/M3_RELEASE_POLICY.json", ".devtool.toml"]
+metadata = { read_only = true, area = "r44-material3-earthy-design-foundation", root_required = false, device_required = false, live_update_enabled = false }
+
 [targets.cinderbox.workflows]
+r44-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r43d", ref = "job:r43d-destination-ux-source", depends_on = ["security"] },
+  { id = "r44", ref = "job:r44-design-system-source", depends_on = ["r43d"] },
+]
 r43d-check = [
   { id = "security", ref = "job:security-contract", depends_on = [] },
   { id = "r43c", ref = "job:r43c-protected-safety-source", depends_on = ["security"] },
