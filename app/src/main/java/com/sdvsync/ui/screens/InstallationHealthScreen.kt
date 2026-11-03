@@ -106,7 +106,7 @@ fun InstallationHealthScreen(onBack: () -> Unit) {
                 HealthRow("Cinderbox app", result.cinderboxApp)
                 result.discovery?.let { inventory ->
                     Spacer(Modifier.height(12.dp))
-                    Text("M23 · Read-only installation evidence", style = MaterialTheme.typography.titleMedium)
+                    Text("Game installation details", style = MaterialTheme.typography.titleMedium)
                     Text("No game, Steam, or SMAPI version is verified by filename detection. " +
                         "SAF, Root and Shizuku access require their own authorized provider checks.",
                         style = MaterialTheme.typography.bodySmall)

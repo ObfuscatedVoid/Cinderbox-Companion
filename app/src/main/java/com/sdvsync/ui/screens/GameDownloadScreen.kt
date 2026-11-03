@@ -36,6 +36,8 @@ import com.sdvsync.ui.formatBytes
 import com.sdvsync.local.M23InstallationDiscovery
 import com.sdvsync.local.M23CinderboxFirstPolicy
 import com.sdvsync.cinderbox.CinderboxPaths
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
+import com.sdvsync.ui.policy.DownloadPresentation
 import java.io.File
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
 import java.text.SimpleDateFormat
@@ -295,7 +297,8 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
             PixelDivider()
             Spacer(Modifier.height(24.dp))
 
-            // A separate optional Steam download destination; not the imported game.
+            if (DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(LocalContext.current)) {
+                // Debug-only folder override; M23/M24 safety gates still apply.
             SectionHeader("Optional separate download location")
             Spacer(Modifier.height(8.dp))
 
@@ -337,6 +340,14 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                 }
             }
 
+            } else {
+                Text(
+                    "This version downloads Steam game files to a separate folder. " +
+                        "It will not replace the existing Cinderbox game automatically.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             // Read-only assessment of the selected path, not a hash verification.
             state.selectedInstallHealth?.let { health ->
                 Text("Selected folder: ${health.health.name.replace('_', ' ')}",
@@ -346,7 +357,7 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
             }
             Text(state.storageDetail, style = MaterialTheme.typography.bodySmall)
             if (state.destinationCode != M23CinderboxFirstPolicy.Code.EMPTY_SEPARATE_DESTINATION) {
-                Text("Destination review: ${state.destinationCode.name.replace('_', ' ')}",
+                Text(DownloadPresentation.destinationStatus(state.destinationCode),
                     color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
             Spacer(Modifier.height(12.dp))
@@ -365,7 +376,7 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                         )
                         Text(
                             "Always checked before publishing this download. " +
-                                "The final Steam manifest source is not independently signed-verified.",
+                                "This does not provide independent signed proof of the Steam files.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

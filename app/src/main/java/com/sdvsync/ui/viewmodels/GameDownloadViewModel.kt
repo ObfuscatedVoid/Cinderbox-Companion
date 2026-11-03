@@ -23,6 +23,8 @@ import com.sdvsync.download.GitHubReleaseChecker
 import com.sdvsync.download.SmapiSetupProgress
 import com.sdvsync.fileaccess.FileAccessDetector
 import com.sdvsync.logging.AppLogger
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
+import com.sdvsync.ui.policy.DownloadPresentation
 import com.sdvsync.steam.ConnectionState
 import com.sdvsync.steam.SteamAuthenticator
 import com.sdvsync.steam.SteamClientManager
@@ -320,6 +322,10 @@ class GameDownloadViewModel(
     }
 
     fun updateInstallDirectory(path: String) {
+        if (!DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(context)) {
+            _state.update { it.copy(error = "Custom download folders are available only in developer debug builds.") }
+            return
+        }
         context.getSharedPreferences("m4_local_install", Context.MODE_PRIVATE)
             .edit().putString("game_dir", path).apply()
         _state.value = _state.value.copy(
@@ -352,6 +358,10 @@ class GameDownloadViewModel(
     }
 
     fun chooseAndroidFolder(uri: Uri) {
+        if (!DeveloperFeaturePolicy.canChooseAlternativeDownloadPath(context)) {
+            _state.update { it.copy(error = "Custom download folders are available only in developer debug builds.") }
+            return
+        }
         runCatching { M24AndroidFolderPicker.resolve(context, uri) }
             .onSuccess { directory ->
                 updateInstallDirectory(directory.absolutePath)

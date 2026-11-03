@@ -185,6 +185,11 @@ description = "M24 gate plus existing Android unit, lint and debug build chain"
 workflow = "m24-full"
 target = "cinderbox"
 
+[wrapper.commands.r42-check]
+description = "R42 user-facing policy and developer-feature source contracts (host-only)"
+workflow = "r42-check"
+target = "cinderbox"
+
 [wrapper.commands.m23-check]
 description = "M23 read-only installation recognition and source-bound evidence DAG"
 workflow = "m23-check"
@@ -558,7 +563,18 @@ inputs = [".devtool.toml", "gradlew", "gradle/wrapper/gradle-wrapper.jar", "grad
 outputs = ["app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk"]
 metadata = { area = "r39-hosted-debug-apk", release_signed = false, device_required = false, ci_toolchain = "android-gradle", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_java_version = "17", ci_android_sdk_packages = ["platforms;android-35", "build-tools;35.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9", ci_android_expected_output = "app/build/outputs/apk/debug/CinderboxCompanion-v0.1.1.apk" }
 
+[targets.cinderbox.jobs.r42-product-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r42_product_gate.py"]
+inputs = ["scripts/devtool/r42_*.py", "app/src/main/java/com/sdvsync/MainActivity.kt", "app/src/main/java/com/sdvsync/ui/policy/**", "app/src/main/java/com/sdvsync/ui/screens/*.kt", "app/src/main/java/com/sdvsync/ui/viewmodels/GameDownloadViewModel.kt", ".devtool.toml"]
+metadata = { read_only = true, area = "r42-ui-policy", root_required = false, device_required = false }
+
 [targets.cinderbox.workflows]
+r42-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "policy", ref = "job:r42-product-source", depends_on = ["security"] },
+]
 # R39 provider-export candidate only, not a release or device workflow.
 # Two native nodes: lint -> assembleDebug. Exact APK path is source-bound.
 r39-hosted-debug = [

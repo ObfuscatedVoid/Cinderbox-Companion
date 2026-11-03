@@ -25,6 +25,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -61,6 +62,7 @@ import com.sdvsync.ui.screens.OperationCenterScreen
 import com.sdvsync.ui.screens.SaveViewerScreen
 import com.sdvsync.ui.screens.SettingsScreen
 import com.sdvsync.ui.screens.SteamDiagnosticsScreen
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import com.sdvsync.ui.screens.SyncDetailScreen
 import com.sdvsync.ui.screens.SyncLogScreen
 import com.sdvsync.ui.theme.AppearancePreferences
@@ -321,7 +323,11 @@ fun SdvSyncNavGraph(navController: NavHostController) {
             InstallationHealthScreen(onBack = { navController.popBackStack() })
         }
         composable("steam_diagnostics") {
-            SteamDiagnosticsScreen(onBack = { navController.popBackStack() })
+            if (DeveloperFeaturePolicy.canOpenDiagnostics(LocalContext.current)) {
+                SteamDiagnosticsScreen(onBack = { navController.popBackStack() })
+            } else {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            }
         }
 
         // Main section with bottom bar

@@ -1,0 +1,39 @@
+name: R42 Product Policy Source Contracts
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/main/java/com/sdvsync/local/M23CinderboxFirstPolicy.kt'
+      - 'scripts/devtool/r42_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r42-product-policy.yml'
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/main/java/com/sdvsync/local/M23CinderboxFirstPolicy.kt'
+      - 'scripts/devtool/r42_*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r42-product-policy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r42-source-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: R42 immutable policy host regressions
+        run: |
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r42_product_policy.py' -v
+          python3 -B scripts/devtool/r42_product_gate.py
+      - name: Evidence summary
+        run: echo 'R42_SOURCE_ONLY_PASS — Gradle/Android APK qualification is separate.'

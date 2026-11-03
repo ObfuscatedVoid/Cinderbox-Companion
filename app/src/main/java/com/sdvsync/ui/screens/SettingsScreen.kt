@@ -24,6 +24,7 @@ import androidx.core.net.toUri
 import com.sdvsync.BuildConfig
 import com.sdvsync.R
 import com.sdvsync.logging.AppLogger
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import com.sdvsync.steam.SteamBackgroundService
 import com.sdvsync.saves.SaveBackupManager
 import com.sdvsync.ui.components.ArrowLeftData
@@ -656,7 +657,7 @@ fun SettingsScreen(
             }
             SectionHeader(stringResource(R.string.settings_diagnostics_title))
             Spacer(Modifier.height(8.dp))
-            if (developerUnlocked) {
+            if (developerUnlocked && DeveloperFeaturePolicy.canOpenDiagnostics(context)) {
                 StardewOutlinedButton(onClick = onOpenDeveloperDiagnostics) {
                     Text("Developer: Steam diagnostics & 1h connection history")
                 }
