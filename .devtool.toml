@@ -235,6 +235,21 @@ description = "R44-B dialogs, responsive states, accessibility and visual-only s
 workflow = "r44b-check"
 target = "cinderbox"
 
+[wrapper.commands.r45a-check]
+description = "R45-A five-tab navigation and read-only Home entry point (host-only)"
+workflow = "r45a-check"
+target = "cinderbox"
+
+[wrapper.commands.r45-ui-check]
+description = "R45 unified five-tab UI and R46 friendly error-state source contracts"
+workflow = "r45-ui-check"
+target = "cinderbox"
+
+[wrapper.commands.r45r2-check]
+description = "R45/R46 consolidated audited UI, privacy and state source contracts"
+workflow = "r45r2-check"
+target = "cinderbox"
+
 [wrapper.commands.m23-check]
 description = "M23 read-only installation recognition and source-bound evidence DAG"
 workflow = "m23-check"
@@ -678,7 +693,48 @@ command = ["python3", "-B", "scripts/devtool/r44b_gate.py"]
 inputs = ["scripts/devtool/r44b_*.py", "scripts/devtool/test_r44b_gate.py", "app/src/main/java/com/sdvsync/ui/components/R44BExperience.kt", "app/src/main/java/com/sdvsync/ui/components/StardewDialog.kt", "app/src/main/java/com/sdvsync/ui/components/EmptyState.kt", "app/src/main/java/com/sdvsync/ui/screens/InstallationHealthScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/OperationCenterScreen.kt", "app/src/main/java/com/sdvsync/ui/policy/R44BLayoutPolicy.kt", "app/src/test/java/com/sdvsync/ui/policy/R44BLayoutPolicyTest.kt", "app/src/main/java/com/sdvsync/ui/theme/R44BExperiencePreview.kt", "docs/security/M3_RELEASE_POLICY.json", ".devtool.toml"]
 metadata = { read_only = true, area = "r44b-responsive-accessible-ui", root_required = false, device_required = false, live_update_enabled = false }
 
+[targets.cinderbox.jobs.r45a-navigation-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r45a_gate.py"]
+inputs = ["scripts/devtool/r45a_*.py", "scripts/devtool/test_r45a_gate.py", "app/src/main/java/com/sdvsync/MainActivity.kt", "app/src/main/java/com/sdvsync/ui/components/StardewBottomBar.kt", "app/src/main/java/com/sdvsync/ui/components/R45HomeIcon.kt", "app/src/main/java/com/sdvsync/ui/screens/HomeScreen.kt", "app/src/main/java/com/sdvsync/ui/policy/R45NavigationPolicy.kt", "app/src/test/java/com/sdvsync/ui/policy/R45NavigationPolicyTest.kt", "app/src/main/java/com/sdvsync/ui/theme/R45HomePreviews.kt", "app/src/main/res/values/strings.xml", "docs/security/M3_RELEASE_POLICY.json", ".devtool.toml"]
+metadata = { read_only = true, area = "r45a-five-tab-home-navigation", root_required = false, device_required = false, live_update_enabled = false }
+
+[targets.cinderbox.jobs.r45-ui-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r45ui_gate.py"]
+inputs = ["scripts/devtool/r45ui_*.py", "scripts/devtool/test_r45ui_gate.py", "scripts/devtool/r45a_*.py", "app/src/main/java/com/sdvsync/ui/components/R45SectionIntro.kt", "app/src/main/java/com/sdvsync/ui/components/R46ErrorPanel.kt", "app/src/main/java/com/sdvsync/ui/screens/DashboardScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/ModManagerScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/SettingsScreen.kt", "app/src/main/java/com/sdvsync/ui/components/SyncErrorCard.kt", "app/src/main/java/com/sdvsync/ui/policy/R46UiErrorPolicy.kt", "app/src/test/java/com/sdvsync/ui/policy/R46UiErrorPolicyTest.kt", ".devtool.toml", "docs/security/M3_RELEASE_POLICY.json"]
+metadata = { read_only = true, area = "r45-all-screens-r46-error-presentation", root_required = false, device_required = false, live_update_enabled = false }
+
+[targets.cinderbox.jobs.r45r2-audit-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r45r2_gate.py"]
+inputs = ["scripts/devtool/r45r2_*.py", "scripts/devtool/test_r45r2_gate.py", "app/src/main/java/com/sdvsync/ui/components/R45AreaGuide.kt", "app/src/main/java/com/sdvsync/ui/components/R46ErrorPanel.kt", "app/src/main/java/com/sdvsync/ui/policy/R46UiErrorPolicy.kt", "app/src/main/java/com/sdvsync/ui/screens/GameDownloadScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/LoginScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/DashboardScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/ModManagerScreen.kt", "app/src/main/java/com/sdvsync/ui/screens/SettingsScreen.kt", ".devtool.toml", "docs/security/M3_RELEASE_POLICY.json"]
+metadata = { read_only = true, area = "r45-r46-audited-production-ui", root_required = false, device_required = false, live_update_enabled = false }
+
 [targets.cinderbox.workflows]
+r45r2-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r44a", ref = "job:r44-design-system-source", depends_on = ["security"] },
+  { id = "r44b", ref = "job:r44b-experience-source", depends_on = ["r44a"] },
+  { id = "r45", ref = "job:r45-ui-source", depends_on = ["r44b"] },
+  { id = "r45r2", ref = "job:r45r2-audit-source", depends_on = ["r45"] },
+]
+r45-ui-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r44a", ref = "job:r44-design-system-source", depends_on = ["security"] },
+  { id = "r44b", ref = "job:r44b-experience-source", depends_on = ["r44a"] },
+  { id = "r45a", ref = "job:r45a-navigation-source", depends_on = ["r44b"] },
+  { id = "r45ui", ref = "job:r45-ui-source", depends_on = ["r45a"] },
+]
+r45a-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r44a", ref = "job:r44-design-system-source", depends_on = ["security"] },
+  { id = "r44b", ref = "job:r44b-experience-source", depends_on = ["r44a"] },
+  { id = "r45a", ref = "job:r45a-navigation-source", depends_on = ["r44b"] },
+]
 r44b-check = [
   { id = "security", ref = "job:security-contract", depends_on = [] },
   { id = "r44a", ref = "job:r44-design-system-source", depends_on = ["security"] },

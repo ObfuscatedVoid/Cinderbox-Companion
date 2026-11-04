@@ -29,6 +29,14 @@ import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewDialog
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.R45SectionIntro
+import com.sdvsync.ui.components.R46ErrorPanel
+import com.sdvsync.ui.components.R45AreaGuide
+import com.sdvsync.ui.components.R44BStatePanel
+import com.sdvsync.ui.policy.R44BStateKind
+import com.sdvsync.ui.policy.R45GuideArea
+import com.sdvsync.ui.theme.SdvSyncThemeExtras
+import com.sdvsync.ui.policy.R46UiErrorArea
 import com.sdvsync.ui.viewmodels.DashboardViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -156,29 +164,24 @@ fun DashboardScreen(
             when {
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        PixelLoadingSpinner(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                        if (SdvSyncThemeExtras.isEarthy) {
+                            R44BStatePanel(
+                                kind = R44BStateKind.LOADING,
+                                title = "Loading your saves",
+                                description = "Checking local save information. No sync has been started."
+                            )
+                        } else {
+                            PixelLoadingSpinner(modifier = Modifier.align(Alignment.Center))
+                        }
                     }
                 }
                 state.error != null -> {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                state.error!!,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            StardewButton(onClick = { viewModel.refresh() }) {
-                                Text(stringResource(R.string.action_retry))
-                            }
-                        }
+                    Box(modifier = Modifier.fillMaxSize().padding(16.dp),
+                        contentAlignment = Alignment.Center) {
+                        R46ErrorPanel(
+                            area = R46UiErrorArea.SAVES,
+                            onRetry = { viewModel.refresh() }
+                        )
                     }
                 }
                 state.saves.isEmpty() -> {
@@ -199,6 +202,15 @@ fun DashboardScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        item {
+                            R45SectionIntro(
+                                "Saves",
+                                "Review your saves, backups and sync status. Changes require explicit action."
+                            )
+                        }
+                        item {
+                            R45AreaGuide(R45GuideArea.SAVES)
+                        }
                         if (state.isStagingMode) {
                             item {
                                 StardewCard {

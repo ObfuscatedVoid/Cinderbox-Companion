@@ -42,6 +42,11 @@ import com.sdvsync.ui.policy.DownloadPresentation
 import com.sdvsync.ui.policy.R43DDestinationPresentation
 import com.sdvsync.ui.policy.R44StatusTone
 import com.sdvsync.ui.components.R44StatusSummary
+import com.sdvsync.ui.components.R45SectionIntro
+import com.sdvsync.ui.components.R45AreaGuide
+import com.sdvsync.ui.policy.R45GuideArea
+import com.sdvsync.ui.components.R46ErrorPanel
+import com.sdvsync.ui.policy.R46UiErrorArea
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
 import java.io.File
 import com.sdvsync.ui.viewmodels.GameDownloadViewModel
@@ -183,6 +188,11 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            R45SectionIntro(
+                "Game",
+                "Inspect Cinderbox storage and game version checks. Existing installations stay protected."
+            )
+            R45AreaGuide(R45GuideArea.GAME)
             // App info card
             StardewCard {
                 Column(modifier = Modifier.padding(12.dp)) {
@@ -527,17 +537,9 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
 
             Spacer(Modifier.height(24.dp))
 
-            // Error
+            // No backend exception text is surfaced in production UI.
             if (state.error != null) {
-                StardewCard {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            state.error!!,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
+                R46ErrorPanel(R46UiErrorArea.GAME)
                 Spacer(Modifier.height(16.dp))
             }
 
@@ -733,21 +735,7 @@ fun GameDownloadScreen(onBack: () -> Unit, onOpenInstallationHealth: () -> Unit,
                 }
 
                 DownloadState.ERROR -> {
-                    StardewCard {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                stringResource(R.string.download_error),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                state.downloadProgress.errorMessage ?: stringResource(R.string.download_error_unknown),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    R46ErrorPanel(R46UiErrorArea.GAME_DOWNLOAD)
                     Spacer(Modifier.height(12.dp))
                     StardewButton(
                         onClick = {
@@ -959,13 +947,7 @@ private fun SmapiSetupSection(
         }
 
         smapiProgress.errorMessage != null && !smapiProgress.completed -> {
-            StardewCard {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("SMAPI setup could not start: ${smapiProgress.errorMessage}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error)
-                }
-            }
+            R46ErrorPanel(R46UiErrorArea.SMAPI)
             Spacer(Modifier.height(8.dp))
             StardewOutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth()) {
                 Text("Dismiss error")
@@ -977,11 +959,7 @@ private fun SmapiSetupSection(
             StardewCard {
                 Column(modifier = Modifier.padding(12.dp)) {
                     if (smapiProgress.errorMessage != null) {
-                        Text(
-                            stringResource(R.string.smapi_extract_error, smapiProgress.errorMessage),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        R46ErrorPanel(R46UiErrorArea.SMAPI)
                     } else {
                         Text(
                             stringResource(R.string.smapi_extract_success),
@@ -1258,15 +1236,7 @@ private fun CinderboxSection(
 
         cinderboxProgress.errorMessage != null -> {
             // Error
-            StardewCard {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        stringResource(R.string.cinderbox_download_error, cinderboxProgress.errorMessage),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
+            R46ErrorPanel(R46UiErrorArea.CINDERBOX)
             Spacer(Modifier.height(8.dp))
             StardewButton(
                 onClick = {

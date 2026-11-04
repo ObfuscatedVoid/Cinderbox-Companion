@@ -36,6 +36,9 @@ import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.R45SectionIntro
+import com.sdvsync.ui.components.R45AreaGuide
+import com.sdvsync.ui.policy.R45GuideArea
 import com.sdvsync.ui.components.StoragePermissionDialog
 import com.sdvsync.ui.theme.AppearanceMode
 import com.sdvsync.ui.theme.AppearancePreferences
@@ -188,6 +191,15 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            if (!preLogin) {
+                R45SectionIntro(
+                    "More",
+                    "Appearance, permissions and account settings. Sensitive actions retain their confirmations."
+                )
+            }
+            if (!preLogin) {
+                R45AreaGuide(R45GuideArea.MORE)
+            }
             // Offline, app-private visual preferences. No Steam or storage permissions required.
             SectionHeader(stringResource(R.string.appearance_section))
             Spacer(Modifier.height(8.dp))

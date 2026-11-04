@@ -1,0 +1,54 @@
+name: R45A Five-Tab Navigation and Home Source Contracts
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/main/res/values/strings.xml'
+      - 'app/src/test/java/com/sdvsync/ui/**'
+      - 'scripts/devtool/r45a_*.py'
+      - 'scripts/devtool/test_r45a_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r45a-navigation.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/main/res/values/strings.xml'
+      - 'app/src/test/java/com/sdvsync/ui/**'
+      - 'scripts/devtool/r45a_*.py'
+      - 'scripts/devtool/test_r45a_gate.py'
+      - '.devtool.toml'
+      - '.github/workflows/r45a-navigation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  navigation-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: R45A source and unit contracts
+        run: |
+          python3 -B scripts/devtool/r45a_patch.py --check
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r45a_gate.py' -v
+          python3 -B scripts/devtool/r45a_gate.py
+      - name: Preserve R44 and protected game behavior
+        run: |
+          python3 -B scripts/devtool/r44b_patch.py --check
+          python3 -B scripts/devtool/r44b_gate.py
+          python3 -B scripts/devtool/r44_patch.py --check
+          python3 -B scripts/devtool/r44_gate.py
+          python3 -B scripts/devtool/r43d_patch.py --check
+          python3 -B scripts/devtool/r43d_gate.py
+          python3 -B scripts/devtool/r43c_gate.py
+          python3 -B scripts/devtool/r43_policy_gate.py
+          python3 -B scripts/devtool/r42_product_gate.py
+      - name: Evidence boundary
+        run: |
+          echo 'R45A host-only navigation tests. Build Debug APK owns Gradle, Android tests, lint, debug signing.'
+          echo 'No physical device access, protected game-update enablement, release or publication.'

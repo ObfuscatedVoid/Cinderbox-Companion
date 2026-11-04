@@ -33,7 +33,12 @@ def check() -> dict:
       'smapi_preflight_in_catch':'_smapiProgress.value = SmapiSetupProgress(isDownloading = true)\n        try {' in mgr and 'StoragePreflight.requireWritable(File(CinderboxPaths.SMAPI_DIR))' in mgr,
       'apk_cache_only':'_cinderboxProgress.value = CinderboxDownloadProgress(isDownloading = true)\n        withContext(Dispatchers.IO) {\n            try {' in mgr and 'StoragePreflight.requireWritable(File(CinderboxPaths.DESKTOP_DIR))' not in mgr,
       'installed_package_read':'getPackageInfo("com.game.cinderbox", 0)' in vm and 'cinderboxPackageInstalled' in vm,
-      'visible_errors': 'SMAPI setup could not start' in ui and 'cinderbox_download_error' in ui,
+      'visible_errors': all(token in ui for token in (
+        'smapiProgress.errorMessage != null',
+        'cinderboxProgress.errorMessage != null',
+        'R46ErrorPanel(R46UiErrorArea.SMAPI)',
+        'R46ErrorPanel(R46UiErrorArea.CINDERBOX)',
+      )),
       'no_redundant_cinderbox_button':'if (!packageInstalled || (updateAvailable && latestVersion != null)) StardewButton' in ui,
       'smapi_overwrite_confirmation':'confirmSmapiReplacement' in ui and 'Replace existing SMAPI?' in ui,
       'negative_unit_cases':all(x in test for x in ('partialParentCannotAuthorize','spuriousParentDepotCannotAuthorize','mismatchedDirectDepotCannotAuthorize')),

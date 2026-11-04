@@ -26,11 +26,13 @@ import androidx.compose.ui.unit.dp
 import com.sdvsync.R
 import com.sdvsync.ui.theme.SdvSyncThemeExtras
 
+/** Stable enum keys preserve internal callers; the visible labels are Home/Game/Saves/Mods/More. */
 enum class BottomTab(val route: String, val labelRes: Int) {
+    HOME("home", R.string.tab_home),
+    DOWNLOAD("game_download", R.string.tab_game),
     SAVES("saves", R.string.tab_saves),
     MODS("mods", R.string.tab_mods),
-    DOWNLOAD("game_download", R.string.tab_download),
-    SETTINGS("settings", R.string.tab_settings)
+    SETTINGS("settings", R.string.tab_more)
 }
 
 @Composable
@@ -94,6 +96,7 @@ private fun BottomTabItem(tab: BottomTab, selected: Boolean, onClick: () -> Unit
     }
 
     val iconData = when (tab) {
+        BottomTab.HOME -> R45HomeIconData
         BottomTab.SAVES -> WheatData
         BottomTab.MODS -> PuzzleData
         BottomTab.DOWNLOAD -> DownloadData

@@ -52,6 +52,7 @@ import com.sdvsync.ui.components.StardewBottomBar
 import com.sdvsync.ui.screens.BackupListScreen
 import com.sdvsync.ui.screens.DashboardScreen
 import com.sdvsync.ui.screens.GameDownloadScreen
+import com.sdvsync.ui.screens.HomeScreen
 import com.sdvsync.ui.screens.InstallationHealthScreen
 import com.sdvsync.ui.screens.InstalledModDetailScreen
 import com.sdvsync.ui.screens.LoginScreen
@@ -63,6 +64,7 @@ import com.sdvsync.ui.screens.SaveViewerScreen
 import com.sdvsync.ui.screens.SettingsScreen
 import com.sdvsync.ui.screens.SteamDiagnosticsScreen
 import com.sdvsync.ui.policy.DeveloperFeaturePolicy
+import com.sdvsync.ui.policy.R45NavigationPolicy
 import com.sdvsync.ui.screens.SyncDetailScreen
 import com.sdvsync.ui.screens.SyncLogScreen
 import com.sdvsync.ui.theme.AppearancePreferences
@@ -219,7 +221,7 @@ private const val NAV_ANIM_DURATION = 300
 private const val FADE_ANIM_DURATION = 400
 
 // Routes that should show the bottom bar
-private val BOTTOM_BAR_ROUTES = setOf("saves", "mods", "game_download", "settings")
+private val BOTTOM_BAR_ROUTES = setOf("home", "game_download", "saves", "mods", "settings")
 
 @Composable
 fun SdvSyncNavGraph(navController: NavHostController) {
@@ -235,11 +237,12 @@ fun SdvSyncNavGraph(navController: NavHostController) {
     val selectedTab by remember(currentRoute) {
         derivedStateOf {
             when (currentRoute) {
+                "home" -> BottomTab.HOME
                 "saves" -> BottomTab.SAVES
                 "mods" -> BottomTab.MODS
                 "game_download" -> BottomTab.DOWNLOAD
                 "settings" -> BottomTab.SETTINGS
-                else -> BottomTab.SAVES
+                else -> BottomTab.HOME
             }
         }
     }
@@ -487,11 +490,26 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
     val mainSelectedTab by remember(mainCurrentRoute) {
         derivedStateOf {
             when (mainCurrentRoute) {
+                "home" -> BottomTab.HOME
                 "saves" -> BottomTab.SAVES
                 "mods" -> BottomTab.MODS
                 "game_download" -> BottomTab.DOWNLOAD
                 "settings" -> BottomTab.SETTINGS
-                else -> BottomTab.SAVES
+                else -> BottomTab.HOME
+            }
+        }
+    }
+
+    // Reuse the established state-restoring tab navigation. Unknown destinations
+    // are ignored here; privileged sub-screens retain their existing explicit paths.
+    val navigateToPrimaryTab: (String) -> Unit = { route ->
+        if (R45NavigationPolicy.isPrimaryRoute(route)) {
+            mainNavController.navigate(route) {
+                popUpTo(mainNavController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
             }
         }
     }
@@ -499,7 +517,7 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
     Column(Modifier.fillMaxSize()) {
         NavHost(
             navController = mainNavController,
-            startDestination = "saves",
+            startDestination = "home",
             modifier = Modifier
                 .weight(1f)
                 .consumeWindowInsets(
@@ -510,6 +528,22 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
             popEnterTransition = { fadeIn(tween(NAV_ANIM_DURATION)) },
             popExitTransition = { fadeOut(tween(NAV_ANIM_DURATION)) }
         ) {
+            // Home is an explicit, navigation-only entry point.
+            composable("home") {
+                HomeScreen(
+                    onOpenGame = { navigateToPrimaryTab("game_download") },
+                    onOpenSaves = { navigateToPrimaryTab("saves") },
+                    onOpenMods = { navigateToPrimaryTab("mods") },
+                    onOpenMore = { navigateToPrimaryTab("settings") },
+                    onOpenInstallationHealth = {
+                        parentNavController.navigate("installation_health")
+                    },
+                    onOpenOperationCenter = {
+                        parentNavController.navigate("operation_center")
+                    }
+                )
+            }
+
             // Saves tab
             composable("saves") {
                 DashboardScreen(
@@ -542,7 +576,7 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
                 GameDownloadScreen(
                     onOpenInstallationHealth = { parentNavController.navigate("installation_health") },
                     onBack = {
-                        mainNavController.navigate("saves") {
+                        mainNavController.navigate("home") {
                             popUpTo(mainNavController.graph.findStartDestination().id) {
                                 saveState = true
                             }
@@ -557,7 +591,7 @@ fun MainScreen(parentNavController: NavHostController, showBottomBar: Boolean, s
             composable("settings") {
                 SettingsScreen(
                     onBack = {
-                        mainNavController.navigate("saves") {
+                        mainNavController.navigate("home") {
                             popUpTo(mainNavController.graph.findStartDestination().id) {
                                 saveState = true
                             }

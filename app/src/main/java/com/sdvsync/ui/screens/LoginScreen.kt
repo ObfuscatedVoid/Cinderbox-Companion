@@ -48,6 +48,9 @@ import com.sdvsync.ui.components.StardewButtonVariant
 import com.sdvsync.ui.components.StardewCard
 import com.sdvsync.ui.components.StardewOutlinedButton
 import com.sdvsync.ui.components.StardewTopAppBar
+import com.sdvsync.ui.components.R46ErrorPanel
+import com.sdvsync.ui.policy.R46UiErrorArea
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import com.sdvsync.ui.viewmodels.LoginViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -235,11 +238,7 @@ fun LoginScreen(
 
                 is AuthState.Error -> {
                     val context = LocalContext.current
-                    Text(
-                        state.message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    R46ErrorPanel(R46UiErrorArea.STEAM_LOGIN)
                     Spacer(Modifier.height(24.dp))
                     LoginOptions(
                         username = username,
@@ -253,6 +252,7 @@ fun LoginScreen(
                         onQRLogin = { viewModel.loginWithQR() }
                     )
                     Spacer(Modifier.height(24.dp))
+                    if (DeveloperFeaturePolicy.canOpenDiagnostics(context)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -269,6 +269,7 @@ fun LoginScreen(
                         ) {
                             Text(stringResource(R.string.login_share_logs))
                         }
+                    }
                     }
                 }
 

@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalContext
+import com.sdvsync.ui.policy.DeveloperFeaturePolicy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,27 +58,22 @@ fun SyncErrorCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = if (showDetails) {
-                    stringResource(R.string.sync_error_details_label) + " ▾"
-                } else {
-                    stringResource(R.string.sync_error_details_label) +
-                        " ▸"
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.clickable { showDetails = !showDetails }
-            )
-
-            AnimatedVisibility(visible = showDetails) {
-                Text(
-                    text = rawMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+            // Raw backend messages can contain private save paths or account details.
+            // Only unlocked debug builds expose them, behind an explicit action.
+            if (DeveloperFeaturePolicy.canOpenDiagnostics(LocalContext.current) &&
+                rawMessage.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = { showDetails = !showDetails }) {
+                    Text(stringResource(R.string.sync_error_details_label))
+                }
+                AnimatedVisibility(visible = showDetails) {
+                    Text(
+                        text = rawMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
 
             // Action buttons

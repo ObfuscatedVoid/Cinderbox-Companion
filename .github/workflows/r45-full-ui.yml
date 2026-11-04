@@ -1,0 +1,55 @@
+name: R45-R46 Consolidated Five-Tab UI and Friendly Error Contracts
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/test/java/com/sdvsync/ui/**'
+      - 'app/src/main/res/values/strings.xml'
+      - 'scripts/devtool/r45*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r45-full-ui.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/src/test/java/com/sdvsync/ui/**'
+      - 'app/src/main/res/values/strings.xml'
+      - 'scripts/devtool/r45*.py'
+      - '.devtool.toml'
+      - '.github/workflows/r45-full-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: R45 five-tab and R46 accessible errors
+        run: |
+          python3 -B scripts/devtool/r45a_patch.py --check
+          python3 -B scripts/devtool/r45ui_patch.py --check
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r45a_gate.py' -v
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r45ui_gate.py' -v
+          python3 -B scripts/devtool/r45a_gate.py
+          python3 -B scripts/devtool/r45ui_gate.py
+      - name: Previous Material 3 and security regressions
+        run: |
+          python3 -B scripts/devtool/r44b_patch.py --check
+          python3 -B scripts/devtool/r44b_gate.py
+          python3 -B scripts/devtool/r44_patch.py --check
+          python3 -B scripts/devtool/r44_gate.py
+          python3 -B scripts/devtool/r43d_patch.py --check
+          python3 -B scripts/devtool/r43d_gate.py
+          python3 -B scripts/devtool/r43c_gate.py
+          python3 -B scripts/devtool/r43_policy_gate.py
+          python3 -B scripts/devtool/r42_product_gate.py
+      - name: Qualification boundary
+        run: |
+          echo 'Presentation source-only: hosted Build Debug APK workflow owns Android compile, lint and debug signing.'
+          echo 'No Steam, real game, device mutation or release publication authorized.'

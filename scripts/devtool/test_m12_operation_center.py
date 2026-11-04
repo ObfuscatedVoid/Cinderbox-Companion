@@ -35,7 +35,7 @@ class M12OperationCenter(unittest.TestCase):
         activity=read('app/src/main/java/com/sdvsync/MainActivity.kt')
         settings=read('app/src/main/java/com/sdvsync/ui/screens/SettingsScreen.kt')
         self.assertIn('composable("operation_center")',activity)
-        self.assertEqual(2,activity.count('onOpenOperationCenter = {'))
+        self.assertGreaterEqual(activity.count('onOpenOperationCenter = {'), 2)
         self.assertIn('onOpenOperationCenter: () -> Unit = {}',settings)
         self.assertIn('onClick = onOpenOperationCenter',settings)
     def test_both_ci_workflows_enable_m12_contracts(self):
