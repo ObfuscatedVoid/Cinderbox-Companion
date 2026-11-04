@@ -1,0 +1,136 @@
+name: R47 Synthetic UI Accessibility and Emulator Acceptance
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/r47-ui-acceptance.yml'
+      - 'scripts/devtool/r47_*.py'
+      - 'scripts/devtool/r47_emulator_ci.sh'
+      - 'scripts/devtool/test_r47_gate.py'
+      - 'app/src/androidTest/java/com/sdvsync/qualification/R47SyntheticExperienceDeviceTest.kt'
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/build.gradle.kts'
+      - 'docs/security/M3_RELEASE_POLICY.json'
+      - '.devtool.toml'
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/r47-ui-acceptance.yml'
+      - 'scripts/devtool/r47_*.py'
+      - 'scripts/devtool/r47_emulator_ci.sh'
+      - 'scripts/devtool/test_r47_gate.py'
+      - 'app/src/androidTest/java/com/sdvsync/qualification/R47SyntheticExperienceDeviceTest.kt'
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/build.gradle.kts'
+      - 'docs/security/M3_RELEASE_POLICY.json'
+      - '.devtool.toml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: r47-ui-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Verify exact source identity and security gate
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -B scripts/devtool/r47_patch.py --check
+          python3 -B scripts/devtool/r47_gate.py
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r47_gate.py' -v
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r47_diag.py' -v
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r47_mmrl_emulator.py' -v
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r47_r6_kvm.py' -v
+          python3 -B scripts/devtool/r45r2_gate.py
+          python3 -B scripts/devtool/r44b_gate.py
+
+  emulator-ui:
+    needs: [host-source]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Assert exact GitHub source and ephemeral runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$RUNNER_OS" = Linux
+          test "$(uname -m)" = x86_64
+          mkdir -p "$RUNNER_TEMP/r47-synthetic"
+          printf '%s\n' '{"overall":"NOT_RUN","synthetic_only":true,"physical_device_qualified":false,"release_qualified":false,"publication_allowed":false}' > "$RUNNER_TEMP/r47-synthetic/R47_SYNTHETIC_EVIDENCE.json"
+          python3 -B scripts/devtool/r47_gate.py
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Install pinned SDK
+        shell: bash
+        run: sdkmanager --install 'platforms;android-35' 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c
+      - name: Compile disposable app and instrumentation APKs on GitHub
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest
+      # Same AVD configuration as MMRL-LSPosed S09 (successful run 41759587780).
+      # This permits only the disposable GitHub-hosted Linux emulator to use KVM.
+      - name: Enable KVM on Linux hosted runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Avoid relying on the presence of a running udev daemon.
+          # Never create a KVM device or silently downgrade to software emulation.
+          if [[ ! -c /dev/kvm ]]; then
+            echo R47_KVM_DEVICE_UNAVAILABLE >&2
+            exit 1
+          fi
+          if [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
+            sudo chmod a+rw /dev/kvm || {
+              echo R47_KVM_PERMISSION_CHANGE_FAILED >&2
+              exit 1
+            }
+          fi
+          if [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
+            echo R47_KVM_NOT_ACCESSIBLE >&2
+            exit 1
+          fi
+          echo R47_KVM_READY
+      - name: Run 11 offline synthetic UI cases and collect seven private previews
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash scripts/devtool/r47_emulator_ci.sh
+      - name: Independently verify the exact PNG inventory, receipt, and source provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B scripts/devtool/r47_verify.py \
+            --output-dir "$RUNNER_TEMP/r47-synthetic" \
+            --source-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID"
+      - name: Upload ONLY synthetic PNGs and minimized evidence, even if emulator fails
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r47-synthetic-ui-evidence
+          path: ${{ runner.temp }}/r47-synthetic/
+          if-no-files-found: error
+          retention-days: 14

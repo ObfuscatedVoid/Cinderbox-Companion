@@ -13,6 +13,11 @@ schema = 2
 default_command = "host-check"
 
 # Fast default uses host-only Python checks. No JDK/SDK/Gradle required.
+[wrapper.commands.r47-check]
+description = "R47 read-only synthetic UI and accessibility source contracts (no Gradle/device)"
+workflow = "r47-check"
+target = "cinderbox"
+
 [wrapper.commands.host-check]
 description = "Safe parallel host source-contract and CI integration checks (no Gradle)"
 workflow = "host-check"
@@ -715,6 +720,12 @@ inputs = ["scripts/devtool/r45r2_*.py", "scripts/devtool/test_r45r2_gate.py", "a
 metadata = { read_only = true, area = "r45-r46-audited-production-ui", root_required = false, device_required = false, live_update_enabled = false }
 
 [targets.cinderbox.workflows]
+r47-check = [
+  { id = "security", ref = "job:security-contract", depends_on = [] },
+  { id = "r44b", ref = "job:r44b-experience-source", depends_on = ["security"] },
+  { id = "r45", ref = "job:r45r2-audit-source", depends_on = ["r44b"] },
+  { id = "r47", ref = "job:r47-ui-source", depends_on = ["r45"] },
+]
 r45r2-check = [
   { id = "security", ref = "job:security-contract", depends_on = [] },
   { id = "r44a", ref = "job:r44-design-system-source", depends_on = ["security"] },
@@ -985,3 +996,10 @@ collision = "unique"
 description = "A05 native M24 verification/Android picker source DAG (no device mutation)"
 workflow = "m24-verify-ux-check"
 target = "cinderbox"
+
+[targets.cinderbox.jobs.r47-ui-source]
+runner = "command"
+execution_environment = "host"
+command = ["python3", "-B", "scripts/devtool/r47_gate.py"]
+inputs = ["scripts/devtool/r47_*.py", "scripts/devtool/r47_emulator_ci.sh", "scripts/devtool/test_r47_gate.py", "app/src/androidTest/java/com/sdvsync/qualification/R47SyntheticExperienceDeviceTest.kt", ".github/workflows/r47-ui-acceptance.yml", "docs/security/M3_RELEASE_POLICY.json", ".devtool.toml"]
+metadata = { read_only = true, device_required = false, root_required = false, live_update_enabled = false, release_enabled = false }
