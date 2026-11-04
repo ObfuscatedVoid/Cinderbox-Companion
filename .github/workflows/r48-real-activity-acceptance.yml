@@ -1,0 +1,115 @@
+name: R48A Real MainActivity Hosted Emulator Acceptance (not device/release)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/r48-real-activity-acceptance.yml'
+      - 'scripts/devtool/r48_*'
+      - 'scripts/devtool/test_r48_gate.py'
+      - 'app/src/androidTest/java/com/sdvsync/qualification/R48RealActivityDeviceTest.kt'
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/build.gradle.kts'
+      - 'docs/security/M3_RELEASE_POLICY.json'
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/r48-real-activity-acceptance.yml'
+      - 'scripts/devtool/r48_*'
+      - 'scripts/devtool/test_r48_gate.py'
+      - 'app/src/androidTest/java/com/sdvsync/qualification/R48RealActivityDeviceTest.kt'
+      - 'app/src/main/java/com/sdvsync/MainActivity.kt'
+      - 'app/src/main/java/com/sdvsync/ui/**'
+      - 'app/build.gradle.kts'
+      - 'docs/security/M3_RELEASE_POLICY.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: r48-real-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Verify R48 code and existing production denial gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -B scripts/devtool/r48_gate.py
+          python3 -B -m unittest discover -s scripts/devtool -p 'test_r48_gate.py' -v
+          python3 -B scripts/devtool/r47_gate.py
+          python3 -B scripts/devtool/r45r2_gate.py
+          python3 -B scripts/devtool/r43c_gate.py
+  emulator-real-activity:
+    needs: [host-source]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Refuse unpinned / non-Linux source and initialize fail-closed receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$RUNNER_OS" = Linux
+          test "$(uname -m)" = x86_64
+          mkdir -p "$RUNNER_TEMP/r48-real-activity"
+          printf '%s\n' '{"overall":"NOT_RUN","hosted_emulator_only":true,"physical_device_qualified":false,"talkback_qualified":false,"release_qualified":false,"publication_allowed":false}' > "$RUNNER_TEMP/r48-real-activity/R48_REAL_ACTIVITY_EVIDENCE.json"
+          python3 -B scripts/devtool/r48_gate.py
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Install pinned Android platform and build tools
+        run: sdkmanager --install 'platforms;android-35' 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c
+      - name: Build unsigned-for-release debug app and test APKs only on GitHub
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Verify ephemeral Linux KVM device
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -c /dev/kvm ]] || { echo R48_KVM_UNAVAILABLE >&2; exit 1; }
+          if [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
+            sudo chmod a+rw /dev/kvm || { echo R48_KVM_REFUSED >&2; exit 1; }
+          fi
+          [[ -r /dev/kvm && -w /dev/kvm ]] || { echo R48_KVM_REFUSED >&2; exit 1; }
+      - name: Real MainActivity, offline five tabs and back navigation (320dp / 160%)
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash scripts/devtool/r48_emulator_ci.sh
+      - name: Independently verify exact tests, five screenshots, APK and installed identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B scripts/devtool/r48_verify.py \
+            --output-dir "$RUNNER_TEMP/r48-real-activity" \
+            --source-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID"
+      - name: Upload allowlisted R48 offline emulator-only evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: r48-real-activity-emulator-evidence
+          path: ${{ runner.temp }}/r48-real-activity/
+          if-no-files-found: error
+          retention-days: 14
